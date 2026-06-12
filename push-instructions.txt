@@ -1,0 +1,27 @@
+=== Your usual GitHub -> Railway flow ===
+
+1. Push this folder to GitHub:
+   cd nrl-fantasy-share
+   git init
+   git add .
+   git commit -m "Fantasy Footy NRL"
+   git branch -M main
+   git remote add origin https://github.com/YOUR-USERNAME/nrl-fantasy.git
+   git push -u origin main
+
+   (or: gh repo create nrl-fantasy --public --source=. --push)
+
+2. Railway:
+   - railway.com -> New Project -> Deploy from GitHub repo -> pick nrl-fantasy
+   - It auto-detects Node (package.json) and runs `npm start` -> server.js serves the app
+   - Settings -> Networking -> Generate Domain
+   - Share that URL with your friends
+
+Notes:
+- No dependencies, no build step — Railway should deploy in under a minute.
+- Each visitor gets their own save (stored in their browser's localStorage).
+- To ship an update later: replace index.html, commit, push — Railway redeploys automatically.
+
+=== Alternative: GitHub Pages (free, no Railway needed) ===
+Repo Settings -> Pages -> Deploy from branch -> main / root
+Link: https://YOUR-USERNAME.github.io/nrl-fantasy/
