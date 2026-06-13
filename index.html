@@ -1131,34 +1131,83 @@ function statRow(p){
 /* ================= DRAFT PAGE ================= */
 function renderDraft(){
   const el=$('#pg-draft');
-  if(!S.draft){el.innerHTML=draftSetupHTML();return}
-  if(!S.draft.done){el.innerHTML=draftRoomHTML();return}
+  if(!S.draft){el.innerHTML=draftLandingHTML();return}
+  /* legacy saves: no phase field */
+  if(!S.draft.phase){
+    if(!S.draft.done){el.innerHTML=draftRoomHTML();return}
+    el.innerHTML=draftLeagueHTML();return;
+  }
+  if(S.draft.phase==='lobby'){el.innerHTML=draftLobbyHTML();return}
+  if(S.draft.phase==='draft'){el.innerHTML=draftRoomHTML();return}
   el.innerHTML=draftLeagueHTML();
 }
-function draftSetupHTML(){
-  return `<div class="card" style="max-width:560px;margin:0 auto">
-    <h3>🏉 Start a Draft League</h3>
-    <p class="muted" style="margin-bottom:12px">Snake draft against AI coaches. Rosters of ${DRAFT_ROSTER} (13 starters + ${BENCH_N} bench). Head-to-head each round, ladder, top-4 finals. Free agency between rounds.</p>
-    <div class="flex" style="margin-bottom:12px">
-      <label>League size <select id="dr-size">${[4,6,8,10,12].map(n=>`<option ${n===8?'selected':''}>${n}</option>`).join('')}</select></label>
-      <label>Your team name <input id="dr-name" value="Brent's Bunnies"></label>
-      <label>Your pick position <select id="dr-pick"><option value="-1">Random</option>${[...Array(12).keys()].map(i=>`<option value="${i}">${i+1}</option>`).join('')}</select></label>
-    </div>
-    <button class="btn" onclick="startDraft()">Start Draft</button>
+function draftLandingHTML(){
+  const flow=S.ui.draftFlow||'';
+  return `<div style="max-width:520px;margin:0 auto">
+  <div class="card" style="text-align:center;padding:28px 20px;margin-bottom:14px">
+   <div style="font-size:48px;margin-bottom:10px">🏉</div>
+   <h3 style="font-size:20px;margin-bottom:6px">Draft Leagues</h3>
+   <p class="muted" style="margin-bottom:20px">Create a league and invite mates, or enter a code to join one that's already been set up.</p>
+   <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <button class="btn" style="padding:12px 28px;font-size:15px" onclick="S.ui.draftFlow='create';renderDraft()">＋ Create league</button>
+    <button class="btn sec" style="padding:12px 28px;font-size:15px" onclick="S.ui.draftFlow='join';renderDraft()">Enter code</button>
+   </div>
+  </div>
+  ${flow==='create'?`
+  <div class="card">
+   <h3>Create a league</h3>
+   <div class="settings-grid" style="margin-bottom:14px">
+    <div class="set-item"><label>League name</label><input id="dr-lgname" placeholder="e.g. The Friday Night Comp" value="The Friday Night Comp"></div>
+    <div class="set-item"><label>Your team name</label><input id="dr-name" value="My Team"></div>
+    <div class="set-item"><label>League size</label>
+     <select id="dr-size">${[4,6,8,10,12].map(n=>`<option ${n===8?'selected':''}>${n}</option>`).join('')}</select></div>
+    <div class="set-item"><label>Your draft pick position</label>
+     <select id="dr-pick"><option value="-1">Random</option>${[...Array(12).keys()].map(i=>`<option value="${i}">${i+1}</option>`).join('')}</select></div>
+   </div>
+   <button class="btn" onclick="createDraftLeague()">Create &amp; get code</button>
+  </div>`:flow==='join'?`
+  <div class="card">
+   <h3>Join a league</h3>
+   <p class="muted" style="margin-bottom:12px">Enter the 6-character code your league commissioner shared with you.</p>
+   <div class="settings-grid" style="margin-bottom:14px">
+    <div class="set-item"><label>League code</label><input id="dr-joincode" placeholder="e.g. ABCD12" style="text-transform:uppercase;letter-spacing:2px;font-family:monospace;font-size:18px" maxlength="6"></div>
+    <div class="set-item"><label>Your team name</label><input id="dr-joinname" value="My Team"></div>
+   </div>
+   <button class="btn" onclick="joinDraftLeague()">Join league</button>
+  </div>`:''}
   </div>`;
 }
-function startDraft(){
+function genLeagueCode(){
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s='';for(let i=0;i<6;i++)s+=c[Math.floor(Math.random()*c.length)];return s;
+}
+function createDraftLeague(){
+  const lgName=($('#dr-lgname').value||'').trim()||'My League';
+  const myName=($('#dr-name').value||'').trim()||'My Team';
   const size=+$('#dr-size').value;
   let myPick=+$('#dr-pick').value;
   if(myPick<0||myPick>=size)myPick=Math.floor(Math.random()*size);
   const names=AI_NAMES.slice().sort(()=>Math.random()-.5);
-  const teams=[];
-  for(let i=0;i<size;i++){
-    teams.push(i===myPick?{name:$('#dr-name').value||'My Team',roster:[],line:emptyLine(),ai:false}
-      :{name:names.pop(),roster:[],line:emptyLine(),ai:true});
-  }
-  S.draft={size,teams,me:myPick,pickNo:0,done:false,log:[],history:{}};
-  save();renderDraft();runAIPicks();
+  const participants=[{name:myName,isMe:true,isAI:false}];
+  for(let i=1;i<size;i++)participants.push({name:names.pop()||'AI Coach',isMe:false,isAI:true});
+  S.draft={phase:'lobby',league:{code:genLeagueCode(),name:lgName,size,draftDate:null,participants,isOwner:true},
+    size,me:myPick,teams:null,pickNo:0,done:false,log:[],history:{}};
+  S.ui.draftFlow=null;S.ui.draftLobbyTab='overview';
+  save();renderDraft();
+}
+function joinDraftLeague(){
+  const code=($('#dr-joincode').value||'').trim().toUpperCase();
+  if(code.length!==6){alert('Please enter a valid 6-character league code.');return}
+  const myName=($('#dr-joinname').value||'').trim()||'My Team';
+  const size=8;
+  const myPick=Math.floor(Math.random()*size);
+  const names=AI_NAMES.slice().sort(()=>Math.random()-.5);
+  const participants=[{name:myName,isMe:true,isAI:false}];
+  for(let i=1;i<size;i++)participants.push({name:names.pop()||'AI Coach',isMe:false,isAI:true});
+  S.draft={phase:'lobby',league:{code,name:'League '+code,size,draftDate:null,participants,isOwner:false},
+    size,me:myPick,teams:null,pickNo:0,done:false,log:[],history:{}};
+  S.ui.draftFlow=null;S.ui.draftLobbyTab='overview';
+  save();renderDraft();
 }
 function draftPickOrder(pickNo){
   const n=S.draft.size,rd=Math.floor(pickNo/n),i=pickNo%n;
@@ -1223,7 +1272,7 @@ function myDraftPick(pid){
   runAIPicks();
 }
 function finishDraft(){
-  const D=S.draft;D.done=true;
+  const D=S.draft;D.done=true;D.phase='done';
   D.teams.forEach(t=>fixDraftRoster(t));
   save();renderDraft();
 }
@@ -1245,6 +1294,248 @@ function fixDraftRoster(team){
     autoSetDraftLineup(team);
   }
 }
+/* ===== LOBBY ===== */
+function draftLobbyHTML(){
+  const D=S.draft,lg=D.league;
+  const tab=S.ui.draftLobbyTab||'overview';
+  let body='';
+  if(tab==='overview')body=draftLobbyOverview(lg);
+  else if(tab==='participants')body=draftLobbyParticipants(lg);
+  else if(tab==='mock')body=draftMockHTML();
+  else if(tab==='players')body=draftLobbyPlayers();
+  else if(tab==='news')body=draftNewsHTML();
+  const humanCount=lg.participants.filter(p=>!p.isAI).length;
+  return `
+  <div class="card" style="margin-bottom:14px">
+   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div>
+     <h3 style="margin:0;font-size:18px">${esc(lg.name)}</h3>
+     <div class="muted" style="font-size:13px">${lg.size}-team draft · ${humanCount} human${humanCount!==1?'s':''} joined</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+     <div style="background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 16px;text-align:center">
+      <div style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:2px">LEAGUE CODE</div>
+      <div style="font-size:24px;font-weight:800;letter-spacing:4px;font-family:monospace;color:var(--acc)">${lg.code}</div>
+     </div>
+     <button class="btn sec" style="padding:6px 12px;font-size:13px" onclick="navigator.clipboard.writeText('${lg.code}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy code',1600)})">Copy code</button>
+    </div>
+   </div>
+  </div>
+  <div class="tabs2" style="margin-bottom:14px">
+   <button class="${tab==='overview'?'on':''}" onclick="S.ui.draftLobbyTab='overview';renderDraft()">Overview</button>
+   <button class="${tab==='participants'?'on':''}" onclick="S.ui.draftLobbyTab='participants';renderDraft()">Participants (${lg.participants.length}/${lg.size})</button>
+   <button class="${tab==='mock'?'on':''}" onclick="S.ui.draftLobbyTab='mock';renderDraft()">Mock Draft</button>
+   <button class="${tab==='players'?'on':''}" onclick="S.ui.draftLobbyTab='players';renderDraft()">Players</button>
+   <button class="${tab==='news'?'on':''}" onclick="S.ui.draftLobbyTab='news';renderDraft()">News</button>
+  </div>
+  ${body}`;
+}
+function draftLobbyOverview(lg){
+  const dtStr=lg.draftDate?new Date(lg.draftDate).toLocaleString('en-AU',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'Not set';
+  const isOwner=lg.isOwner;
+  return `<div class="grid2">
+  <div class="card">
+   <h3>Draft date &amp; time</h3>
+   <div style="font-size:26px;font-weight:700;margin:10px 0;color:${lg.draftDate?'var(--acc)':'var(--dim)'}">${dtStr}</div>
+   ${isOwner?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+    <input type="datetime-local" id="dr-dt" value="${lg.draftDate?lg.draftDate.slice(0,16):''}" style="flex:1;min-width:170px">
+    <button class="btn sec" onclick="S.draft.league.draftDate=$('#dr-dt').value?new Date($('#dr-dt').value).toISOString():null;save();renderDraft()">Save</button>
+   </div>`:`<p class="muted" style="font-size:13px">Only the commissioner can set the draft time.</p>`}
+  </div>
+  <div class="card">
+   <h3>League settings</h3>
+   <div style="display:flex;flex-direction:column;gap:6px;font-size:14px">
+    <div class="flex"><span class="muted">Teams</span><b>${lg.size}</b></div>
+    <div class="flex"><span class="muted">Roster</span><b>${DRAFT_ROSTER} players (${STARTERS_N} starters + ${BENCH_N} bench)</b></div>
+    <div class="flex"><span class="muted">Format</span><b>Snake draft · Head-to-head</b></div>
+    <div class="flex"><span class="muted">Scoring</span><b>${S.settings.scoreMode==='custom'?'Custom rules':'Official NRL Fantasy'}</b></div>
+   </div>
+  </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+   <h3>Ready to go?</h3>
+   <p class="muted" style="margin-bottom:14px">When everyone's ready, ${isOwner?'start the draft below.':'wait for the commissioner to start the draft.'} Any unfilled spots will be taken by AI coaches.</p>
+   <div style="display:flex;gap:10px;flex-wrap:wrap">
+    ${isOwner?`<button class="btn" style="font-size:15px;padding:10px 28px" onclick="startDraftFromLobby()">🏉 Start Draft</button>`:''}
+    <button class="btn danger" style="margin-left:auto" onclick="if(confirm('Leave this league?')){S.draft=null;save();renderDraft()}">Leave league</button>
+   </div>
+  </div>`;
+}
+function draftLobbyParticipants(lg){
+  return `<div class="card">
+  <h3>Participants <span class="tag">${lg.participants.filter(p=>!p.isAI).length} human · ${lg.participants.filter(p=>p.isAI).length} AI</span></h3>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+  ${lg.participants.map((p,i)=>`
+   <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg2);border-radius:8px;border:1px solid ${p.isMe?'var(--acc)':'var(--line)'}">
+    <div style="width:38px;height:38px;border-radius:50%;background:${p.isAI?'var(--bg3)':'var(--acc)'};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${p.isAI?'🤖':'👤'}</div>
+    <div style="flex:1">
+     <div style="font-weight:700">${esc(p.name)}</div>
+     <div style="font-size:12px;color:var(--dim)">${p.isAI?'AI coach':'Human manager'}${i===0?' · Commissioner':''}</div>
+    </div>
+    ${p.isMe?`<span class="tag" style="background:#1e3a5f;color:#93c5fd">You</span>`:''}
+   </div>`).join('')}
+  </div>
+  <p class="tooltip" style="margin-top:12px">Share the code <b style="letter-spacing:2px">${lg.code}</b> so others can join. Empty spots will be filled by AI coaches when the draft starts.</p>
+  </div>`;
+}
+function draftLobbyPlayers(){
+  let pool=PLAYERS.slice();
+  if(S.ui.draftQ)pool=pool.filter(p=>p.name.toLowerCase().includes(S.ui.draftQ.toLowerCase()));
+  if(S.ui.draftPos)pool=pool.filter(p=>p.pos.includes(S.ui.draftPos));
+  pool.sort((a,b)=>(b.avg||0)-(a.avg||0));
+  return `<div class="card">
+  <h3>Player rankings <span class="tag">pre-draft scouting</span></h3>
+  <input placeholder="Search players…" style="width:100%;margin-bottom:8px" value="${esc(S.ui.draftQ||'')}" oninput="S.ui.draftQ=this.value;renderDraft()">
+  <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.draftPos||0)===pi?'on':''}" onclick="S.ui.draftPos=${pi};renderDraft()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
+  <div style="overflow-x:auto;margin-top:10px"><table><thead><tr><th></th><th>Player</th><th>Club</th><th>Pos</th><th>Price</th><th>Avg</th><th>L3</th><th></th></tr></thead><tbody>
+  ${pool.slice(0,60).map(p=>`<tr>
+   <td>${avatar(p,26)}</td><td><b>${esc(p.name)}</b></td>
+   <td class="muted" style="font-size:12px">${CLUBS[p.sq].s}</td>
+   <td>${p.pos.map(x=>`<span class="posb">${POSN[x]}</span>`).join('')}</td>
+   <td>${fmtK(price(p.id))}</td><td><b>${p.avg||'–'}</b></td><td>${p.l3||'–'}</td>
+   <td><button class="btn sec" style="padding:3px 8px;font-size:12px" onclick="showPlayer(${p.id})">Stats</button></td>
+  </tr>`).join('')}
+  </tbody></table></div></div>`;
+}
+function draftNewsHTML(){
+  const items=[];
+  PLAYERS.filter(p=>NAMED[p.id]===1).slice(0,5).forEach(p=>
+    items.push({icon:'✅',tag:'Named to start',text:`<b>${esc(p.name)}</b> (${CLUBS[p.sq].s}) is named to start Round ${S.round}.`,pri:4}));
+  PLAYERS.filter(p=>NAMED[p.id]===2).slice(0,4).forEach(p=>
+    items.push({icon:'🪑',tag:'Bench',text:`<b>${esc(p.name)}</b> (${CLUBS[p.sq].s}) is named off the bench Round ${S.round}.`,pri:3}));
+  PLAYERS.filter(p=>{const t=trendOf(p.id);return t&&t.label==='up'&&t.slope>=8}).slice(0,4).forEach(p=>{
+    const t=trendOf(p.id);
+    items.push({icon:'📈',tag:'Form alert',text:`<b>${esc(p.name)}</b> is trending up +${t.slope} pts/game over ${t.n} rounds (season avg ${t.avg}, last-5 avg ${t.l5}).`,pri:3})});
+  [...KICKERS].map(id=>PLAYERS[id]).filter(Boolean).slice(0,3).forEach(p=>
+    items.push({icon:'🥅',tag:'Goal kicker',text:`<b>${esc(p.name)}</b> is the confirmed goal kicker for ${CLUBS[p.sq].n} — valuable for consistent scoring.`,pri:2}));
+  PLAYERS.filter(p=>p.avg>=70).slice(0,3).forEach(p=>
+    items.push({icon:'⭐',tag:'Premium',text:`<b>${esc(p.name)}</b> averaging <b>${p.avg}</b> pts this season — a top-2-round draft target.`,pri:2}));
+  PLAYERS.filter(p=>{const t=trendOf(p.id);return t&&t.label==='down'&&t.slope<=-8}).slice(0,3).forEach(p=>{
+    const t=trendOf(p.id);
+    items.push({icon:'📉',tag:'Form concern',text:`<b>${esc(p.name)}</b> dropping ${Math.abs(t.slope)} pts/game over last ${t.n} rounds — may be a risk.`,pri:1})});
+  if(!items.length)items.push({icon:'📰',tag:'Info',text:'League news will populate here — named teams, form movers and price changes as the season progresses.',pri:0});
+  items.sort((a,b)=>b.pri-a.pri);
+  return `<div style="display:flex;flex-direction:column;gap:10px">
+  ${items.slice(0,12).map(it=>`
+  <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;gap:12px;align-items:flex-start">
+   <div style="font-size:22px;flex-shrink:0">${it.icon}</div>
+   <div><span class="tag" style="display:inline-block;margin-bottom:4px">${it.tag}</span>
+    <div style="font-size:14px">${it.text}</div>
+   </div>
+  </div>`).join('')}
+  </div>`;
+}
+/* ===== MOCK DRAFT ===== */
+function draftMockHTML(){
+  const mock=S.ui.mockDraft;
+  if(!mock){
+    return `<div class="card" style="max-width:540px;margin:0 auto;text-align:center;padding:24px">
+    <h3>Mock Draft</h3>
+    <p class="muted" style="margin-bottom:16px">Practice your strategy without committing. Picks won't affect your real draft. AI coaches fill all other spots.</p>
+    <button class="btn" onclick="startMockDraft()">▶ Start mock draft</button>
+   </div>`;
+  }
+  const D=mock;
+  if(D.done){
+    const me=D.teams[D.me];
+    return `<div class="card">
+    <h3>Mock complete ✓</h3>
+    <p class="muted" style="margin-bottom:12px">Your mock roster of ${me.roster.length} players:</p>
+    ${me.roster.map(pid=>{const p=PLAYERS[pid];return `<div class="flex" style="padding:5px 0;border-bottom:1px solid var(--line)">${avatar(p,26)}<b>${esc(p.name)}</b><span class="muted">${CLUBS[p.sq].s} ${posStr(p)}</span><span class="spacer"></span>avg ${p.avg||'–'}</div>`}).join('')}
+    <div style="margin-top:14px;display:flex;gap:10px">
+     <button class="btn" onclick="startMockDraft()">↺ Run again</button>
+     <button class="btn sec" onclick="S.ui.mockDraft=null;renderDraft()">Back to lobby</button>
+    </div></div>`;
+  }
+  const ti=mockPickOrder(D);
+  const myTurn=!D.teams[ti].ai;
+  const taken=new Set();D.teams.forEach(tm=>tm.roster.forEach(x=>taken.add(x)));
+  let pool=PLAYERS.filter(p=>!taken.has(p.id));
+  if(S.ui.draftQ)pool=pool.filter(p=>p.name.toLowerCase().includes(S.ui.draftQ.toLowerCase()));
+  if(S.ui.draftPos)pool=pool.filter(p=>p.pos.includes(S.ui.draftPos));
+  pool.sort((a,b)=>targetAvg(b)-targetAvg(a));
+  const me=D.teams[D.me],need=rosterNeeds(me),total=D.size*DRAFT_ROSTER;
+  return `
+  <div class="notice" style="${myTurn?'border-color:var(--acc);':''}">
+   Mock pick ${D.pickNo+1}/${total} · Round ${Math.floor(D.pickNo/D.size)+1}/${DRAFT_ROSTER} ·
+   <b class="${myTurn?'good':''}">${myTurn?'YOUR PICK':esc(D.teams[ti].name)+' picking…'}</b>
+   <button class="btn danger" style="float:right;padding:2px 8px;font-size:12px" onclick="S.ui.mockDraft=null;renderDraft()">Exit mock</button>
+  </div>
+  <div class="grid2">
+   <div class="card ${myTurn?'onclock':''}">
+    <h3>Available players</h3>
+    <input placeholder="Search…" style="width:100%" value="${esc(S.ui.draftQ||'')}" oninput="S.ui.draftQ=this.value;renderDraft()">
+    <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.draftPos||0)===pi?'on':''}" onclick="S.ui.draftPos=${pi};renderDraft()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
+    <div style="max-height:400px;overflow-y:auto"><table><thead><tr><th></th><th>Player</th><th>Pos</th><th>Avg</th><th></th></tr></thead><tbody>
+    ${pool.slice(0,60).map(p=>`<tr><td>${avatar(p,26)}</td><td><b>${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${CLUBS[p.sq].s}</span></td>
+     <td>${p.pos.map(x=>`<span class="posb">${POSN[x]}</span>`).join('')}</td><td><b>${p.avg||'–'}</b></td>
+     <td><button class="btn" style="padding:4px 10px" ${myTurn?'':'disabled'} onclick="mockPick(${p.id})">Pick</button></td></tr>`).join('')}
+    </tbody></table></div>
+   </div>
+   <div>
+    <div class="card"><h3>My mock roster (${me.roster.length}/${DRAFT_ROSTER}) <span class="tag">${POS_IDS.filter(x=>need[x]>0).map(x=>need[x]+' '+POSN[x]).join(', ')||'starters full'}</span></h3>
+     ${me.roster.map(pid=>{const p=PLAYERS[pid];return `<div class="flex" style="padding:3px 0">${avatar(p,26)}<b>${esc(p.name)}</b><span class="muted">${CLUBS[p.sq].s}</span><span class="spacer"></span>${p.avg||'–'}</div>`}).join('')||'<p class="muted">No picks yet.</p>'}
+    </div>
+    <div class="card"><h3>Mock log</h3><div class="draft-pick-log">
+     ${D.log.slice(0,25).map(l=>`<div style="padding:3px 0">#${l.pick} <b>${esc(D.teams[l.team].name)}</b> → ${esc(PLAYERS[l.pid].name)}</div>`).join('')}
+    </div></div>
+   </div>
+  </div>`;
+}
+function mockPickOrder(D){const n=D.size,rd=Math.floor(D.pickNo/n),i=D.pickNo%n;return rd%2===0?i:n-1-i}
+function startMockDraft(){
+  const lg=S.draft.league,size=lg.size,myPick=S.draft.me;
+  const names=AI_NAMES.slice().sort(()=>Math.random()-.5);
+  const teams=[];
+  for(let i=0;i<size;i++){
+    const p=lg.participants[i]||{};
+    teams.push(i===myPick?{name:p.name||'My Team',roster:[],ai:false}
+      :{name:p.name||names.pop()||'AI',roster:[],ai:true});
+  }
+  S.ui.mockDraft={size,teams,me:myPick,pickNo:0,done:false,log:[]};
+  save();renderDraft();runMockAIPicks();
+}
+function runMockAIPicks(){
+  const D=S.ui.mockDraft;
+  if(!D||D.done)return;
+  const step=()=>{
+    if(D.pickNo>=D.size*DRAFT_ROSTER){D.done=true;save();renderDraft();return}
+    const ti=mockPickOrder(D);
+    if(!D.teams[ti].ai){renderDraft();return}
+    const taken=new Set();D.teams.forEach(tm=>tm.roster.forEach(x=>taken.add(x)));
+    let pool=PLAYERS.filter(p=>!taken.has(p.id));
+    const need=rosterNeeds(D.teams[ti]),picksLeft=DRAFT_ROSTER-D.teams[ti].roster.length;
+    const needTotal=Object.values(need).reduce((a,b)=>a+b,0);
+    if(needTotal>=picksLeft)pool=pool.filter(p=>p.pos.some(x=>need[x]>0));
+    pool.sort((a,b)=>targetAvg(b)-targetAvg(a));
+    const k=Math.min(pool.length,3);
+    const pid=pool[Math.floor(Math.random()*k)].id;
+    D.teams[ti].roster.push(pid);D.log.unshift({pick:D.pickNo+1,team:ti,pid});D.pickNo++;
+    save();renderDraft();setTimeout(step,60);
+  };step();
+}
+function mockPick(pid){
+  const D=S.ui.mockDraft;
+  const ti=mockPickOrder(D);if(D.teams[ti].ai)return;
+  const team=D.teams[ti],need=rosterNeeds(team),picksLeft=DRAFT_ROSTER-team.roster.length;
+  const needTotal=Object.values(need).reduce((a,b)=>a+b,0),p=PLAYERS[pid];
+  if(needTotal>=picksLeft&&!p.pos.some(x=>need[x]>0)){alert('Must fill: '+POS_IDS.filter(x=>need[x]>0).map(x=>need[x]+'× '+POSN[x]).join(', '));return}
+  team.roster.push(pid);D.log.unshift({pick:D.pickNo+1,team:ti,pid});D.pickNo++;
+  save();renderDraft();runMockAIPicks();
+}
+function startDraftFromLobby(){
+  const lg=S.draft.league,size=lg.size,myPick=S.draft.me;
+  const names=AI_NAMES.slice().sort(()=>Math.random()-.5);
+  const teams=[];
+  for(let i=0;i<size;i++){
+    const p=lg.participants[i]||{};
+    teams.push(i===myPick?{name:p.name||'My Team',roster:[],line:emptyLine(),ai:false}
+      :{name:p.name||names.pop()||'AI',roster:[],line:emptyLine(),ai:true});
+  }
+  S.draft.teams=teams;S.draft.phase='draft';S.draft.pickNo=0;S.draft.done=false;S.draft.log=[];
+  save();renderDraft();runAIPicks();
+}
+/* ===== DRAFT ROOM ===== */
 function draftRoomHTML(){
   const D=S.draft;
   const ti=draftPickOrder(D.pickNo);
