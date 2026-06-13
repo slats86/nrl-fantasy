@@ -194,7 +194,24 @@ const DEFAULT_RULES={T:8,TS:5,G:2,FG:5,TA:5,LB:4,LBA:2,TCK:1,TB:2,MT:-2,OFH:4,OF
 const DEFAULT_SETTINGS={
   cap:13000000, tradesPerRound:3, seasonTrades:36, captainMult:2,
   benchScores:true, scoreMode:'official',
-  totalRounds:27, rules:{...DEFAULT_RULES}, layout:{...DEFAULT_LAYOUT}
+  totalRounds:27, rules:{...DEFAULT_RULES}, layout:{...DEFAULT_LAYOUT},
+  bonusEvents:false, bonusMetre:5, bonusTackle:5, bonusTryInv:5,
+  consistencyBonus:false, consistencyStreak:3, consistencyMult:1.1,
+  upsetBonus:false, upsetThreshold:60, upsetBonusPts:10
+};
+
+/* ===== CHIPS ===== */
+const CHIP_DEFS={
+  injuryWildcard:{id:'injuryWildcard',name:'Injury Wildcard',icon:'🏥',
+    desc:'Unlimited free trades for one round. Only unlocks when 3+ of your players are marked injured.',uses:1,roundOnly:true},
+  posCaptain:{id:'posCaptain',name:'Positional Captain',icon:'🎯',
+    desc:'Captain bonus goes to the best-scoring player at a chosen position that round, not your named captain.',uses:3,roundOnly:true},
+  splitCaptain:{id:'splitCaptain',name:'Split Captain',icon:'⚡',
+    desc:'Split the captain bonus across C and VC — each gets 1.5× instead of one player getting 2×.',uses:3,roundOnly:true},
+  benchInsurance:{id:'benchInsurance',name:'Bench Insurance',icon:'🛡️',
+    desc:'Your best-scoring interchange player also counts even if all starters played.',uses:3,roundOnly:true},
+  vcLock:{id:'vcLock',name:'VC Lock',icon:'🔒',
+    desc:'VC only activates as captain if your captain scores below a threshold you set. Activate per-round.',uses:999,roundOnly:false},
 };
 /* squad layout (adjustable in Rules & Settings) — defaults: 13 starters, 4 bench, 4 reserves */
 let FIELD_STRUCT=[[1,1],[2,3],[3,2],[4,2],[5,2],[6,3]];
@@ -220,7 +237,8 @@ function defaultState(){
     round:1, /* next round to simulate */
     season:{rounds:{}}, /* r -> {stats:{pid:[...]}, fix:[[h,a]..], bye:clubIdx} */
     prices:{}, /* pid -> current price */
-    classic:{squad:[],line:emptyLine(),tradesRound:0,tradesSeason:0,history:{}},
+    classic:{squad:[],line:emptyLine(),tradesRound:0,tradesSeason:0,history:{},
+      chips:{active:{},used:{},injured:[]}},
     league:null, /* classic league {name,teams:[{name,squad,line,ai}],fix:{},...} */
     draft:null,  /* {size,teams:[{name,roster,line,ai}],order,picks,done,fix,history} */
     ui:{page:'classic',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',slotPick:null,draftQ:'',draftPos:0}
@@ -273,6 +291,8 @@ function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){
 function load(){
   try{const raw=localStorage.getItem(STORE_KEY);if(raw){S=JSON.parse(raw);
     if(S.settings&&S.settings.cap===11500000)S.settings.cap=13000000; /* migrate old default cap */
+    if(S.classic&&!S.classic.chips)S.classic.chips={active:{},used:{},injured:[]}; /* migrate: add chips state */
+    if(S.settings&&S.settings.bonusEvents===undefined){S.settings.bonusEvents=false;S.settings.bonusMetre=5;S.settings.bonusTackle=5;S.settings.bonusTryInv=5;S.settings.consistencyBonus=false;S.settings.consistencyStreak=3;S.settings.consistencyMult=1.1;S.settings.upsetBonus=false;S.settings.upsetThreshold=60;S.settings.upsetBonusPts=10;}
     if(S.settings&&!S.settings.layout){ /* migrate: preserve this save's existing squad shape */
       S.settings.layout={...DEFAULT_LAYOUT};
       try{
@@ -586,17 +606,58 @@ function ptsFromStats(arr){
   return Math.round(t);
 }
 
+/* ===== BONUS SCORING HELPERS ===== */
+/* Extra points for milestone stat events (200+ run metres, 50+ tackles, 3+ try involvements) */
+function bonusPts(pid,r){
+  if(!S.settings.bonusEvents)return 0;
+  const st=RST[pid]&&RST[pid][r];if(!st)return 0;
+  let b=0;
+  // STAT_KEYS index: MG=14(run metres), TCK=7(tackles), T=0,TS=1,TA=4(try involvements)
+  if((st[14]||0)>=200)b+=S.settings.bonusMetre||5;
+  if((st[7]||0)>=50)b+=S.settings.bonusTackle||5;
+  if((st[0]||0)+(st[1]||0)+(st[4]||0)>=3)b+=S.settings.bonusTryInv||5;
+  return b;
+}
+/* Multiplier for players scoring above their season avg for X consecutive rounds */
+function consistencyMult(pid,r){
+  if(!S.settings.consistencyBonus)return 1;
+  const streak=S.settings.consistencyStreak||3;
+  const avg=PLAYERS[pid].avg;if(!avg||avg<=0)return 1;
+  for(let i=r-1;i>=Math.max(1,r-streak);i--){
+    const pts=playerPts(pid,i);if(pts==null||pts<avg)return 1;
+  }
+  return S.settings.consistencyMult||1.1;
+}
+/* Extra points if player scored well in a losing team */
+function upsetBonus(pid,r){
+  if(!S.settings.upsetBonus)return 0;
+  const p=PLAYERS[pid];
+  const fix=RFIX[r]&&RFIX[r].games;if(!fix)return 0;
+  const game=fix.find(g=>g[0]===p.sq||g[1]===p.sq);
+  if(!game||game[2]==null||game[3]==null)return 0;
+  const isHome=game[0]===p.sq;
+  const myScore=isHome?game[2]:game[3];const oppScore=isHome?game[3]:game[2];
+  if(myScore>=oppScore)return 0; // team won or drew
+  const pts=playerPts(pid,r);if(pts==null)return 0;
+  return pts>=(S.settings.upsetThreshold||60)?(S.settings.upsetBonusPts||10):0;
+}
+/* helper: get chips state safely */
+function getChips(){return (S.classic&&S.classic.chips)||{active:{},used:{},injured:[]};}
+
 /* team score for a classic lineup snapshot at round r (official results) */
 function lineupScore(line,r){
   if(!S.season.rounds[r])return {total:0,detail:[]};
-  const detail=[];
-  let total=0;
+  const chips=getChips();const active=chips.active||{};
+  const detail=[];let total=0;
+  const captainMult=S.settings.captainMult||2;
   const resAvail=line.res.filter(x=>x!=null&&playedIn(x,r)).sort((a,b)=>(playerPts(b,r)||0)-(playerPts(a,r)||0));
   const subUsed=new Set();
+  /* build scorer list */
   const scorers=[];
   for(const [posId,]of FIELD_STRUCT){for(const pid of line.starters[posId]){scorers.push({pid,posId,slot:'field'})}}
   if(S.settings.benchScores)for(const pid of line.bench)scorers.push({pid,posId:0,slot:'bench'});
-  let capPid=line.c!=null&&playedIn(line.c,r)?line.c:(line.vc!=null&&playedIn(line.vc,r)?line.vc:null);
+  /* resolve actual players (with auto-subs) */
+  const resolved=[];
   for(const sc of scorers){
     let pid=sc.pid,sub=false;
     if(pid==null)continue;
@@ -604,10 +665,54 @@ function lineupScore(line,r){
       const rep=resAvail.find(x=>!subUsed.has(x)&&(sc.posId===0||PLAYERS[x].pos.includes(sc.posId)));
       if(rep!=null){subUsed.add(rep);pid=rep;sub=true}else{detail.push({pid:sc.pid,pts:null,sub:false,cap:false});continue}
     }
-    let pts=playerPts(pid,r);
-    if(pid===capPid)pts=Math.round(pts*S.settings.captainMult);
+    resolved.push({pid,origPid:sc.pid,posId:sc.posId,slot:sc.slot,sub});
+  }
+  /* bench insurance chip: also count best bench player even if all starters played */
+  if(active.benchInsurance){
+    const alreadyIn=new Set(resolved.map(x=>x.pid));
+    const extras=line.bench.filter(x=>x!=null&&playedIn(x,r)&&!alreadyIn.has(x))
+      .sort((a,b)=>(playerPts(b,r)||0)-(playerPts(a,r)||0));
+    if(extras.length)resolved.push({pid:extras[0],origPid:extras[0],posId:0,slot:'bench_ins',sub:false});
+  }
+  /* determine captain logic */
+  let capPid=null,splitVcPid=null;
+  if(active.splitCaptain){
+    // each of C and VC gets 1+(captainMult-1)/2 instead of one player getting captainMult
+    capPid=line.c!=null&&playedIn(line.c,r)?line.c:null;
+    splitVcPid=line.vc!=null&&playedIn(line.vc,r)?line.vc:null;
+  } else if(active.posCaptain){
+    // best scorer at chosen position gets full captain mult
+    const pos=active.posCaptain.pos||1;
+    let bestPts=-Infinity;
+    for(const sc of resolved){
+      if(sc.posId===pos){const pts=playerPts(sc.pid,r)||0;if(pts>bestPts){bestPts=pts;capPid=sc.pid;}}
+    }
+  } else if(active.vcLock){
+    // VC only activates if captain scored under threshold
+    const thr=active.vcLock.threshold!=null?active.vcLock.threshold:30;
+    if(line.c!=null&&playedIn(line.c,r)){
+      const capRaw=playerPts(line.c,r)||0;
+      capPid=(capRaw<thr&&line.vc!=null&&playedIn(line.vc,r))?line.vc:line.c;
+    } else {
+      capPid=line.vc!=null&&playedIn(line.vc,r)?line.vc:null;
+    }
+  } else {
+    capPid=line.c!=null&&playedIn(line.c,r)?line.c:(line.vc!=null&&playedIn(line.vc,r)?line.vc:null);
+  }
+  const splitMult=1+(captainMult-1)/2;
+  /* score each player */
+  for(const sc of resolved){
+    let rawPts=playerPts(sc.pid,r)||0;
+    rawPts=Math.round(rawPts*consistencyMult(sc.pid,r));
+    let pts=rawPts,isCap=false;
+    if(active.splitCaptain){
+      if(sc.pid===capPid||sc.pid===splitVcPid){pts=Math.round(rawPts*splitMult);isCap=true;}
+    } else if(sc.pid===capPid){
+      pts=Math.round(rawPts*captainMult);isCap=true;
+    }
+    pts+=bonusPts(sc.pid,r)+upsetBonus(sc.pid,r);
     total+=pts;
-    detail.push({pid,orig:sc.pid,pts,sub,cap:pid===capPid});
+    detail.push({pid:sc.pid,orig:sc.origPid,pts,sub:sc.sub,cap:isCap,benchIns:sc.slot==='bench_ins'});
   }
   return {total,detail};
 }
@@ -680,6 +785,9 @@ function simulateRound(){
     S.draft.history[r]=S.draft.teams.map(t=>JSON.parse(JSON.stringify(t.line)));
   }
   S.classic.tradesRound=0;
+  /* clear round-only chips after each round */
+  const ch=S.classic.chips;
+  if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
   S.round=r+1;
   S.ui.mcRound=r;
   save();renderAll();
@@ -767,6 +875,78 @@ function seasonStarted(){return S.round>1}
 </script>
 <script>
 /* ================= CLASSIC PAGE ================= */
+/* ===== CHIPS PANEL ===== */
+function chipsHTML(){
+  const ch=getChips();const active=ch.active||{};const used=ch.used||{};
+  const injured=(ch.injured||[]).filter(pid=>S.classic.squad.includes(pid));
+  const leagueCfg=(S.settings.chipRules)||{};
+  const injCount=injured.length;
+  let html=`<div class="card" style="margin-bottom:12px"><h3>🃏 Power Chips <span class="tag">one-round boosts</span></h3>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">`;
+  for(const id of Object.keys(CHIP_DEFS)){
+    const def=CHIP_DEFS[id];
+    const maxUses=leagueCfg[id]!=null?leagueCfg[id]:def.uses;
+    if(maxUses===0)continue; // commissioner disabled this chip
+    const usedCount=used[id]||0;const isActive=!!active[id];
+    const exhausted=usedCount>=maxUses&&maxUses<999;
+    const locked=id==='injuryWildcard'&&injCount<3;
+    const canActivate=!exhausted&&!locked&&!isActive;
+    let statusBadge='';
+    if(isActive)statusBadge=`<span style="color:var(--acc);font-size:10px;font-weight:700">● ACTIVE</span>`;
+    else if(exhausted)statusBadge=`<span style="color:var(--dim);font-size:10px">USED</span>`;
+    else if(locked)statusBadge=`<span style="color:var(--amber);font-size:10px">🔒 Need ${3-injCount} more injured</span>`;
+    else statusBadge=`<span style="color:var(--dim);font-size:10px">${maxUses<999?`${maxUses-usedCount} left`:'unlimited'}</span>`;
+    html+=`<div style="background:var(--bg2);border:1px solid ${isActive?'var(--acc)':'var(--line)'};border-radius:10px;padding:10px;min-width:170px;max-width:230px">
+      <div style="font-size:18px">${def.icon}</div>
+      <div style="font-weight:700;font-size:13px;margin:3px 0">${def.name}</div>
+      <div style="font-size:11px;color:var(--dim);margin-bottom:6px">${def.desc}</div>
+      ${statusBadge}
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+      ${isActive?`<button class="btn sec" style="padding:4px 10px;font-size:11px" onclick="deactivateChip('${id}')">Deactivate</button>`
+        :(canActivate?`<button class="btn" style="padding:4px 10px;font-size:11px" onclick="activateChip('${id}')">Activate</button>`:'')}</div>
+    </div>`;
+  }
+  html+=`</div>`;
+  // Injured players section
+  html+=`<div style="margin-top:10px"><span class="muted" style="font-size:12px">🏥 Injured players (${injCount}/3 needed for Injury Wildcard): `;
+  if(injCount===0)html+=`<span class="muted">None marked — click a player card to mark injured.</span>`;
+  else html+=injured.map(pid=>`<span class="posb" style="background:rgba(248,113,113,.2);border-color:var(--red)">${esc(PLAYERS[pid].name)} <button style="background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px" onclick="toggleInjured(${pid})">✕</button></span>`).join(' ');
+  html+=`</span></div></div>`;
+  return html;
+}
+function activateChip(id){
+  const def=CHIP_DEFS[id];if(!def)return;
+  const ch=S.classic.chips=S.classic.chips||{active:{},used:{},injured:[]};
+  if(id==='posCaptain'){
+    const pos=prompt('Which position gets the captain bonus? Enter: 1=HOK 2=MID 3=EDG 4=HLF 5=CTR 6=WFB','4');
+    const posId=parseInt(pos);if(!posId||posId<1||posId>6){alert('Invalid position.');return;}
+    ch.active[id]={pos:posId};
+  } else if(id==='vcLock'){
+    const thr=prompt('Captain must score at least how many points for VC NOT to take over?','30');
+    const t=parseInt(thr);if(isNaN(t)){alert('Enter a number.');return;}
+    ch.active[id]={threshold:t};
+  } else {
+    ch.active[id]=true;
+  }
+  if(def.uses<999){ch.used[id]=(ch.used[id]||0)+1;}
+  save();renderClassic();
+}
+function deactivateChip(id){
+  const ch=getChips();
+  delete ch.active[id];
+  // refund use if roundOnly and we cancel before round is played
+  const def=CHIP_DEFS[id];
+  if(def&&def.uses<999&&(ch.used[id]||0)>0)ch.used[id]--;
+  save();renderClassic();
+}
+function toggleInjured(pid){
+  if(!S.classic.chips)S.classic.chips={active:{},used:{},injured:[]};
+  const inj=S.classic.chips.injured||(S.classic.chips.injured=[]);
+  const i=inj.indexOf(pid);
+  if(i>=0)inj.splice(i,1);else inj.push(pid);
+  save();renderClassic();
+}
+
 function renderClassic(){
   const el=$('#pg-classic');
   const val=squadValue(),cap=S.settings.cap,rem=S.classic.bank!=null?S.classic.bank:cap-val,n=S.classic.squad.length;
@@ -786,6 +966,7 @@ function renderClassic(){
   <div style="margin-bottom:12px"><div class="capbar ${rem<0?'over':''}"><div style="width:${Math.min(100,val/(val+Math.max(0,rem))*100)}%"></div></div></div>
   ${rem<0?'<div class="notice red">Over budget! Remove or downgrade players.</div>':''}
   ${n<SQUAD_N?`<div class="notice">Squad incomplete — fill all ${SQUAD_N} positions (${STARTERS_N} starters, ${BENCH_N} interchange, ${RES_N} reserves). Tap an empty slot to pick a player, or use Auto-complete.</div>`:''}
+  ${chipsHTML()}
   <div class="flex" style="margin-bottom:12px">
     <button class="btn sec" onclick="autoComplete()">⚡ Auto-complete team</button>
     <button class="btn sec" onclick="clearTeam()">Clear team</button>
@@ -932,6 +1113,7 @@ function playerMenu(pid){
      <button class="btn sec" onclick="S.classic.line.vc=${pid};if(S.classic.line.c===${pid})S.classic.line.c=null;save();closeModal();renderClassic()">Make Vice</button>
      <button class="btn danger" onclick="tradeOut(${pid})">${seasonStarted()?'Trade out':'Remove'}</button>
      <button class="btn sec" onclick="closeModal();showPlayer(${pid})">Full profile</button>
+     <button class="btn sec" style="border-color:var(--${(getChips().injured||[]).includes(pid)?'acc':'red'});color:var(--${(getChips().injured||[]).includes(pid)?'acc2':'red'})" onclick="toggleInjured(${pid});closeModal();renderClassic()">${(getChips().injured||[]).includes(pid)?'✓ Injured (unmark)':'🏥 Mark injured'}</button>
    </div>
    ${statRow(p)}`);
 }
@@ -1539,8 +1721,9 @@ function execTrade(outPid,inPid){
   const slot=lineSlots(S.classic.line).find(s=>s.pid===outPid);
   if(!slot)return;
   if(price(inPid)-price(outPid)>S.classic.bank){alert('Not enough salary.');return}
-  if(seasonStarted()){
-    if(S.classic.tradesRound>=S.settings.tradesPerRound){alert('No trades left this round.');return}
+  const injWild=!!(getChips().active||{}).injuryWildcard;
+  if(seasonStarted()&&!injWild){
+    if(S.classic.tradesRound>=S.settings.tradesPerRound){alert('No trades left this round. Use the Injury Wildcard chip if 3+ of your players are injured.');return}
     if(S.classic.tradesSeason>=S.settings.seasonTrades){alert('No season trades left.');return}
     S.classic.tradesRound++;S.classic.tradesSeason++;
   }
@@ -1767,6 +1950,63 @@ function renderSettings(){
     <div class="set-item"><label>Interchange scores (1=on 0=off)</label><input type="number" min="0" max="1" value="${st.benchScores?1:0}" onchange="S.settings.benchScores=!!+this.value;save()"></div>
    </div>
   </div>
+
+  <div class="card"><h3>🎯 Bonus point events <span class="tag">extra pts for milestone performances</span></h3>
+   <div class="notice" style="margin-bottom:10px">Rewards players who hit major stat milestones in a game — stacks with regular scoring. Requires Custom score mode OR works additively on top of Official scores.</div>
+   <div class="settings-grid">
+    <div class="set-item"><label>Enable bonus events</label>
+     <select onchange="S.settings.bonusEvents=this.value==='1';save();renderSettings()">
+      <option value="0" ${st.bonusEvents?'':'selected'}>Off</option>
+      <option value="1" ${st.bonusEvents?'selected':''}>On</option>
+     </select></div>
+    ${st.bonusEvents?`
+    <div class="set-item"><label>200+ run metres bonus (pts)</label><input type="number" value="${st.bonusMetre}" onchange="S.settings.bonusMetre=+this.value;save()"></div>
+    <div class="set-item"><label>50+ tackles bonus (pts)</label><input type="number" value="${st.bonusTackle}" onchange="S.settings.bonusTackle=+this.value;save()"></div>
+    <div class="set-item"><label>3+ try involvements bonus (pts)</label><input type="number" value="${st.bonusTryInv}" onchange="S.settings.bonusTryInv=+this.value;save()"></div>`:''}
+   </div>
+  </div>
+
+  <div class="card"><h3>📈 Consistency bonus <span class="tag">streak multiplier</span></h3>
+   <div class="notice" style="margin-bottom:10px">Players who score above their season average for X consecutive rounds earn a score multiplier that round.</div>
+   <div class="settings-grid">
+    <div class="set-item"><label>Enable consistency bonus</label>
+     <select onchange="S.settings.consistencyBonus=this.value==='1';save();renderSettings()">
+      <option value="0" ${st.consistencyBonus?'':'selected'}>Off</option>
+      <option value="1" ${st.consistencyBonus?'selected':''}>On</option>
+     </select></div>
+    ${st.consistencyBonus?`
+    <div class="set-item"><label>Rounds above avg needed</label><input type="number" min="1" max="10" value="${st.consistencyStreak}" onchange="S.settings.consistencyStreak=+this.value;save()"></div>
+    <div class="set-item"><label>Multiplier (e.g. 1.1 = +10%)</label><input type="number" step="0.05" min="1" max="2" value="${st.consistencyMult}" onchange="S.settings.consistencyMult=+this.value;save()"></div>`:''}
+   </div>
+  </div>
+
+  <div class="card"><h3>⚡ Upset bonus <span class="tag">reward standout losers</span></h3>
+   <div class="notice" style="margin-bottom:10px">A player who scores big in a match their team ultimately lost earns extra points — acknowledging elite individual effort despite the team result.</div>
+   <div class="settings-grid">
+    <div class="set-item"><label>Enable upset bonus</label>
+     <select onchange="S.settings.upsetBonus=this.value==='1';save();renderSettings()">
+      <option value="0" ${st.upsetBonus?'':'selected'}>Off</option>
+      <option value="1" ${st.upsetBonus?'selected':''}>On</option>
+     </select></div>
+    ${st.upsetBonus?`
+    <div class="set-item"><label>Min player score to trigger (pts)</label><input type="number" value="${st.upsetThreshold}" onchange="S.settings.upsetThreshold=+this.value;save()"></div>
+    <div class="set-item"><label>Bonus pts awarded</label><input type="number" value="${st.upsetBonusPts}" onchange="S.settings.upsetBonusPts=+this.value;save()"></div>`:''}
+   </div>
+  </div>
+
+  <div class="card"><h3>🃏 Custom chip rules <span class="tag">league commissioner — control available chips</span></h3>
+   <div class="notice" style="margin-bottom:10px">Set how many times each chip can be used per season. Set to 0 to disable a chip entirely for your league.</div>
+   <div class="settings-grid">
+   ${Object.values(CHIP_DEFS).map(def=>{
+     const cur=(st.chipRules||{})[def.id]!=null?(st.chipRules||{})[def.id]:def.uses;
+     return `<div class="set-item"><label>${def.icon} ${def.name} (uses/season)</label>
+      <input type="number" min="0" max="99" value="${cur>=999?99:cur}"
+       onchange="if(!S.settings.chipRules)S.settings.chipRules={};S.settings.chipRules['${def.id}']=+this.value===99?999:+this.value;save()">
+      <span style="font-size:10px;color:var(--dim)">99 = unlimited · 0 = disabled</span></div>`;
+   }).join('')}
+   </div>
+   <button class="btn sec" style="margin-top:10px" onclick="S.settings.chipRules={};save();renderSettings()">Reset chip rules to defaults</button>
+  </div>
   <div class="card"><h3>Season data <span class="tag">real results loaded through Round ${MAXR} of ${st.totalRounds}</span></h3>
    <p class="muted" style="margin-bottom:10px">Prices are the official round-by-round prices. When new NRL rounds finish, update to pull in the latest official scores, stat lines, prices and results.</p>
    <div class="flex">
@@ -1781,7 +2021,57 @@ function renderSettings(){
     <button class="btn danger" onclick="if(confirm('Reset the ENTIRE game — teams, leagues, season history?')){localStorage.removeItem(STORE_KEY);location.reload()}">⚠ Full reset</button>
    </div>
    <p class="tooltip">Squad: 1 HOK · 3 MID · 2 EDG · 2 HLF · 2 CTR · 3 WFB starters + ${BENCH_N} interchange + ${RES_N} reserves (${SQUAD_N} total). Reserves auto-cover non-playing scorers. One club has a bye each round — its players score 0, so plan your reserves.</p>
-  </div>`;
+  </div>
+
+  <div class="card"><h3>📖 Rules &amp; features explained</h3>
+  <div style="display:flex;flex-direction:column;gap:14px;margin-top:6px">
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">🏥 Injury Wildcard</div>
+    <p style="color:var(--dim);font-size:13px">A conditional chip that grants you <b>unlimited free trades</b> for a single round — but only unlocks when 3 or more of your players are on the injury list. To use it: open each injured player's card (Classic page → tap player) and click <b>Mark injured</b>. Once 3 are flagged, the chip activates in the Power Chips panel above your field. Unlike a standard wildcard it can only be used once per season and the injury condition must be met before each use.</p>
+   </div>
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">🎯 Positional Captain</div>
+    <p style="color:var(--dim);font-size:13px">Normally your named captain gets the score multiplier (default 2×). With the <b>Positional Captain</b> chip active, you choose a position (e.g. HLF = halves) and the captain bonus automatically goes to whichever player in that position scores the most points that round — regardless of who you've named as captain. Great for maximising returns in a round where one position is clearly going to dominate. Uses 3 times per season by default.</p>
+   </div>
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">⚡ Split Captain</div>
+    <p style="color:var(--dim);font-size:13px">Instead of doubling one player's score, the <b>Split Captain</b> chip applies a 1.5× multiplier to <em>both</em> your captain and vice-captain. If your usual captain/VC combo is: C = 80pts → 160pts and VC = 60pts, the split version gives 120 + 90 = 210 — a net win whenever the gap between C and VC is less than 50% of C's score. Useful in unpredictable rounds. 3 uses per season.</p>
+   </div>
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">🛡️ Bench Insurance</div>
+    <p style="color:var(--dim);font-size:13px">Normally your interchange players only score if a starter didn't play (reserve cover). <b>Bench Insurance</b> forces your best-scoring interchange player to also count toward your total — even if all 13 starters took the field and no cover was needed. Think of it as a guaranteed extra scorer for the round. 3 uses per season.</p>
+   </div>
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">🔒 Vice Captain Lock</div>
+    <p style="color:var(--dim);font-size:13px">By default your vice-captain only takes over if your captain doesn't play. With <b>VC Lock</b> you set a custom threshold (e.g. 30 points). If your captain plays but scores <em>under</em> that threshold, the captain multiplier shifts to your VC instead — giving you a safety net in rounds where your captain has a shocker. Activate the chip each round you want it in force and set the threshold accordingly.</p>
+   </div>
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">🎯 Bonus Point Events</div>
+    <p style="color:var(--dim);font-size:13px">An optional scoring layer (toggle in settings above) that rewards elite stat milestones in a single game: <b>200+ run metres</b> = bonus points, <b>50+ tackles</b> = bonus points, <b>3+ try involvements</b> (tries + try assists + try saves combined) = bonus points. The bonuses stack with regular scoring and apply on top of official points. Useful for rewarding dominant individual performances that the standard scoring system only partially captures. Configure the bonus values in the Bonus point events section.</p>
+   </div>
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">📈 Consistency Bonus</div>
+    <p style="color:var(--dim);font-size:13px">Rewards form streaks: if a player scores above their season average for X consecutive rounds (you configure X), their score gets a small multiplier that round (default 1.1×, i.e. +10%). The streak must be unbroken — one bad round resets it. This feature encourages picking consistent performers over boom-bust options and adds an extra dimension to captaincy decisions (a player on a long streak is worth an extra boost). Enable and configure in the Consistency bonus section.</p>
+   </div>
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">⚡ Upset Bonus</div>
+    <p style="color:var(--dim);font-size:13px">If a player scores above a threshold (default 60 pts) but their club lost the real NRL match, they earn extra fantasy points. This recognises that high-scoring efforts in a losing side are often undervalued — a halfback who racked up 80 points in a loss showed elite individual form despite the team result. Enable in the Upset bonus section and configure both the points threshold and the bonus amount.</p>
+   </div>
+
+   <div style="background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:12px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">🃏 Custom Chip Rules (League Commissioner)</div>
+    <p style="color:var(--dim);font-size:13px">League commissioners can restrict which chips are available and how many times they can be used per season. Set any chip's uses to <b>0</b> to disable it completely for your league — it won't appear in the Power Chips panel for any manager. Set to <b>99</b> for unlimited uses. These settings apply globally to the game instance, so configure them before your league season starts. Change them in the Custom chip rules section above.</p>
+   </div>
+
+  </div></div>`;
 }
 function exportSave(){
   const a=document.createElement('a');
