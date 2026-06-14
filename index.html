@@ -6,23 +6,54 @@
 <title>Fantasy Footy — NRL Edition (Unofficial)</title>
 <style>
 :root{
-  --bg:#0b1220; --bg2:#0e1729; --card:#141f33; --card2:#1a2742; --line:#26334e;
-  --txt:#e8eefb; --dim:#8fa0bd; --acc:#84cc16; --acc2:#a3e635; --red:#f87171; --amber:#fbbf24;
-  --blue:#38bdf8; --pink:#f472b6;
+  --bg:#07070c; --bg2:#13131f; --card:#1a1a28; --card2:#161622; --line:#252535;
+  --txt:#e8f0e8; --dim:#a8a8bc; --acc:#00e676; --acc2:#00b050; --red:#ff4d4d; --amber:#ffb700;
+  --blue:#00b7ff; --violet:#8a3df0; --pink:#f472b6;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:linear-gradient(180deg,#0b1220 0%,#0d1526 100%);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;font-size:14px}
-header{background:linear-gradient(90deg,#0f2a1a,#15331f 40%,#0e1729);border-bottom:2px solid var(--acc);padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:50}
-header h1{font-size:20px;letter-spacing:.5px}
-header h1 .ball{color:var(--acc)}
-header .sub{color:var(--dim);font-size:11px}
-.rd-pill{margin-left:auto;display:flex;align-items:center;gap:10px}
-.rd-pill .pill{background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-weight:600}
-nav{display:flex;gap:4px;background:var(--bg2);padding:6px 16px;border-bottom:1px solid var(--line);position:sticky;top:58px;z-index:49;overflow-x:auto}
-nav button{background:none;border:none;color:var(--dim);padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;border-radius:8px;white-space:nowrap}
-nav button:hover{color:var(--txt);background:var(--card)}
-nav button.on{color:#0b1220;background:var(--acc)}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;font-size:14px}
+/* ---- app shell layout ---- */
+#app-shell{display:flex;min-height:100vh}
+/* ---- sidebar (desktop) ---- */
+#sidebar{width:218px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand-row{display:flex;align-items:center;gap:11px;padding:0 4px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.brand-ball{font-size:28px;line-height:1}
+.brand-name{font-size:15px;font-weight:800;letter-spacing:.2px}
+.brand-sub{font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:2px;text-transform:uppercase}
+#sidebar-nav{display:flex;flex-direction:column;gap:1px}
+.navitem{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;color:var(--dim);font-size:13.5px;font-weight:600;cursor:pointer;transition:background .13s,color .13s;user-select:none}
+.navitem:hover{color:var(--txt);background:rgba(255,255,255,.06)}
+.navitem.on{color:var(--bg);background:var(--acc)}
+.ni{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.navsep{height:1px;background:var(--line);margin:8px 4px}
+.navspacer{flex:1}
+.prof-card{display:none;align-items:center;gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:10px;margin-top:10px;cursor:pointer}
+.prof-card:hover{border-color:var(--acc)}
+.prof-card .av-sm{width:32px;height:32px;border-radius:50%;background:var(--acc);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.prof-card b{font-size:13px;font-weight:700;display:block;color:var(--txt)}
+.prof-card span{font-size:11px;color:var(--dim)}
+/* ---- main wrap ---- */
+#main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow-x:hidden}
+/* ---- topbar ---- */
+#topbar{background:linear-gradient(90deg,#0d1a10,#132013 40%,#0e1729);border-bottom:1px solid var(--line);padding:0 20px;height:60px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:49;flex-shrink:0}
+.topbar-brand{font-size:16px;font-weight:800;letter-spacing:.3px;display:none;margin-right:4px}
+.topbar-brand .ball{color:var(--acc)}
+.rd-pill{display:flex;align-items:center;gap:10px;margin-right:auto}
+.rd-pill .pill{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-weight:700;font-size:14px}
 main{padding:18px;max-width:1280px;margin:0 auto}
+/* ---- bottom tab bar (mobile) ---- */
+#bottom-tabbar{display:none;position:fixed;bottom:0;left:0;right:0;background:#0d0d15;border-top:1px solid var(--line);z-index:50;justify-content:space-around;padding:6px 0 10px}
+.btab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 8px;color:var(--dim);font-size:10px;font-weight:600;cursor:pointer;border-radius:8px;min-width:52px;letter-spacing:.2px;user-select:none}
+.btab .bi{font-size:18px;line-height:1.3}
+.btab.on{color:var(--acc)}
+.btab:hover{color:var(--txt)}
+/* ---- responsive ---- */
+@media(max-width:768px){
+  #sidebar{display:none}
+  .topbar-brand{display:block}
+  #bottom-tabbar{display:flex}
+  #app-main{padding-bottom:80px}
+}
 .page{display:none}
 .page.on{display:block}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
@@ -67,13 +98,18 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{color:var(--dim);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;white-space:nowrap}
 th:hover{color:var(--txt)}
 td{padding:7px 8px;border-bottom:1px solid #1b2740;white-space:nowrap}
-tr:hover td{background:rgba(132,204,22,.05)}
+tr:hover td{background:rgba(0,230,118,.04)}
 .posb{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--card2);border:1px solid var(--line);margin-right:3px}
+.posb.hok{background:rgba(255,183,0,.13);color:#ffb700;border-color:rgba(255,183,0,.28)}
+.posb.mid,.posb.edg{background:rgba(0,230,118,.09);color:#00e676;border-color:rgba(0,230,118,.22)}
+.posb.hlf{background:rgba(138,61,240,.13);color:#c074ff;border-color:rgba(138,61,240,.28)}
+.posb.ctr{background:rgba(255,122,26,.13);color:#ff7a1a;border-color:rgba(255,122,26,.28)}
+.posb.wfb{background:rgba(0,183,255,.11);color:#00b7ff;border-color:rgba(0,183,255,.24)}
 .clubb{display:inline-flex;align-items:center;gap:5px;font-weight:600}
 .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
 .pos-filter{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
 .pos-filter button{background:var(--card2);border:1px solid var(--line);color:var(--dim);padding:5px 11px;border-radius:14px;cursor:pointer;font-size:12px;font-weight:600}
-.pos-filter button.on{background:var(--acc);color:#0b1220;border-color:var(--acc)}
+.pos-filter button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
 /* modal */
 #modal-bg{position:fixed;inset:0;background:rgba(4,8,16,.75);display:none;z-index:100;align-items:center;justify-content:center;padding:16px}
 #modal-bg.on{display:flex}
@@ -101,14 +137,14 @@ tr:hover td{background:rgba(132,204,22,.05)}
 .set-item input{width:100%}
 .draft-pick-log{max-height:280px;overflow-y:auto;font-size:12px}
 .onclock{animation:pulse 1.2s infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(132,204,22,.5)}50%{box-shadow:0 0 0 8px rgba(132,204,22,0)}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,.5)}50%{box-shadow:0 0 0 8px rgba(0,230,118,0)}}
 .ladder-pos{font-weight:800;color:var(--dim);width:24px;display:inline-block}
 .avatar-sm{border-radius:8px}
 .tooltip{font-size:11px;color:var(--dim);margin-top:6px}
 .tabs2{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
 .tabs2 button{background:var(--card2);border:1px solid var(--line);color:var(--dim);padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px}
-.tabs2 button.on{background:var(--acc);color:#0b1220;border-color:var(--acc)}
-.notice{background:rgba(132,204,22,.08);border:1px solid rgba(132,204,22,.35);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px}
+.tabs2 button.on{background:var(--acc);color:var(--bg);border-color:var(--acc)}
+.notice{background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.28);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px}
 .notice.red{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.35)}
 footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 ::-webkit-scrollbar{width:10px;height:10px}
@@ -132,9 +168,9 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .login-sub input{width:100%;margin-bottom:10px}
 .login-sub .btn{width:100%;padding:11px}
 /* ---- user avatar in header ---- */
-.user-chip{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:5px 12px 5px 5px;cursor:pointer}
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:5px 12px 5px 5px;cursor:pointer}
 .user-chip:hover{border-color:var(--acc)}
-.user-chip .av{width:28px;height:28px;border-radius:50%;background:var(--acc);color:#0b1220;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.user-chip .av{width:28px;height:28px;border-radius:50%;background:var(--acc);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
 .user-chip .un{font-size:13px;font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
@@ -175,36 +211,59 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
     <p style="color:var(--dim);font-size:11px;text-align:center;margin-top:18px">Unofficial fan-made game &middot; No data leaves your device</p>
   </div>
 </div>
-<header id="app-header" style="display:none">
-  <h1><span class="ball">&#127945;</span> Fantasy Footy <span class="sub">NRL EDITION &middot; UNOFFICIAL FAN GAME</span></h1>
-  <div class="rd-pill">
-    <span class="pill" id="hdr-round">Round 1</span>
-    <button class="btn" id="btn-sim">&#9654; Simulate Round</button>
-    <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none"></div>
+<div id="app-shell" style="display:none">
+  <!-- Sidebar — desktop nav -->
+  <aside id="sidebar">
+    <div class="brand-row">
+      <div class="brand-ball">🏉</div>
+      <div><div class="brand-name">NRL Fantasy</div><div class="brand-sub">2026 Season</div></div>
+    </div>
+    <nav id="sidebar-nav">
+      <div class="navitem on" data-pg="classic"><span class="ni">🏠</span>Classic</div>
+      <div class="navitem" data-pg="custom"><span class="ni">⚙️</span>Custom</div>
+      <div class="navitem" data-pg="draft"><span class="ni">📋</span>Draft</div>
+      <div class="navsep"></div>
+      <div class="navitem" data-pg="trades"><span class="ni">🔄</span>Trades</div>
+      <div class="navitem" data-pg="match"><span class="ni">⚡</span>Match Centre</div>
+      <div class="navitem" data-pg="leagues"><span class="ni">🏆</span>Leagues</div>
+      <div class="navitem" data-pg="players"><span class="ni">📊</span>Players</div>
+      <div class="navsep"></div>
+      <div class="navitem" data-pg="settings"><span class="ni">📖</span>Rules &amp; FAQ</div>
+    </nav>
+    <div class="navspacer"></div>
+    <div class="prof-card" id="sidebar-prof" onclick="showUserMenu()"></div>
+  </aside>
+  <!-- Main content area -->
+  <div id="main-wrap">
+    <div id="topbar">
+      <span class="topbar-brand"><span class="ball">🏉</span> NRL Fantasy</span>
+      <div class="rd-pill">
+        <span class="pill" id="hdr-round">Round 1</span>
+        <button class="btn" id="btn-sim">&#9654; Play Round</button>
+      </div>
+      <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none"></div>
+    </div>
+    <main id="app-main">
+      <div class="page on" id="pg-classic"></div>
+      <div class="page" id="pg-custom"></div>
+      <div class="page" id="pg-draft"></div>
+      <div class="page" id="pg-trades"></div>
+      <div class="page" id="pg-match"></div>
+      <div class="page" id="pg-leagues"></div>
+      <div class="page" id="pg-players"></div>
+      <div class="page" id="pg-settings"></div>
+    </main>
   </div>
-</header>
-<nav id="nav" style="display:none">
-  <button data-pg="classic" class="on">Classic</button>
-  <button data-pg="custom">Custom</button>
-  <button data-pg="draft">Draft</button>
-  <button data-pg="trades">Trades</button>
-  <button data-pg="match">Match Centre</button>
-  <button data-pg="leagues">Leagues</button>
-  <button data-pg="players">Players</button>
-  <button data-pg="settings">Rules &amp; FAQ</button>
-</nav>
-<main id="app-main" style="display:none">
-  <div class="page on" id="pg-classic"></div>
-  <div class="page" id="pg-custom"></div>
-  <div class="page" id="pg-draft"></div>
-  <div class="page" id="pg-trades"></div>
-  <div class="page" id="pg-match"></div>
-  <div class="page" id="pg-leagues"></div>
-  <div class="page" id="pg-players"></div>
-  <div class="page" id="pg-settings"></div>
-</main>
+  <!-- Bottom tab bar — mobile nav -->
+  <nav id="bottom-tabbar">
+    <div class="btab on" data-pg="classic"><span class="bi">🏠</span>Classic</div>
+    <div class="btab" data-pg="custom"><span class="bi">⚙️</span>Custom</div>
+    <div class="btab" data-pg="draft"><span class="bi">📋</span>Draft</div>
+    <div class="btab" data-pg="trades"><span class="bi">🔄</span>Trades</div>
+    <div class="btab" data-pg="players"><span class="bi">📊</span>More</div>
+  </nav>
+</div>
 <div id="modal-bg"><div id="modal"></div></div>
-<footer>Unofficial fan-made fantasy game for personal use. Player names &amp; statistics are factual data. Not affiliated with or endorsed by the NRL.</footer>
 <script>
 /* ================= DATA ================= */
 /* Player rows: name|club|price($k)|positions|avg|gp|high|low|own%|last3avg  (real season data) */
@@ -400,20 +459,18 @@ function completeLogin(method){
   save();showApp();
 }
 function showApp(){
+  const shell=document.getElementById('app-shell');
   if(!S.user){
     document.getElementById('login-page').style.display='flex';
-    document.getElementById('app-header').style.display='none';
-    document.getElementById('nav').style.display='none';
-    document.getElementById('app-main').style.display='none';
+    if(shell)shell.style.display='none';
     return;
   }
   document.getElementById('login-page').style.display='none';
-  document.getElementById('app-header').style.display='flex';
-  document.getElementById('nav').style.display='flex';
-  document.getElementById('app-main').style.display='block';
+  if(shell)shell.style.display='flex';
   const chip=document.getElementById('user-chip');
-  chip.style.display='flex';
-  chip.innerHTML=`<div class="av">${S.user.initials}</div><span class="un">${esc(S.user.name)}</span>`;
+  if(chip){chip.style.display='flex';chip.innerHTML=`<div class="av">${S.user.initials}</div><span class="un">${esc(S.user.name)}</span>`;}
+  const sp=document.getElementById('sidebar-prof');
+  if(sp){sp.style.display='flex';sp.innerHTML=`<div class="av-sm">${S.user.initials}</div><div><b>${esc(S.user.name)}</b><span>Season 2026</span></div>`;}
 }
 function showUserMenu(){
   openModal(`<div style="text-align:center;padding:10px 0">
@@ -2565,11 +2622,12 @@ $('#modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')closeMod
 
 function setPage(pg){
   S.ui.page=pg;
-  $$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
+  $$('#sidebar-nav .navitem').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
+  $$('#bottom-tabbar .btab').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
   $$('.page').forEach(p=>p.classList.toggle('on',p.id==='pg-'+pg));
   renderAll();save();
 }
-$$('#nav button').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.pg)));
+$$('#sidebar-nav .navitem, #bottom-tabbar .btab').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.pg)));
 $('#btn-sim').addEventListener('click',()=>{
   if(S.classic.squad.length<SQUAD_N&&!confirm('Your Classic squad is incomplete ('+S.classic.squad.length+'/'+SQUAD_N+'). Apply the round anyway?'))return;
   simulateRound();
