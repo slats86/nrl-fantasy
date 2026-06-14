@@ -3020,7 +3020,7 @@ function renderPlayers(){
      <td>${p.pos.map(x=>`<span class="posb">${POSN[x]}</span>`).join('')}</td>
      <td>${fmtK(price(p.id))} ${delta?`<span class="${delta>0?'good':'bad'}" style="font-size:10px">${delta>0?'▲':'▼'}${fmtK(Math.abs(delta))}</span>`:''}</td>
      <td><b>${p.avg||'–'}</b></td><td>${p.l3||'–'}</td><td>${ppmC[p.id]!=null?ppmC[p.id].toFixed(2):'–'}</td><td>${trendIcon(t)}</td><td>${p.gp}</td><td>${p.hi}</td><td>${p.own}%</td>
-     <td><button class="btn" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();openComparison(${p.id})">⇔</button></td></tr>\`;
+     <td><button class="btn" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();openComparison(${p.id})">⇔</button></td></tr>`;
    }).join('')}
    </tbody></table></div>
    ${list.length>200?'<p class="muted" style="margin-top:8px">Showing first 200 — refine your search.</p>':''}
@@ -3230,8 +3230,7 @@ applyLayout();
 applyDataPatch();
 if(S.classic.bank==null)S.classic.bank=S.settings.cap-squadValue(); /* migrate: bank = cap - current value */
 /* LOGIN DISABLED — set a guest user so the app loads directly */
-if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};
-showApp();
+if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};showApp();
 setPage(S.ui.page||'classic');
 </script>
 </body>
