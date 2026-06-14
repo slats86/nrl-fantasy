@@ -253,7 +253,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 </style>
 </head>
 <body>
-<div id="login-page">
+<div id="login-page" style="display:none">
   <div class="login-card">
     <div class="login-logo">
       <span class="ball">🏉</span>
@@ -543,7 +543,7 @@ function completeLogin(method){
   }
   const initials=name.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';
   S.user={name,email,method,initials};
-  save();showApp();
+  save();showApp();setPage(S.ui.page||'classic');
 }
 function showApp(){
   const shell=document.getElementById('app-shell');
