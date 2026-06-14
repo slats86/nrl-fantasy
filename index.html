@@ -250,6 +250,17 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
   .bench-row{gap:4px}
 }
 
+
+/* ── MODE TABS ── */
+.mode-tabs{display:flex;gap:2px;background:var(--bg2);border-radius:10px;padding:3px;margin-bottom:16px;border:1px solid var(--line);flex-wrap:wrap}
+.mode-tabs button{flex:1;min-width:80px;padding:9px 10px;border-radius:7px;font-size:13px;font-weight:600;color:var(--dim);background:none;border:none;cursor:pointer;transition:background .13s,color .13s;white-space:nowrap}
+.mode-tabs button.on{background:var(--acc);color:#07070c}
+.mode-tabs button:hover:not(.on){background:rgba(255,255,255,.06);color:var(--txt)}
+.mode-hdr{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;padding:2px 0}
+.mode-hdr h1{margin:0 0 3px;font-size:20px}
+.mode-hdr .msub{color:var(--dim);font-size:12px}
+.mstat b{display:block;font-size:17px;font-weight:800;color:var(--txt)}
+.mstat span{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
 </style>
 </head>
 <body>
@@ -302,7 +313,6 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
       <div class="navitem" data-pg="custom"><span class="ni">⚙️</span>Custom</div>
       <div class="navitem" data-pg="draft"><span class="ni">📋</span>Draft</div>
       <div class="navsep"></div>
-      <div class="navitem" data-pg="trades"><span class="ni">🔄</span>Trades</div>
       <div class="navitem" data-pg="match"><span class="ni">⚡</span>Match Centre</div>
       <div class="navitem" data-pg="leagues"><span class="ni">🏆</span>Leagues</div>
       <div class="navitem" data-pg="players"><span class="ni">📊</span>Players</div>
@@ -339,7 +349,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
     <div class="btab" data-pg="home"><span class="bi">📈</span>Home</div>
     <div class="btab on" data-pg="classic"><span class="bi">🏠</span>Classic</div>
     <div class="btab" data-pg="draft"><span class="bi">📋</span>Draft</div>
-    <div class="btab" data-pg="trades"><span class="bi">🔄</span>Trades</div>
+    <div class="btab" data-pg="custom"><span class="bi">⚙️</span>Custom</div>
     <div class="btab" data-pg="players"><span class="bi">📊</span>More</div>
   </nav>
 </div>
@@ -447,7 +457,7 @@ function defaultState(){
     priceHistory:{},   /* {round:{pid:price}} snapshot after each simulated round */
     plannedTrades:[],  /* [{out:pid,in:pid,note:''}] staged future trades */
     user:null,   /* {name,email,method,initials} */
-    ui:{page:'classic',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',slotPick:null,draftQ:'',draftPos:0}
+    ui:{page:'classic',classicTab:'team',draftPostTab:'team',trPage:'classic',trTab:'centre',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',slotPick:null,draftQ:'',draftPos:0}
   };
 }
 function emptyLine(){
@@ -501,6 +511,11 @@ function load(){
     if(S.settings&&S.settings.bonusEvents===undefined){S.settings.bonusEvents=false;S.settings.bonusMetre=5;S.settings.bonusTackle=5;S.settings.bonusTryInv=5;S.settings.consistencyBonus=false;S.settings.consistencyStreak=3;S.settings.consistencyMult=1.1;S.settings.upsetBonus=false;S.settings.upsetThreshold=60;S.settings.upsetBonusPts=10;}
     if(S.draft&&!S.draft.phase)S.draft=null; /* migrate: reset legacy draft — new league-code flow required */
     if(!S.watchlist)S.watchlist=[];
+    if(!S.ui.classicTab)S.ui.classicTab='team';
+    if(!S.ui.draftPostTab)S.ui.draftPostTab='team';
+    if(!S.ui.trPage)S.ui.trPage='classic';
+    if(!S.ui.trTab)S.ui.trTab='centre';
+    if(['scoring','bonuses','rules'].includes(S.ui.customTab))S.ui.customTab='settings';
     if(!S.priceHistory)S.priceHistory={};
     if(!S.plannedTrades)S.plannedTrades=[];
     if(S.settings&&!S.settings.layout){ /* migrate: preserve this save's existing squad shape */
@@ -1537,10 +1552,96 @@ function stopPickTimer(){
   if(_draftTimerID){clearInterval(_draftTimerID);_draftTimerID=null;}
 }
 
+
+/* ===== SHARED MODE TRADES HTML ===== */
+function modeTradesHTML(mode){
+  S.ui.trPage=mode;
+  const bank=S.classic.bank,started=seasonStarted();
+  const sub=S.ui.trTab||'centre';
+  const re=mode==='custom'?'renderCustom()':'renderClassic()';
+  if(S.classic.squad.length===0)return `<div class="card" style="text-align:center;padding:40px">
+    <p class="muted">Build your squad in My Team first.</p>
+    <button class="btn" onclick="S.ui.${mode==='custom'?'customTab':'classicTab'}='team';${re}">👥 Go to My Team</button></div>`;
+  return `<div class="statbar">
+    <div class="stat ${bank<0?'warn':''}"><div class="v">${fmtM(bank)}</div><div class="l">Salary remaining</div></div>
+    <div class="stat"><div class="v">${fmtM(squadValue())}</div><div class="l">Team value</div></div>
+    <div class="stat"><div class="v">${started?(S.settings.tradesPerRound-S.classic.tradesRound):'∞'}</div><div class="l">Trades this round</div></div>
+    <div class="stat"><div class="v">${started?(S.settings.seasonTrades-S.classic.tradesSeason):'—'}</div><div class="l">Season trades left</div></div>
+  </div>
+  <div class="tabs2">
+    <button class="${sub==='centre'?'on':''}" onclick="S.ui.trTab='centre';${re}">🔄 Trade Centre</button>
+    <button class="${sub==='bye'?'on':''}" onclick="S.ui.trTab='bye';${re}">📅 Bye Planner</button>
+  </div>
+  ${sub==='centre'?tradeCentreHTML():byePlannerHTML()}`;
+}
+
+/* ===== CLASSIC / CUSTOM LEAGUE MATCHUP ===== */
+function classicMatchupHTML(){
+  const lg=S.league;
+  if(!lg)return `<div class="card" style="text-align:center;padding:40px 20px">
+    <div style="font-size:40px;margin-bottom:10px">🏟</div>
+    <h3>No League Yet</h3>
+    <p class="muted" style="margin:8px 0 18px">Create or join a head-to-head Classic league to track weekly matchups and the ladder.</p>
+    <button class="btn" onclick="setPage('leagues')">Go to Leagues</button>
+  </div>`;
+  const myI=0,ladder=leagueLadder(lg,false);
+  const nextR=Math.min(S.round,24),lastR=S.round-1;
+  const myFx=leagueFixtures(lg.teams.length,nextR).find(([a,b])=>a===myI||b===myI);
+  const oppI=myFx?(myFx[0]===myI?myFx[1]:myFx[0]):null;
+  let lastHTML='';
+  if(lastR>=1&&lg.history&&lg.history[lastR]){
+    const mf=leagueFixtures(lg.teams.length,lastR).find(([a,b])=>a===myI||b===myI);
+    if(mf){
+      const opI=mf[0]===myI?mf[1]:mf[0];
+      const myS=lineupScore(lg.history[lastR][myI],lastR).total;
+      const opS=lineupScore(lg.history[lastR][opI],lastR).total;
+      const win=myS>=opS;
+      lastHTML=`<div class="card" style="margin-bottom:14px"><h3>Round ${lastR} Result</h3>
+        <div style="display:flex;align-items:center;gap:16px;font-weight:700;padding:10px 0;font-size:15px">
+          <span style="flex:1;text-align:right">${esc(lg.teams[myI].name)}</span>
+          <span class="${win?'good':'bad'}" style="font-size:26px">${myS}</span>
+          <span style="color:var(--dim)">–</span>
+          <span class="${!win?'good':'bad'}" style="font-size:26px">${opS}</span>
+          <span style="flex:1">${esc(lg.teams[opI].name)}</span>
+        </div>
+        <div class="${win?'good':'bad'}" style="text-align:center;font-size:13px">${win?'✅ Win':'❌ Loss'}</div>
+      </div>`;
+    }
+  }
+  return lastHTML+`<div class="card"><h3>🏅 Ladder</h3>
+    ${oppI!=null?`<div style="margin-bottom:10px;font-size:13px">Round ${nextR}: <b>${esc(lg.teams[myI].name)}</b> vs <b>${esc(lg.teams[oppI].name)}</b></div>`:'<div style="color:var(--dim);font-size:13px;margin-bottom:10px">Bye in Round '+nextR+'</div>'}
+    <div style="overflow-x:auto"><table style="width:100%"><thead>
+      <tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>D</th><th>PF</th><th>PA</th><th>Pts</th></tr>
+    </thead><tbody>
+    ${ladder.map((t,i)=>`<tr style="${t.i===myI?'background:rgba(0,230,118,.07);font-weight:700':''}">
+      <td>${i+1}</td><td>${esc(lg.teams[t.i].name)}</td>
+      <td>${t.w}</td><td>${t.l}</td><td>${t.d}</td><td>${t.pf}</td><td>${t.pa}</td><td><b>${t.pts}</b></td>
+    </tr>`).join('')}
+    </tbody></table></div></div>`;
+}
 function renderClassic(){
-  $('#pg-classic').innerHTML=`
-  <div class="notice">🏆 <b>Classic mode</b> — official NRL Fantasy rules. Standard scoring, 2 trades per round, 30 season trades, captain doubles. No chips or bonus rules.</div>
-  ${squadInnerHTML()}`;
+  const el=$('#pg-classic');
+  const tab=S.ui.classicTab||'team';
+  const bank=S.classic.bank,started=seasonStarted();
+  S.ui.trPage='classic';
+  el.innerHTML=`
+  <div class="mode-hdr">
+    <div><h1>🏆 Classic</h1><div class="msub">Official NRL Fantasy · cap ${fmtK(S.settings.cap)}</div></div>
+    <span class="spacer"></span>
+    <div style="display:flex;gap:18px">
+      <div class="mstat"><b class="${bank<0?'bad':''}">${fmtM(bank)}</b><span>Bank</span></div>
+      <div class="mstat"><b>${started?(S.settings.tradesPerRound-S.classic.tradesRound):'∞'}</b><span>Trades left</span></div>
+      <div class="mstat"><b>${fmtM(squadValue())}</b><span>Team value</span></div>
+    </div>
+  </div>
+  <div class="mode-tabs">
+    <button class="${tab==='team'?'on':''}" onclick="S.ui.classicTab='team';renderClassic()">👥 My Team</button>
+    <button class="${tab==='trades'?'on':''}" onclick="S.ui.classicTab='trades';renderClassic()">🔄 Trades</button>
+    <button class="${tab==='matchup'?'on':''}" onclick="S.ui.classicTab='matchup';renderClassic()">🏟 League Matchup</button>
+  </div>
+  ${tab==='team'?squadInnerHTML():''}
+  ${tab==='trades'?modeTradesHTML('classic'):''}
+  ${tab==='matchup'?classicMatchupHTML():''}`;
 }
 function customLeagueSetupHTML(){
   const st=S.settings;
@@ -1643,16 +1744,16 @@ function renderCustom(){
    <span class="spacer"></span>
    <button class="btn sec" style="font-size:12px" onclick="if(confirm('Delete custom league and reset settings?')){S.customLeague=null;save();renderCustom()}">Delete league</button>
   </div>
-  <div class="tabs2" style="margin-bottom:14px">
-   <button class="${tab==='team'?'on':''}" onclick="S.ui.customTab='team';renderCustom()">My Team</button>
-   <button class="${tab==='scoring'?'on':''}" onclick="S.ui.customTab='scoring';renderCustom()">Scoring</button>
-   <button class="${tab==='bonuses'?'on':''}" onclick="S.ui.customTab='bonuses';renderCustom()">Chips &amp; Bonuses</button>
-   <button class="${tab==='rules'?'on':''}" onclick="S.ui.customTab='rules';renderCustom()">Squad Rules</button>
+  <div class="mode-tabs" style="margin-bottom:14px">
+   <button class="${tab==='team'?'on':''}" onclick="S.ui.customTab='team';renderCustom()">👥 My Team</button>
+   <button class="${tab==='trades'?'on':''}" onclick="S.ui.customTab='trades';S.ui.trPage='custom';renderCustom()">🔄 Trades</button>
+   <button class="${tab==='matchup'?'on':''}" onclick="S.ui.customTab='matchup';renderCustom()">🏟 League Matchup</button>
+   <button class="${tab==='settings'?'on':''}" onclick="S.ui.customTab='settings';renderCustom()">⚙ Settings</button>
   </div>
-  ${tab==='team'?`
-  ${squadInnerHTML()}
-  ${chipsHTML()}`:''}
-  ${tab==='scoring'?`
+  ${tab==='team'?`${squadInnerHTML()}${chipsHTML()}`:''}  
+  ${tab==='trades'?modeTradesHTML('custom'):''}
+  ${tab==='matchup'?classicMatchupHTML():''}
+  ${tab==='settings'?`
   <div class="card"><h3>Scoring mode</h3>
    <div class="flex">
     <select onchange="S.settings.scoreMode=this.value;save();renderCustom()">
@@ -1668,7 +1769,7 @@ function renderCustom(){
    </div>
    <button class="btn sec" style="margin-top:10px" onclick="S.settings.rules={...DEFAULT_RULES};save();renderCustom()">Reset to defaults</button>
   </div>`:''}
-  ${tab==='bonuses'?`
+  ${tab==='settings'?`
   <div class="card"><h3>🎯 Bonus point events <span class="tag">extra pts for milestone performances</span></h3>
    <div class="notice" style="margin-bottom:10px">Rewards players who hit major stat milestones — stacks with regular scoring.</div>
    <div class="settings-grid">
@@ -1717,7 +1818,7 @@ function renderCustom(){
    </div>
    <button class="btn sec" style="margin-top:10px" onclick="S.settings.chipRules={};save();renderCustom()">Reset chip rules</button>
   </div>`:''}
-  ${tab==='rules'?`
+  ${tab==='settings'?`
   <div class="card"><h3>Squad layout</h3>
    <div class="settings-grid">
     ${POS_IDS.map(pi=>`<div class="set-item"><label>${POSN[pi]} starters</label><input type="number" min="0" max="6" value="${st.layout[POSN[pi]]}" onchange="setLayout('${POSN[pi]}',this.value)"></div>`).join('')}
@@ -2395,34 +2496,111 @@ function draftRoomHTML(){
   </div>`;
 }
 function draftLeagueHTML(){
-  const D=S.draft;
-  const r=Math.min(S.round-1,24);
+  const D=S.draft,me=D.teams[D.me];
+  const tab=S.ui.draftPostTab||'team';
   const nextR=Math.min(S.round,24);
-  const fx=leagueFixtures(D.size,nextR);
-  const myFx=fx.find(([a,b])=>a===D.me||b===D.me);
-  const oppI=myFx?(myFx[0]===D.me?myFx[1]:myFx[0]):null;
   const ladder=leagueLadder(D,true);
-  /* last result */
+  const myFx=leagueFixtures(D.size,nextR).find(([a,b])=>a===D.me||b===D.me);
+  const oppI=myFx?(myFx[0]===D.me?myFx[1]:myFx[0]):null;
+  return `<div class="mode-hdr">
+    <div><h1>📋 Draft League</h1><div class="msub">${esc(me.name)} · Round ${nextR}</div></div>
+    <span class="spacer"></span>
+    <div style="display:flex;gap:18px">
+      <div class="mstat"><b>${me.roster.length}</b><span>Players</span></div>
+      <div class="mstat"><b>${oppI!=null?esc(D.teams[oppI].name):'Bye'}</b><span>Opponent</span></div>
+    </div>
+  </div>
+  <div class="mode-tabs">
+    <button class="${tab==='team'?'on':''}" onclick="S.ui.draftPostTab='team';renderDraft()">👥 My Team</button>
+    <button class="${tab==='trades'?'on':''}" onclick="S.ui.draftPostTab='trades';renderDraft()">🔄 Waivers / FA</button>
+    <button class="${tab==='matchup'?'on':''}" onclick="S.ui.draftPostTab='matchup';renderDraft()">🏟 League Matchup</button>
+    <button class="${tab==='history'?'on':''}" onclick="S.ui.draftPostTab='history';renderDraft()">📜 History</button>
+  </div>
+  ${tab==='team'?draftMyTeamHTML():''}
+  ${tab==='trades'?draftFATab():''}
+  ${tab==='matchup'?draftMatchupTabHTML():''}
+  ${tab==='history'?draftHistoryTabHTML():''}`;
+}
+function draftMyTeamHTML(){
+  const D=S.draft,me=D.teams[D.me];
+  const slotCard=(pid,posId,bi)=>{
+    if(pid==null)return `<div class="pcard empty" onclick="draftSlotMenu(null,${posId},${bi})"><div style="font-size:22px">+</div><div style="font-size:10px">${posId?POSN[posId]:'INT'}</div></div>`;
+    const p=PLAYERS[pid];
+    return `<div class="pcard" onclick="draftSlotMenu(${pid},${posId},${bi})">${avatar(p,38)}<div class="nm">${esc(p.name)}</div><div class="meta">${CLUBS[p.sq].s}</div><div class="meta">avg ${p.avg||'–'}</div></div>`;
+  };
+  let field='';
+  const rows=[[6,'WFB / WINGERS'],[5,'CENTRES'],[4,'HALVES'],[3,'EDGE FORWARDS'],[2,'MIDDLE FORWARDS'],[1,'HOOKER']];
+  for(const[posId,label]of rows)
+    field+=`<div class="frow">${me.line.starters[posId].map((pid,i)=>slotCard(pid,posId,i)).join('')}</div><div class="frow-label">${label}</div>`;
+  field+=`<div class="bench-zone"><div class="ttl">BENCH</div><div class="bench-row">${me.line.bench.map((pid,i)=>slotCard(pid,0,i)).join('')}</div></div>`;
+  return `<div class="field">${field}</div>
+    <div class="flex" style="margin-top:10px">
+      <button class="btn sec" onclick="autoSetDraftLineup(S.draft.teams[S.draft.me]);save();renderDraft()">⚡ Auto-set best lineup</button>
+    </div>`;
+}
+function draftMatchupTabHTML(){
+  const D=S.draft,me=D.teams[D.me];
+  const r=Math.min(S.round-1,24),nextR=Math.min(S.round,24);
+  const ladder=leagueLadder(D,true);
+  const myFx=leagueFixtures(D.size,nextR).find(([a,b])=>a===D.me||b===D.me);
+  const oppI=myFx?(myFx[0]===D.me?myFx[1]:myFx[0]):null;
   let lastHTML='';
-  if(r>=1&&D.history[r]){
-    const fxL=leagueFixtures(D.size,r);
-    const mf=fxL.find(([a,b])=>a===D.me||b===D.me);
+  if(r>=1&&D.history&&D.history[r]){
+    const mf=leagueFixtures(D.size,r).find(([a,b])=>a===D.me||b===D.me);
     if(mf){
-      const myS=draftScoreSnap(D,D.me,r),opI=mf[0]===D.me?mf[1]:mf[0],opS=draftScoreSnap(D,opI,r);
-      lastHTML=`<div class="notice">Round ${r}: <b>${esc(D.teams[D.me].name)} ${myS}</b> ${myS>opS?'<span class="good">def.</span>':myS<opS?'<span class="bad">lost to</span>':'drew with'} ${esc(D.teams[opI].name)} ${opS}</div>`;
+      const opI=mf[0]===D.me?mf[1]:mf[0];
+      const myS=draftScoreSnap(D,D.me,r),opS=draftScoreSnap(D,opI,r);
+      const win=myS>=opS;
+      lastHTML=`<div class="card" style="margin-bottom:14px"><h3>Round ${r} Result</h3>
+        <div style="display:flex;align-items:center;gap:16px;font-weight:700;padding:10px 0;font-size:15px">
+          <span style="flex:1;text-align:right">${esc(me.name)}</span>
+          <span class="${win?'good':'bad'}" style="font-size:26px">${myS}</span>
+          <span style="color:var(--dim)">–</span>
+          <span class="${!win?'good':'bad'}" style="font-size:26px">${opS}</span>
+          <span style="flex:1">${esc(D.teams[opI].name)}</span>
+        </div>
+        <div class="${win?'good':'bad'}" style="text-align:center;font-size:13px">${win?'✅ Win':'❌ Loss'}</div>
+      </div>`;
     }
   }
-  return `
-  <div class="tabs2">
-    <button class="${(S.ui.draftTab||'team')==='team'?'on':''}" onclick="S.ui.draftTab='team';renderDraft()">My Team</button>
-    <button class="${S.ui.draftTab==='fa'?'on':''}" onclick="S.ui.draftTab='fa';renderDraft()">Free Agents</button>
-    <button class="${S.ui.draftTab==='ladder'?'on':''}" onclick="S.ui.draftTab='ladder';renderDraft()">Ladder & Fixtures</button>
-    <span class="spacer"></span>
-    <button class="btn danger" onclick="if(confirm('Delete draft league and start over?')){S.draft=null;save();renderDraft()}">Reset draft league</button>
-  </div>
-  ${lastHTML}
-  ${(S.ui.draftTab||'team')==='team'?draftTeamTab(oppI,nextR):S.ui.draftTab==='fa'?draftFATab():draftLadderTab(ladder)}`;
+  const nextCard=oppI!=null
+    ?`<div class="card" style="margin-bottom:14px"><h3>Round ${nextR} Matchup — vs ${esc(D.teams[oppI].name)}</h3>
+      <p class="muted" style="margin-bottom:10px">Simulate the round to play this match.</p>
+      ${D.teams[oppI].roster.map(pid=>{const p=PLAYERS[pid];return `<div class="flex" style="padding:3px 0;border-bottom:1px solid var(--line)">${avatar(p,24)} ${esc(p.name)} <span class="muted">${posStr(p)}</span><span class="spacer"></span>avg ${p.avg||'–'}</div>`}).join('')}
+    </div>`
+    :`<div class="card" style="margin-bottom:14px"><p class="muted">Bye in Round ${nextR}.</p></div>`;
+  return lastHTML+nextCard+`<div class="card"><h3>🏅 Ladder</h3>
+    <div style="overflow-x:auto"><table style="width:100%"><thead>
+      <tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>D</th><th>PF</th><th>PA</th><th>Pts</th></tr>
+    </thead><tbody>
+    ${ladder.map((t,i)=>`<tr style="${t.i===D.me?'background:rgba(0,230,118,.07);font-weight:700':''}">
+      <td>${i+1}</td><td>${esc(D.teams[t.i].name)}</td>
+      <td>${t.w}</td><td>${t.l}</td><td>${t.d}</td><td>${t.pa}</td><td>${t.pa}</td><td><b>${t.pts}</b></td>
+    </tr>`).join('')}
+    </tbody></table></div></div>`;
 }
+function draftHistoryTabHTML(){
+  const D=S.draft,me=D.teams[D.me];
+  const maxR=Math.min(S.round-1,24);
+  const rows=[];
+  for(let r=1;r<=maxR;r++){
+    if(!D.history||!D.history[r])continue;
+    const mf=leagueFixtures(D.size,r).find(([a,b])=>a===D.me||b===D.me);
+    if(!mf)continue;
+    const opI=mf[0]===D.me?mf[1]:mf[0];
+    const myS=draftScoreSnap(D,D.me,r),opS=draftScoreSnap(D,opI,r);
+    rows.push(`<tr><td>Rd ${r}</td><td>${esc(D.teams[opI].name)}</td>
+      <td class="${myS>=opS?'good':'bad'}"><b>${myS}</b></td><td>${opS}</td>
+      <td class="${myS>=opS?'good':'bad'}">${myS>=opS?'✅ Win':'❌ Loss'}</td></tr>`);
+  }
+  return `<div class="card"><h3>📜 Season History</h3>
+    ${maxR<1?'<p class="muted">No rounds played yet.</p>':`<div style="overflow-x:auto"><table style="width:100%">
+      <thead><tr><th>Round</th><th>Opponent</th><th>Your pts</th><th>Their pts</th><th>Result</th></tr></thead>
+      <tbody>${rows.join('')||'<tr><td colspan="5" class="muted">No results yet.</td></tr>'}</tbody>
+    </table></div>`}
+  </div>`;
+}
+
 function draftTeamTab(oppI,nextR){
   const D=S.draft,me=D.teams[D.me];
   const slotCard=(pid,posId,bi)=>{
@@ -2851,6 +3029,13 @@ function renderTrades(){
 }
 
 /* ---------- trade centre ---------- */
+
+function refreshTrades(){
+  const m=S.ui.trPage||'classic';
+  if(m==='custom')renderCustom();
+  else if(m==='draft')renderDraft();
+  else renderClassic();
+}
 function tradeCentreHTML(){
   const outPid=S.ui.trOut;
   return `<div class="grid2">
@@ -2861,7 +3046,7 @@ function tradeCentreHTML(){
       const p=PLAYERS[s.pid],st=seasonStats(s.pid),nb=nextBye(p.sq);
       const delta=price(s.pid)-basePriceR1(s.pid);
       const kindLbl=s.kind==='st'?POSN[s.posId]:s.kind==='bench'?'INT':'RES';
-      return `<tr style="cursor:pointer;${outPid===s.pid?'background:rgba(132,204,22,.15)':''}" onclick="S.ui.trOut=${outPid===s.pid?'null':s.pid};renderTrades()">
+      return `<tr style="cursor:pointer;${outPid===s.pid?'background:rgba(132,204,22,.15)':''}" onclick="S.ui.trOut=${outPid===s.pid?'null':s.pid};refreshTrades()">
       <td>${avatar(p,26)}</td>
       <td>${namedTick(s.pid)}<b>${esc(p.name)}</b> <span class="posb">${kindLbl}</span><br><span class="muted" style="font-size:11px">${CLUBS[p.sq].n} · ${posStr(p)}</span></td>
       <td>${fmtK(price(s.pid))}${delta?`<br><span class="${delta>0?'good':'bad'}" style="font-size:10px">${delta>0?'▲':'▼'}${fmtK(Math.abs(delta))}</span>`:''}</td>
@@ -2886,7 +3071,7 @@ function tradeInHTML(){
   if(S.ui.trPos&&slot.posId===0)pool=pool.filter(p=>p.pos.includes(S.ui.trPos));
   pool.sort((a,b)=>seasonStats(b.id).avg-seasonStats(a.id).avg);
   return `<h3>Trade in for ${esc(out.name)} <span class="tag">${slot.kind==='st'?POSN[slot.posId]+' slot':slot.kind==='bench'?'interchange slot':'reserve slot'} · budget ${fmtK(budget)}</span>
-   <button class="btn sec" style="margin-left:auto;padding:4px 10px" onclick="S.ui.trOut=null;renderTrades()">✕</button></h3>
+   <button class="btn sec" style="margin-left:auto;padding:4px 10px" onclick="S.ui.trOut=null;refreshTrades()">✕</button></h3>
   <input placeholder="Search…" style="width:100%" value="${esc(S.ui.trQ||'')}" oninput="S.ui.trQ=this.value;$('#trade-in-card').innerHTML=tradeInHTML();const i=$('#trade-in-card input');i.focus();i.setSelectionRange(i.value.length,i.value.length)">
   ${slot.posId===0?`<div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.trPos||0)===pi?'on':''}" onclick="S.ui.trPos=${pi};$('#trade-in-card').innerHTML=tradeInHTML()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>`:''}
   <div style="overflow-x:auto;max-height:540px;overflow-y:auto">
@@ -2919,7 +3104,7 @@ function execTrade(outPid,inPid){
   if(wasC)S.classic.line.c=inPid;
   if(wasVC)S.classic.line.vc=inPid;
   S.ui.trOut=null;
-  save();renderTrades();
+  save();refreshTrades();
 }
 
 /* ---------- bye planner / future team view ---------- */
@@ -3214,6 +3399,7 @@ function renderAll(){
   b.textContent=over?'Season over':(S.round<=MAXR?'▶ Play Round '+S.round+' (real results)':'⏳ Awaiting Round '+S.round+' results');
   const pg=S.ui.page||'classic';
   if(pg==='home')renderHome();
+  else if(pg==='trades'){S.ui.page='classic';S.ui.classicTab='trades';renderClassic();}
   else if(pg==='classic')renderClassic();
   else if(pg==='custom')renderCustom();
   else if(pg==='trades')renderTrades();
