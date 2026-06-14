@@ -360,8 +360,9 @@ function defaultState(){
     prices:{}, /* pid -> current price */
     classic:{squad:[],line:emptyLine(),tradesRound:0,tradesSeason:0,history:{},
       chips:{active:{},used:{},injured:[]}},
-    league:null, /* classic league {name,teams:[{name,squad,line,ai}],fix:{},...} */
-    draft:null,  /* {phase,league,size,teams,me,pickNo,done,log,history} */
+    league:null,       /* classic league {name,teams:[{name,squad,line,ai}],fix:{},...} */
+    customLeague:null, /* {name,created,chipsEnabled} — gates Custom tab */
+    draft:null,        /* {phase,league,size,teams,me,pickNo,done,log,history} */
     user:null,   /* {name,email,method,initials} */
     ui:{page:'classic',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',slotPick:null,draftQ:'',draftPos:0}
   };
@@ -1138,7 +1139,6 @@ function squadInnerHTML(){
   <div style="margin-bottom:12px"><div class="capbar ${rem<0?'over':''}"><div style="width:${Math.min(100,val/(val+Math.max(0,rem))*100)}%"></div></div></div>
   ${rem<0?'<div class="notice red">Over budget! Remove or downgrade players.</div>':''}
   ${n<SQUAD_N?`<div class="notice">Squad incomplete — fill all ${SQUAD_N} positions (${STARTERS_N} starters, ${BENCH_N} interchange, ${RES_N} reserves). Tap an empty slot to pick a player, or use Auto-complete.</div>`:''}
-  ${chipsHTML()}
   <div class="flex" style="margin-bottom:12px">
     <button class="btn sec" onclick="autoComplete()">⚡ Auto-complete team</button>
     <button class="btn sec" onclick="clearTeam()">Clear team</button>
@@ -1151,14 +1151,110 @@ function squadInnerHTML(){
 }
 function renderClassic(){
   $('#pg-classic').innerHTML=`
-  <div class="notice" style="background:rgba(132,204,22,.07);border-color:rgba(132,204,22,.3)">🏆 <b>Classic mode</b> — official NRL Fantasy scoring, standard rules. Pick your 17 + bench and compete round by round.</div>
+  <div class="notice">🏆 <b>Classic mode</b> — official NRL Fantasy rules. Standard scoring, 2 trades per round, 30 season trades, captain doubles. No chips or bonus rules.</div>
   ${squadInnerHTML()}`;
+}
+function customLeagueSetupHTML(){
+  const st=S.settings;
+  return `<div class="card" style="max-width:640px;margin:0 auto">
+   <div style="text-align:center;margin-bottom:22px">
+    <div style="font-size:40px;margin-bottom:8px">⚙</div>
+    <h3 style="font-size:20px;margin-bottom:4px">Create a Custom League</h3>
+    <p class="muted" style="font-size:13px">Set your own scoring, squad rules, bonus events and chip settings.<br>These apply only to Custom mode — Classic always uses official rules.</p>
+   </div>
+   <div class="set-item" style="margin-bottom:18px">
+    <label style="font-size:13px;margin-bottom:6px;display:block">League name</label>
+    <input id="cl-name" type="text" value="My Custom League" style="width:100%">
+   </div>
+   <div class="navsep" style="margin:0 0 16px"></div>
+   <h4 style="margin-bottom:10px;color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:1px">Scoring</h4>
+   <div class="settings-grid" style="margin-bottom:18px">
+    <div class="set-item"><label>Score mode</label>
+     <select id="cl-scoremode">
+      <option value="official">Official NRL Fantasy</option>
+      <option value="custom">Custom per-stat rules</option>
+     </select>
+    </div>
+    <div class="set-item"><label>Captain multiplier</label>
+     <input id="cl-capmult" type="number" step="0.5" min="1" max="4" value="${st.captainMult}">
+    </div>
+    <div class="set-item"><label>Interchange scores</label>
+     <select id="cl-bench">
+      <option value="1" ${st.benchScores?'selected':''}>On</option>
+      <option value="0" ${!st.benchScores?'selected':''}>Off</option>
+     </select>
+    </div>
+   </div>
+   <div class="navsep" style="margin:0 0 16px"></div>
+   <h4 style="margin-bottom:10px;color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:1px">Squad &amp; Trades</h4>
+   <div class="settings-grid" style="margin-bottom:18px">
+    <div class="set-item"><label>Salary cap ($)</label>
+     <input id="cl-cap" type="number" step="100000" value="${st.cap}">
+    </div>
+    <div class="set-item"><label>Trades per round</label>
+     <input id="cl-tpr" type="number" min="0" max="10" value="${st.tradesPerRound}">
+    </div>
+    <div class="set-item"><label>Season trade limit</label>
+     <input id="cl-tps" type="number" min="0" max="100" value="${st.seasonTrades}">
+    </div>
+   </div>
+   <div class="navsep" style="margin:0 0 16px"></div>
+   <h4 style="margin-bottom:10px;color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:1px">Bonus Rules</h4>
+   <div class="settings-grid" style="margin-bottom:18px">
+    <div class="set-item"><label>Milestone bonus events</label>
+     <select id="cl-bonus"><option value="0">Off</option><option value="1">On</option></select>
+    </div>
+    <div class="set-item"><label>Consistency streak bonus</label>
+     <select id="cl-consist"><option value="0">Off</option><option value="1">On</option></select>
+    </div>
+    <div class="set-item"><label>Upset bonus</label>
+     <select id="cl-upset"><option value="0">Off</option><option value="1">On</option></select>
+    </div>
+    <div class="set-item"><label>Power chips</label>
+     <select id="cl-chips"><option value="1">Enabled</option><option value="0">Disabled</option></select>
+    </div>
+   </div>
+   <button class="btn" style="width:100%;padding:13px;font-size:15px" onclick="createCustomLeague()">Create Custom League →</button>
+  </div>`;
+}
+function createCustomLeague(){
+  const name=($('#cl-name').value||'My Custom League').trim();
+  S.settings.scoreMode=$('#cl-scoremode').value;
+  S.settings.captainMult=+$('#cl-capmult').value||2;
+  S.settings.benchScores=$('#cl-bench').value==='1';
+  const newCap=+$('#cl-cap').value||S.settings.cap;
+  if(S.classic.bank!=null)S.classic.bank+=(newCap-S.settings.cap);
+  S.settings.cap=newCap;
+  S.settings.tradesPerRound=+$('#cl-tpr').value||2;
+  S.settings.seasonTrades=+$('#cl-tps').value||30;
+  S.settings.bonusEvents=$('#cl-bonus').value==='1';
+  S.settings.consistencyBonus=$('#cl-consist').value==='1';
+  S.settings.upsetBonus=$('#cl-upset').value==='1';
+  const chipsEnabled=$('#cl-chips').value==='1';
+  S.settings.chipRules=chipsEnabled?{}:Object.fromEntries(Object.keys(CHIP_DEFS).map(k=>[k,0]));
+  S.customLeague={name,created:Date.now(),chipsEnabled};
+  S.ui.customTab='team';
+  save();renderCustom();
 }
 function renderCustom(){
   const el=$('#pg-custom');
+  /* ── Gate: show wizard if no custom league created yet ── */
+  if(!S.customLeague){
+    el.innerHTML=customLeagueSetupHTML();
+    return;
+  }
   const tab=S.ui.customTab||'team';
   const st=S.settings;
+  const cl=S.customLeague;
   el.innerHTML=`
+  <div class="flex" style="margin-bottom:14px;align-items:flex-start">
+   <div>
+    <h3 style="font-size:17px;margin-bottom:2px">⚙ ${esc(cl.name)}</h3>
+    <span class="muted" style="font-size:12px">Custom league · Scoring: <b>${st.scoreMode==='custom'?'Custom rules':'Official NRL Fantasy'}</b></span>
+   </div>
+   <span class="spacer"></span>
+   <button class="btn sec" style="font-size:12px" onclick="if(confirm('Delete custom league and reset settings?')){S.customLeague=null;save();renderCustom()}">Delete league</button>
+  </div>
   <div class="tabs2" style="margin-bottom:14px">
    <button class="${tab==='team'?'on':''}" onclick="S.ui.customTab='team';renderCustom()">My Team</button>
    <button class="${tab==='scoring'?'on':''}" onclick="S.ui.customTab='scoring';renderCustom()">Scoring</button>
@@ -1166,8 +1262,8 @@ function renderCustom(){
    <button class="${tab==='rules'?'on':''}" onclick="S.ui.customTab='rules';renderCustom()">Squad Rules</button>
   </div>
   ${tab==='team'?`
-  <div class="notice" style="background:rgba(56,189,248,.07);border-color:rgba(56,189,248,.3)">⚙ <b>Custom mode</b> — same squad as Classic, scored with your own rules. Scoring mode: <b>${st.scoreMode==='custom'?'Custom rules':'Official NRL Fantasy'}</b>.</div>
-  ${squadInnerHTML()}`:''}
+  ${squadInnerHTML()}
+  ${chipsHTML()}`:''}
   ${tab==='scoring'?`
   <div class="card"><h3>Scoring mode</h3>
    <div class="flex">
@@ -2125,60 +2221,126 @@ function showStatLine(pid,r){
 }
 
 /* ================= LEAGUES (CLASSIC) ================= */
-function renderLeagues(){
-  const el=$('#pg-leagues');
-  if(!S.league){
-    el.innerHTML=`<div class="card" style="max-width:560px;margin:0 auto">
-     <h3>🏆 Create a Classic League</h3>
-     <p class="muted" style="margin-bottom:12px">Head-to-head league using your Classic team against AI coaches (each runs a real squad under the same cap and rules). 2 points a win, rounds 1–24, top 4 finals.</p>
-     <div class="flex" style="margin-bottom:12px">
-      <label>League name <input id="lg-name" value="The Front Rowers"></label>
-      <label>Teams <select id="lg-size">${[4,6,8,10].map(n=>`<option ${n===6?'selected':''}>${n}</option>`).join('')}</select></label>
-     </div>
-     <button class="btn" onclick="createLeague()">Create league</button>
-     ${seasonStarted()?'<p class="warn" style="margin-top:10px;font-size:12px">Season already underway — the league will start counting from the next round.</p>':''}
+/* ── leagues hub helpers ── */
+function leagueRulesHTML(mode){
+  const st=S.settings;
+  if(mode==='classic'){
+    return `<div class="settings-grid" style="margin-top:10px">
+     <div class="set-item"><label>Scoring</label><b>Official NRL Fantasy</b></div>
+     <div class="set-item"><label>Captain</label><b>2× multiplier</b></div>
+     <div class="set-item"><label>Salary cap</label><b>$9.7M</b></div>
+     <div class="set-item"><label>Trades / round</label><b>2</b></div>
+     <div class="set-item"><label>Season trades</label><b>30</b></div>
+     <div class="set-item"><label>Interchange</label><b>Scores off field</b></div>
+     <div class="set-item"><label>Power chips</label><b>None</b></div>
+     <div class="set-item"><label>Bonus events</label><b>None</b></div>
     </div>`;
-    return;
   }
-  const lg=S.league;
-  const ladder=leagueLadder(lg,false);
-  const nextR=Math.min(S.round,24);
-  const fx=leagueFixtures(lg.teams.length,nextR);
-  const myFx=fx.find(([a,b])=>a===0||b===0);
-  const oppI=myFx?(myFx[0]===0?myFx[1]:myFx[0]):null;
-  /* last round result detail */
-  let lastHTML='';
-  const r=S.round-1;
-  if(r>=1&&lg.history&&lg.history[r]){
-    const fxl=leagueFixtures(lg.teams.length,r);
-    const mf=fxl.find(([a,b])=>a===0||b===0);
-    if(mf){
-      const op=mf[0]===0?mf[1]:mf[0];
-      const myS=lineupScore(lg.history[r][0],r).total,opS=lineupScore(lg.history[r][op],r).total;
-      lastHTML=`<div class="notice">Round ${r}: <b>${esc(lg.teams[0].name)} ${myS}</b> ${myS>opS?'<span class="good">def.</span>':myS<opS?'<span class="bad">lost to</span>':'drew with'} <b>${esc(lg.teams[op].name)} ${opS}</b></div>`;
-    }
+  if(mode==='custom'&&S.customLeague){
+    const cl=S.customLeague;
+    return `<div class="settings-grid" style="margin-top:10px">
+     <div class="set-item"><label>Scoring</label><b>${st.scoreMode==='custom'?'Custom per-stat rules':'Official NRL Fantasy'}</b></div>
+     <div class="set-item"><label>Captain</label><b>${st.captainMult}× multiplier</b></div>
+     <div class="set-item"><label>Salary cap</label><b>${fmtM(st.cap)}</b></div>
+     <div class="set-item"><label>Trades / round</label><b>${st.tradesPerRound}</b></div>
+     <div class="set-item"><label>Season trades</label><b>${st.seasonTrades}</b></div>
+     <div class="set-item"><label>Interchange</label><b>${st.benchScores?'Scores':'Off'}</b></div>
+     <div class="set-item"><label>Power chips</label><b>${cl.chipsEnabled?'Enabled':'Disabled'}</b></div>
+     <div class="set-item"><label>Bonus events</label><b>${st.bonusEvents?'On':'Off'}</b></div>
+     <div class="set-item"><label>Consistency bonus</label><b>${st.consistencyBonus?'On (×'+st.consistencyMult+' after '+st.consistencyStreak+' rounds)':'Off'}</b></div>
+     <div class="set-item"><label>Upset bonus</label><b>${st.upsetBonus?'On (+'+st.upsetBonusPts+'pts ≥'+st.upsetThreshold+')':'Off'}</b></div>
+    </div>`;
   }
-  el.innerHTML=`
-  <div class="flex" style="margin-bottom:10px"><h3 style="font-size:18px">🏆 ${esc(lg.name)}</h3><span class="spacer"></span>
-   <button class="btn danger" onclick="if(confirm('Delete this league?')){S.league=null;save();renderLeagues()}">Delete league</button></div>
-  ${lastHTML}
-  <div class="grid2">
-   <div class="card"><h3>Ladder</h3>
-    <table><thead><tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>D</th><th>PF</th><th>PA</th><th>Pts</th></tr></thead><tbody>
-    ${ladder.map((t,i)=>`<tr style="${t.i===0?'background:rgba(132,204,22,.08)':''}"><td class="ladder-pos">${i+1}</td><td><b>${esc(t.name)}</b>${t.i===0?' <span class="good">(you)</span>':''}</td><td>${t.w}</td><td>${t.l}</td><td>${t.d}</td><td>${t.pf}</td><td>${t.pa}</td><td><b>${t.pts}</b></td></tr>`).join('')}
-    </tbody></table>
-    ${finalsHTML(lg,false)}
-   </div>
-   <div>
-    <div class="card"><h3>Round ${nextR} fixtures</h3>
-     ${fx.map(([a,b])=>`<div class="match"><div class="teams"><div class="t">${esc(lg.teams[a].name)}${a===0?' <span class="good">(you)</span>':''}</div><div class="score muted">vs</div><div class="t away">${b===0?'<span class="good">(you)</span> ':''}${esc(lg.teams[b].name)}</div></div></div>`).join('')}
+  if(mode==='draft'&&S.draft&&S.draft.league){
+    const dl=S.draft.league;
+    return `<div class="settings-grid" style="margin-top:10px">
+     <div class="set-item"><label>Format</label><b>Snake draft</b></div>
+     <div class="set-item"><label>Teams</label><b>${dl.size}</b></div>
+     <div class="set-item"><label>Roster size</label><b>${dl.rosterSize||17} players</b></div>
+     <div class="set-item"><label>Scoring</label><b>Official NRL Fantasy</b></div>
+     <div class="set-item"><label>AI fill empty slots</label><b>${dl.allowAI?'Yes':'No'}</b></div>
+     <div class="set-item"><label>League code</label><b style="font-family:monospace;letter-spacing:2px">${dl.code||'—'}</b></div>
+    </div>`;
+  }
+  return '';
+}
+function lgModeCard(mode,icon,title,league,createBtn){
+  const status=league?'active':'open';
+  const id='lgexpand-'+mode;
+  return `<div class="card" style="margin-bottom:10px">
+   <div class="flex" style="cursor:pointer" onclick="const d=document.getElementById('${id}');d.style.display=d.style.display==='none'?'block':'none'">
+    <span style="font-size:22px">${icon}</span>
+    <div style="flex:1">
+     <div style="font-weight:700;font-size:15px">${title}${league?' — <span style="color:var(--acc);font-size:13px">'+esc(league.name||league.n||'')+'</span>':''}</div>
+     <div class="muted" style="font-size:12px">${league?'Active · click to see rules':'No active league · '+createBtn}</div>
     </div>
-    ${oppI!=null?`<div class="card"><h3>Scout: ${esc(lg.teams[oppI].name)}</h3>
-     <p class="muted" style="margin-bottom:8px">Projected score: <b>${Math.round(projLineup(lg.teams[oppI].line))}</b> · Your projection: <b>${Math.round(projLineup(S.classic.line))}</b></p>
-     ${lineSlots(lg.teams[oppI].line).filter(s=>s.kind!=='res'&&s.pid!=null).map(s=>{const p=PLAYERS[s.pid];return `<div class="flex" style="padding:3px 0;border-bottom:1px solid #1b2740">${avatar(p,24)} ${esc(p.name)} <span class="muted">${posStr(p)}</span><span class="spacer"></span>avg ${p.avg||'–'}</div>`}).join('')}
-    </div>`:''}
+    <span style="color:var(--dim);font-size:18px" id="${id}-arrow">▼</span>
+   </div>
+   <div id="${id}" style="display:none">
+    <div class="navsep" style="margin:10px 0"></div>
+    ${league?leagueRulesHTML(mode):`<div class="muted" style="font-size:13px;padding:8px 0">No ${title} league created yet.</div>`}
+    ${league?`<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+     <button class="btn sec" onclick="setPage('${mode}')">Open ${title} →</button>
+     ${mode==='classic'?`<button class="btn danger" style="font-size:12px" onclick="if(confirm('Delete league?')){S.league=null;save();renderLeagues()}">Delete</button>`:''}
+     ${mode==='custom'?`<button class="btn danger" style="font-size:12px" onclick="if(confirm('Delete league?')){S.customLeague=null;save();renderLeagues()}">Delete</button>`:''}
+     ${mode==='draft'?`<button class="btn danger" style="font-size:12px" onclick="if(confirm('Delete draft league?')){S.draft=null;save();renderLeagues()}">Delete</button>`:''}
+    </div>`:`<button class="btn" style="margin-top:10px" onclick="${createBtn}">Create ${title} League →</button>`}
    </div>
   </div>`;
+}
+function renderLeagues(){
+  const el=$('#pg-leagues');
+  const classicLg=S.league?{name:S.league.name}:null;
+  const customLg=S.customLeague||null;
+  const draftLg=(S.draft&&S.draft.league)?S.draft.league:null;
+  /* ── If classic league is active, also show ladder below hub ── */
+  let ladderHTML='';
+  if(S.league){
+    const lg=S.league;
+    const ladder=leagueLadder(lg,false);
+    const nextR=Math.min(S.round,24);
+    const fx=leagueFixtures(lg.teams.length,nextR);
+    const myFx=fx.find(([a,b])=>a===0||b===0);
+    const oppI=myFx?(myFx[0]===0?myFx[1]:myFx[0]):null;
+    let lastHTML='';
+    const r=S.round-1;
+    if(r>=1&&lg.history&&lg.history[r]){
+      const fxl=leagueFixtures(lg.teams.length,r);
+      const mf=fxl.find(([a,b])=>a===0||b===0);
+      if(mf){
+        const op=mf[0]===0?mf[1]:mf[0];
+        const myS=lineupScore(lg.history[r][0],r).total,opS=lineupScore(lg.history[r][op],r).total;
+        lastHTML=`<div class="notice">Round ${r}: <b>${esc(lg.teams[0].name)} ${myS}</b> ${myS>opS?'<span class="good">def.</span>':myS<opS?'<span class="bad">lost to</span>':'drew with'} <b>${esc(lg.teams[op].name)} ${opS}</b></div>`;
+      }
+    }
+    ladderHTML=`
+    <h3 style="font-size:16px;margin:20px 0 12px">Classic League — ${esc(lg.name)}</h3>
+    ${lastHTML}
+    <div class="grid2">
+     <div class="card"><h3>Ladder</h3>
+      <table><thead><tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>D</th><th>PF</th><th>PA</th><th>Pts</th></tr></thead><tbody>
+      ${ladder.map((t,i)=>`<tr style="${t.i===0?'background:rgba(0,230,118,.07)':''}"><td class="ladder-pos">${i+1}</td><td><b>${esc(t.name)}</b>${t.i===0?' <span class="good">(you)</span>':''}</td><td>${t.w}</td><td>${t.l}</td><td>${t.d}</td><td>${t.pf}</td><td>${t.pa}</td><td><b>${t.pts}</b></td></tr>`).join('')}
+      </tbody></table>
+      ${finalsHTML(lg,false)}
+     </div>
+     <div>
+      <div class="card"><h3>Round ${nextR} fixtures</h3>
+       ${fx.map(([a,b])=>`<div class="match"><div class="teams"><div class="t">${esc(lg.teams[a].name)}${a===0?' <span class="good">(you)</span>':''}</div><div class="score muted">vs</div><div class="t away">${b===0?'<span class="good">(you)</span> ':''}${esc(lg.teams[b].name)}</div></div></div>`).join('')}
+      </div>
+      ${oppI!=null?`<div class="card"><h3>Scout: ${esc(lg.teams[oppI].name)}</h3>
+       <p class="muted" style="margin-bottom:8px">Projected score: <b>${Math.round(projLineup(lg.teams[oppI].line))}</b> · Your projection: <b>${Math.round(projLineup(S.classic.line))}</b></p>
+       ${lineSlots(lg.teams[oppI].line).filter(s=>s.kind!=='res'&&s.pid!=null).map(s=>{const p=PLAYERS[s.pid];return `<div class="flex" style="padding:3px 0;border-bottom:1px solid var(--line)">${avatar(p,24)} ${esc(p.name)} <span class="muted">${posStr(p)}</span><span class="spacer"></span>avg ${p.avg||'–'}</div>`}).join('')}
+      </div>`:''}
+     </div>
+    </div>`;
+  }
+  el.innerHTML=`
+  <h3 style="font-size:18px;margin-bottom:4px">🏆 Leagues</h3>
+  <p class="muted" style="font-size:13px;margin-bottom:16px">Click any league to see its scoring rules and settings. Create leagues from each game mode tab.</p>
+  ${lgModeCard('classic','🏆','Classic',classicLg,'showCreateClassicLeagueModal()')}
+  ${lgModeCard('custom','⚙️','Custom',customLg,'setPage(\'custom\')')}
+  ${lgModeCard('draft','📋','Draft',draftLg?{name:draftLg.name||('Draft · '+draftLg.size+' teams')}:null,'setPage(\'draft\')')}
+  ${ladderHTML}`;
 }
 function projLineup(line){
   let t=0;
@@ -2186,12 +2348,23 @@ function projLineup(line){
   const c=line.c!=null?targetAvg(PLAYERS[line.c]):0;
   return t+c*(S.settings.captainMult-1);
 }
+function showCreateClassicLeagueModal(){
+  openModal(`<h3 style="margin-bottom:14px">🏆 Create Classic League</h3>
+   <p class="muted" style="margin-bottom:14px;font-size:13px">Head-to-head against AI coaches using your Classic team. Official NRL Fantasy scoring, standard rules.</p>
+   <div class="settings-grid" style="margin-bottom:14px">
+    <div class="set-item"><label>League name</label><input id="lg-name" type="text" value="The Front Rowers" style="width:100%"></div>
+    <div class="set-item"><label>Teams</label>
+     <select id="lg-size">${[4,6,8,10].map(n=>`<option ${n===6?'selected':''}>${n}</option>`).join('')}</select>
+    </div>
+   </div>
+   ${seasonStarted()?'<p class="warn" style="margin-bottom:10px;font-size:12px">Season already underway — counting from next round.</p>':''}
+   <button class="btn" style="width:100%" onclick="createLeague()">Create league</button>`);
+}
 function createLeague(){
   const size=+$('#lg-size').value;
-  const name=$('#lg-name').value||'My League';
+  const name=$('#lg-name').value.trim()||'My League';
   const names=AI_NAMES.slice().sort(()=>Math.random()-.5);
-  /* team 0 = user's classic team (lineup synced at each sim) */
-  const t0={name:"My Classic Team",ai:false,line:JSON.parse(JSON.stringify(S.classic.line))};
+  const t0={name:'My Classic Team',ai:false,line:JSON.parse(JSON.stringify(S.classic.line))};
   const list=[t0];
   for(let i=1;i<size;i++){
     const rng=mulberry32(Date.now()+i*999);
@@ -2199,7 +2372,7 @@ function createLeague(){
     list.push({name:names.pop(),ai:true,squad,line});
   }
   S.league={name,teams:list,history:{}};
-  save();renderLeagues();
+  closeModal();save();renderLeagues();
 }
 /* user's league lineup = classic lineup; patch history capture */
 const _origSim=simulateRound;
@@ -2527,7 +2700,6 @@ function showPlayer(pid){
    <h3 style="font-size:13px;margin-top:14px">Previous seasons — minutes &amp; fantasy by position</h3>
    ${histHTML}`);
 }
-
 /* ================= SETTINGS ================= */
 function renderSettings(){
   const el=$('#pg-settings');
