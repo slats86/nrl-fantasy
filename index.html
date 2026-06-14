@@ -172,6 +172,84 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .user-chip:hover{border-color:var(--acc)}
 .user-chip .av{width:28px;height:28px;border-radius:50%;background:var(--acc);color:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
 .user-chip .un{font-size:13px;font-weight:600;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- HOME DASHBOARD ---- */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:16px}
+.stat-tile{background:var(--card);border-radius:12px;padding:16px 18px;border:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.stat-tile .st-label{font-size:11px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.stat-tile .st-val{font-size:28px;font-weight:800;color:var(--txt);line-height:1.1}
+.stat-tile .st-sub{font-size:11px;color:var(--dim)}
+.news-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.news-item:last-child{border-bottom:none}
+.news-icon{font-size:20px;line-height:1;flex-shrink:0;margin-top:2px}
+.news-body{flex:1}
+.news-title{font-size:13px;font-weight:700;color:var(--txt);margin:0 0 2px}
+.news-sub{font-size:11px;color:var(--dim)}
+.watchlist-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.watchlist-row:last-child{border-bottom:none}
+.wl-info{flex:1;min-width:0}
+.wl-name{font-size:13px;font-weight:700}
+.wl-meta{font-size:11px;color:var(--dim)}
+.wl-badge{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700;color:var(--txt)}
+
+/* ---- POSITION-COLOURED PLAYER CARDS ---- */
+.pcard{position:relative}
+.pcard.pos-hok{border-top:2px solid var(--amber)}
+.pcard.pos-mid,.pcard.pos-edg{border-top:2px solid var(--acc)}
+.pcard.pos-hlf{border-top:2px solid var(--violet)}
+.pcard.pos-ctr{border-top:2px solid #ff7a1a}
+.pcard.pos-wfb{border-top:2px solid var(--blue)}
+
+/* ---- WATCHLIST STAR BUTTON ---- */
+.watch-btn{position:absolute;top:3px;left:3px;background:none;border:none;color:transparent;font-size:13px;cursor:pointer;padding:0;line-height:1;z-index:2;transition:color .15s;text-shadow:0 0 0 var(--dim)}
+.pcard:hover .watch-btn{color:var(--dim)}
+.watch-btn.on{color:transparent;text-shadow:0 0 0 var(--amber)}
+.watch-btn.on:hover{text-shadow:0 0 0 var(--amber)}
+
+/* ---- PRICE DELTA ---- */
+.pdelta-up{color:var(--acc);font-size:10px}
+.pdelta-dn{color:var(--red);font-size:10px}
+
+/* ---- SHARE TEAM MODAL ---- */
+.share-box{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;white-space:pre;overflow-x:auto;max-height:320px;overflow-y:auto;color:var(--txt)}
+
+/* ---- COMPARISON MODAL ---- */
+.cmp-grid{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start}
+.cmp-col{display:flex;flex-direction:column;gap:6px}
+.cmp-stat{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--card2);border-radius:6px;font-size:13px}
+.cmp-stat-label{color:var(--dim);font-size:11px;font-weight:600;text-align:center;padding:4px;text-transform:uppercase;letter-spacing:.04em}
+.cmp-win{color:var(--acc);font-weight:700}
+.cmp-divider{display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;color:var(--dim);font-size:11px;padding-top:26px}
+
+/* ---- DRAFT TIMER ---- */
+.draft-timer-bar{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 18px;display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.draft-timer-num{font-size:28px;font-weight:900;color:var(--acc);min-width:48px;text-align:center;font-variant-numeric:tabular-nums;transition:color .3s}
+.draft-timer-num.urgent{color:var(--red);animation:pulse 1s infinite}
+.draft-timer-label{font-size:12px;color:var(--dim);font-weight:600}
+.draft-timer-bar progress{flex:1;height:6px;border-radius:3px;overflow:hidden}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ---- PRICE TRACKER ---- */
+.price-hist-table{width:100%;border-collapse:collapse;font-size:12px}
+.price-hist-table th{color:var(--dim);font-weight:600;padding:4px 8px;text-align:right;border-bottom:1px solid var(--line)}
+.price-hist-table td{padding:4px 8px;text-align:right;border-bottom:1px solid #1a1a2a}
+.price-hist-table td:first-child{text-align:left;font-weight:600;color:var(--txt)}
+
+/* ---- PLANNED TRADES ---- */
+.trade-plan-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:8px;border:1px solid var(--line);margin-bottom:6px}
+.trade-plan-row .tp-out{color:var(--red)}
+.trade-plan-row .tp-in{color:var(--acc)}
+
+/* ---- MOBILE FIELD IMPROVEMENTS ---- */
+@media(max-width:600px){
+  .frow{gap:4px;flex-wrap:wrap;justify-content:center}
+  .pcard{min-width:72px;max-width:84px;padding:7px 4px}
+  .pcard .nm{font-size:11px}
+  .pcard .meta{font-size:10px}
+  .pcard .sc{font-size:14px}
+  .bench-row{gap:4px}
+}
+
 </style>
 </head>
 <body>
@@ -219,6 +297,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
       <div><div class="brand-name">NRL Fantasy</div><div class="brand-sub">2026 Season</div></div>
     </div>
     <nav id="sidebar-nav">
+      <div class="navitem" data-pg="home"><span class="ni">📈</span>Dashboard</div>
       <div class="navitem on" data-pg="classic"><span class="ni">🏠</span>Classic</div>
       <div class="navitem" data-pg="custom"><span class="ni">⚙️</span>Custom</div>
       <div class="navitem" data-pg="draft"><span class="ni">📋</span>Draft</div>
@@ -244,6 +323,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
       <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none"></div>
     </div>
     <main id="app-main">
+      <div class="page" id="pg-home"></div>
       <div class="page on" id="pg-classic"></div>
       <div class="page" id="pg-custom"></div>
       <div class="page" id="pg-draft"></div>
@@ -256,8 +336,8 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
   </div>
   <!-- Bottom tab bar — mobile nav -->
   <nav id="bottom-tabbar">
+    <div class="btab" data-pg="home"><span class="bi">📈</span>Home</div>
     <div class="btab on" data-pg="classic"><span class="bi">🏠</span>Classic</div>
-    <div class="btab" data-pg="custom"><span class="bi">⚙️</span>Custom</div>
     <div class="btab" data-pg="draft"><span class="bi">📋</span>Draft</div>
     <div class="btab" data-pg="trades"><span class="bi">🔄</span>Trades</div>
     <div class="btab" data-pg="players"><span class="bi">📊</span>More</div>
@@ -363,6 +443,9 @@ function defaultState(){
     league:null,       /* classic league {name,teams:[{name,squad,line,ai}],fix:{},...} */
     customLeague:null, /* {name,created,chipsEnabled} — gates Custom tab */
     draft:null,        /* {phase,league,size,teams,me,pickNo,done,log,history} */
+    watchlist:[],      /* [pid,...] starred players */
+    priceHistory:{},   /* {round:{pid:price}} snapshot after each simulated round */
+    plannedTrades:[],  /* [{out:pid,in:pid,note:''}] staged future trades */
     user:null,   /* {name,email,method,initials} */
     ui:{page:'classic',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',slotPick:null,draftQ:'',draftPos:0}
   };
@@ -417,6 +500,9 @@ function load(){
     if(S.classic&&!S.classic.chips)S.classic.chips={active:{},used:{},injured:[]}; /* migrate: add chips state */
     if(S.settings&&S.settings.bonusEvents===undefined){S.settings.bonusEvents=false;S.settings.bonusMetre=5;S.settings.bonusTackle=5;S.settings.bonusTryInv=5;S.settings.consistencyBonus=false;S.settings.consistencyStreak=3;S.settings.consistencyMult=1.1;S.settings.upsetBonus=false;S.settings.upsetThreshold=60;S.settings.upsetBonusPts=10;}
     if(S.draft&&!S.draft.phase)S.draft=null; /* migrate: reset legacy draft — new league-code flow required */
+    if(!S.watchlist)S.watchlist=[];
+    if(!S.priceHistory)S.priceHistory={};
+    if(!S.plannedTrades)S.plannedTrades=[];
     if(S.settings&&!S.settings.layout){ /* migrate: preserve this save's existing squad shape */
       S.settings.layout={...DEFAULT_LAYOUT};
       try{
@@ -962,6 +1048,9 @@ function simulateRound(){
   /* clear round-only chips after each round */
   const ch=S.classic.chips;
   if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
+  /* price history snapshot */
+  const ph={};PLAYERS.forEach(p=>ph[p.id]=price(p.id));
+  S.priceHistory[r]=ph;
   S.round=r+1;
   S.ui.mcRound=r;
   save();renderAll();
@@ -1149,6 +1238,305 @@ function squadInnerHTML(){
     <div class="card" id="pool-card">${renderPool()}</div>
   </div>`;
 }
+
+/* ===== WATCHLIST ===== */
+function isWatched(pid){return (S.watchlist||[]).includes(pid)}
+function toggleWatch(pid){
+  S.watchlist=S.watchlist||[];
+  const i=S.watchlist.indexOf(pid);
+  if(i>=0)S.watchlist.splice(i,1);else S.watchlist.push(pid);
+  save();
+  /* update any visible watch buttons without full re-render */
+  document.querySelectorAll('.watch-btn[data-wid="'+pid+'"]').forEach(b=>b.classList.toggle('on',isWatched(pid)));
+}
+
+/* ===== PRICE CHANGE ===== */
+function priceChange(pid){
+  /* return delta vs last round's price, or 0 */
+  const lastR=S.round-2;
+  if(lastR<1)return 0;
+  const snap=S.priceHistory[lastR];
+  if(!snap||snap[pid]==null)return 0;
+  return price(pid)-snap[pid];
+}
+
+/* ===== SHARE TEAM ===== */
+function shareTeam(){
+  const L=S.classic.line;
+  const sqids=[...Object.values(L.starters).flat(),...L.bench,...L.res].filter(x=>x!=null);
+  const lastR=S.round-1;
+  const sc=lastR>=1&&S.classic.history[lastR]?lineupScore(S.classic.history[lastR],lastR):null;
+  let lines=[];
+  lines.push('⚽ NRL Fantasy 2026 — My Team');
+  lines.push('Round '+S.round+' | Value: '+fmtK(squadValue()));
+  lines.push('');
+  const rows=[[6,'WFB/WIN'],[5,'CTR'],[4,'HLF'],[3,'EDG'],[2,'MID'],[1,'HOK']];
+  for(const[posId,label]of rows){
+    const pids=L.starters[posId]||[];
+    if(pids.some(x=>x!=null)){
+      lines.push('── '+label+' ──');
+      pids.forEach(pid=>{
+        if(pid==null)return;
+        const p=PLAYERS[pid];
+        const cap=L.c===pid?' (C)':L.vc===pid?' (VC)':'';
+        const sc2=sc?sc.detail.find(x=>x.orig===pid||x.pid===pid):null;
+        const pts=sc2&&sc2.pts!=null?' ['+sc2.pts+'pts]':'';
+        lines.push('  '+p.name+cap+' — '+CLUBS[p.sq].s+pts);
+      });
+    }
+  }
+  lines.push('── BENCH ──');
+  L.bench.forEach(pid=>{if(pid==null)return;const p=PLAYERS[pid];lines.push('  INT: '+p.name+' — '+CLUBS[p.sq].s)});
+  lines.push('── RESERVES ──');
+  L.res.forEach(pid=>{if(pid==null)return;const p=PLAYERS[pid];lines.push('  RES: '+p.name+' — '+CLUBS[p.sq].s)});
+  const txt=lines.join('\n');
+  openModal(`<h2>📤 Share Your Team</h2>
+  <div class="share-box">${esc(txt)}</div>
+  <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+  <button class="btn" onclick="navigator.clipboard.writeText(${JSON.stringify(txt)}).then(()=>{this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000)})">📋 Copy</button>
+  <button class="btn" onclick="closeModal()">Close</button></div>`);
+}
+
+/* ===== PLAYER COMPARISON ===== */
+let _cmpA=null,_cmpB=null;
+function openComparison(pid){
+  if(_cmpA==null||(_cmpA!=null&&_cmpB!=null)){_cmpA=pid;_cmpB=null}
+  else if(pid!==_cmpA){_cmpB=pid}
+  else{_cmpA=null;_cmpB=null}
+  if(_cmpA!=null&&_cmpB!=null){showComparison(_cmpA,_cmpB)}
+  else{
+    openModal(`<h2>🔍 Compare Players</h2>
+    <p>Player 1 selected: <b>${_cmpA!=null?esc(PLAYERS[_cmpA].name):'none'}</b></p>
+    <p class="muted">Go to the Players tab and click "Compare" on a second player to see the side-by-side breakdown.</p>
+    <button class="btn" onclick="closeModal()">OK</button>`);
+  }
+}
+function showComparison(pid1,pid2){
+  const a=PLAYERS[pid1],b=PLAYERS[pid2];
+  const stats=[
+    {k:'avg',label:'Avg Pts'},
+    {k:'l3',label:'Last 3 Avg'},
+    {k:'hi',label:'Season High'},
+    {k:'gp',label:'Games Played'},
+    {k:'own',label:'Ownership %'},
+  ];
+  const prA=price(pid1),prB=price(pid2);
+  const ppmA=ppmOf(pid1),ppmB=ppmOf(pid2);
+  const trA=trendOf(pid1),trB=trendOf(pid2);
+  function cell(va,vb,fmt){
+    const a=parseFloat(va)||0,bv=parseFloat(vb)||0;
+    const wA=a>bv,wB=bv>a;
+    return [`<span class="${wA?'cmp-win':''}">${fmt?fmt(va):va||'–'}</span>`,`<span class="${wB?'cmp-win':''}">${fmt?fmt(vb):vb||'–'}</span>`];
+  }
+  function rows(){
+    const out=[];
+    stats.forEach(s=>{const[ca,cb]=cell(a[s.k],b[s.k]);out.push(`<div class="cmp-stat">${ca}</div><div class="cmp-stat-label">${s.label}</div><div class="cmp-stat">${cb}</div>`)});
+    const[pA,pB]=cell(prA,prB,fmtK);out.push(`<div class="cmp-stat">${pA}</div><div class="cmp-stat-label">Price</div><div class="cmp-stat">${pB}</div>`);
+    const[qA,qB]=cell(ppmA!=null?ppmA.toFixed(2):null,ppmB!=null?ppmB.toFixed(2):null);out.push(`<div class="cmp-stat">${qA}</div><div class="cmp-stat-label">PPM</div><div class="cmp-stat">${qB}</div>`);
+    const[tA,tB]=[trendIcon(trA),trendIcon(trB)];out.push(`<div class="cmp-stat">${tA}</div><div class="cmp-stat-label">Form</div><div class="cmp-stat">${tB}</div>`);
+    return out.join('');
+  }
+  openModal(`<h2>🔍 Player Comparison</h2>
+  <div class="cmp-grid" style="margin-top:12px">
+    <div style="text-align:center;font-weight:700;font-size:14px;padding-bottom:4px">${avatar(a,36)}<br>${esc(a.name)}<br><small class="muted">${CLUBS[a.sq].s} · ${posStr(a)}</small></div>
+    <div></div>
+    <div style="text-align:center;font-weight:700;font-size:14px;padding-bottom:4px">${avatar(b,36)}<br>${esc(b.name)}<br><small class="muted">${CLUBS[b.sq].s} · ${posStr(b)}</small></div>
+    ${rows()}
+  </div>
+  <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+    <button class="btn" onclick="_cmpA=null;_cmpB=null;closeModal()">Close</button></div>`);
+}
+
+/* ===== DASHBOARD NEWS ===== */
+function getDashNews(){
+  const items=[];
+  const lastR=S.round-1;
+  const sq=squadIds();
+  if(sq.size===0){items.push({icon:'💡',title:'Welcome to NRL Fantasy 2026!',sub:'Pick your squad in Classic mode to get started.'});return items;}
+  /* top scorer last round */
+  if(lastR>=1&&S.classic.history[lastR]){
+    const sc=lineupScore(S.classic.history[lastR],lastR);
+    const best=sc.detail.filter(x=>x.pts!=null).sort((a,b)=>b.pts-a.pts)[0];
+    if(best){const p=PLAYERS[best.pid||best.orig];if(p)items.push({icon:'🔥',title:p.name+' scored '+best.pts+'pts in Round '+lastR,sub:CLUBS[p.sq].n+' · '+posStr(p)})}
+    /* round total */
+    items.push({icon:'📊',title:'Round '+lastR+' total: '+sc.total+'pts',sub:'Captain: '+(S.classic.history[lastR].c!=null?esc(PLAYERS[S.classic.history[lastR].c].name):'none')});
+  }
+  /* upcoming byes */
+  const nextR=S.round;
+  if(RFIX[nextR]){
+    const byeClubs=RFIX[nextR].byes||[];
+    const byePlayers=[...sq].filter(pid=>byeClubs.includes(PLAYERS[pid].sq));
+    if(byePlayers.length>0){
+      items.push({icon:'😴',title:byePlayers.length+' player'+(byePlayers.length>1?'s':'')+' on bye in Round '+nextR,sub:byePlayers.map(pid=>PLAYERS[pid].name).join(', ')});
+    }
+  }
+  /* price risers (last round) */
+  if(S.priceHistory[lastR-1]&&lastR>1){
+    const ph=S.priceHistory[lastR-1];
+    const risers=[...sq].filter(pid=>ph[pid]!=null&&price(pid)>ph[pid]).sort((a,b)=>(price(b)-S.priceHistory[lastR-1][b])-(price(a)-S.priceHistory[lastR-1][a]));
+    if(risers.length>0){const p=PLAYERS[risers[0]];const delta=price(risers[0])-(S.priceHistory[lastR-1][risers[0]]||price(risers[0]));items.push({icon:'📈',title:p.name+' up '+fmtK(delta),sub:'Price rose in Round '+lastR});}
+  }
+  /* watchlist alert */
+  const wl=(S.watchlist||[]).filter(pid=>!sq.has(pid));
+  if(wl.length>0){
+    const p=PLAYERS[wl[0]];
+    items.push({icon:'⭐',title:'Watchlist: '+p.name+' ('+fmtK(price(wl[0]))+', avg '+p.avg+')',sub:'Not in your squad · '+wl.length+' player'+(wl.length>1?'s':'') + ' watched'});
+  }
+  /* team value */
+  const tv=squadValue();
+  items.push({icon:'💰',title:'Team value: '+fmtK(tv)+(S.classic.bank!=null?' · Bank: '+fmtK(S.classic.bank):''),sub:'Cap: '+fmtK(S.settings.cap)});
+  return items.slice(0,6);
+}
+
+/* ===== HOME DASHBOARD ===== */
+function renderHome(){
+  const el=document.getElementById('pg-home');
+  const lastR=S.round-1;
+  const sq=squadIds();
+  /* compute round score */
+  let roundScore=0,roundPts='—';
+  if(lastR>=1&&S.classic.history[lastR]){
+    const sc=lineupScore(S.classic.history[lastR],lastR);
+    roundScore=sc.total;roundPts=sc.total+'';
+  }
+  /* total season score */
+  let totalPts=0;
+  for(let r=1;r<S.round;r++){
+    if(S.classic.history[r])totalPts+=lineupScore(S.classic.history[r],r).total;
+  }
+  /* team value */
+  const tv=squadValue();
+  /* watchlist */
+  const wl=(S.watchlist||[]).filter(pid=>PLAYERS[pid]);
+  const wlHTML=wl.length===0?'<p class="muted">No players starred yet. Click ★ on any player card to watch them.</p>':
+    wl.slice(0,8).map(pid=>{
+      const p=PLAYERS[pid];const pd=priceChange(pid);const pdH=pd?`<span class="${pd>0?'pdelta-up':'pdelta-dn'}" style="font-size:11px">${pd>0?'▲':'▼'}${fmtK(Math.abs(pd))}</span>`:'';
+      const inSquad=sq.has(pid);
+      return `<div class="watchlist-row">
+        ${avatar(p,30)}
+        <div class="wl-info"><div class="wl-name">${esc(p.name)} ${inSquad?'<span class="tag" style="background:rgba(0,230,118,.1);color:var(--acc);font-size:10px">in squad</span>':''}</div>
+        <div class="wl-meta">${CLUBS[p.sq].n} · ${posStr(p)} · avg ${p.avg||'–'}</div></div>
+        <div class="wl-badge">${fmtK(price(pid))} ${pdH}</div>
+        <button class="watch-btn on" style="position:static;font-size:16px;padding:0 4px" onclick="toggleWatch(${pid});renderHome()">★</button>
+      </div>`;
+    }).join('');
+  /* news */
+  const news=getDashNews();
+  const newsHTML=news.map(n=>`<div class="news-item"><div class="news-icon">${n.icon}</div><div class="news-body"><div class="news-title">${n.title}</div><div class="news-sub">${n.sub}</div></div></div>`).join('');
+  /* next round bye warning */
+  const nextR=S.round;
+  const byeHTML=(()=>{
+    if(!RFIX[nextR])return '';
+    const byeClubs=RFIX[nextR].byes||[];
+    const byePl=[...sq].filter(pid=>byeClubs.includes(PLAYERS[pid].sq));
+    if(byePl.length===0)return '';
+    return `<div class="notice" style="border-color:var(--amber);background:rgba(255,183,0,.07);margin-bottom:14px">
+      😴 <b>${byePl.length} player${byePl.length>1?'s':''} on bye in Round ${nextR}</b>: ${byePl.map(pid=>esc(PLAYERS[pid].name)).join(', ')}
+    </div>`;
+  })();
+  /* price tracker card (squad players with history) */
+  const pthist=(()=>{
+    const rounds=Object.keys(S.priceHistory).map(Number).sort((a,b)=>a-b);
+    if(rounds.length===0)return '<p class="muted">Price history will appear after you simulate rounds.</p>';
+    const sqArr=[...sq].slice(0,10);
+    const hdrs=rounds.map(r=>'R'+r).join('</th><th>');
+    const rws=sqArr.map(pid=>{
+      const p=PLAYERS[pid];
+      const cells=rounds.map(r=>{
+        const v=S.priceHistory[r]&&S.priceHistory[r][pid];
+        const prev=rounds.indexOf(r)>0?S.priceHistory[rounds[rounds.indexOf(r)-1]][pid]:null;
+        const delta=v&&prev?v-prev:null;
+        return `<td>${v?fmtK(v):'–'}${delta?`<br><span style="font-size:9px;color:${delta>0?'var(--acc)':'var(--red)'}">${delta>0?'▲':'▼'}${fmtK(Math.abs(delta))}</span>`:''}</td>`;
+      }).join('');
+      return `<tr><td>${esc(p.name)}</td>${cells}</tr>`;
+    }).join('');
+    return `<div style="overflow-x:auto"><table class="price-hist-table"><thead><tr><th>Player</th><th>${hdrs}</th><th>Now</th></tr></thead><tbody>
+      ${rws}${sqArr.map(pid=>`<td>${fmtK(price(pid))}</td>`)}
+    </tbody></table></div>`;
+  })();
+  el.innerHTML=`
+  <div class="page-header" style="margin-bottom:18px">
+    <h1 style="margin:0 0 4px;font-size:22px">📈 Dashboard</h1>
+    <div style="color:var(--dim);font-size:13px">Season 2026 · Round ${S.round}</div>
+  </div>
+  ${byeHTML}
+  <div class="dash-grid">
+    <div class="stat-tile"><div class="st-label">Round ${lastR>=1?lastR:'—'} score</div><div class="st-val">${roundPts}</div><div class="st-sub">pts this round</div></div>
+    <div class="stat-tile"><div class="st-label">Season total</div><div class="st-val">${totalPts}</div><div class="st-sub">pts across ${lastR>=1?lastR:0} rounds</div></div>
+    <div class="stat-tile"><div class="st-label">Team value</div><div class="st-val">${fmtK(tv)}</div><div class="st-sub">Bank: ${fmtK(S.classic.bank||0)}</div></div>
+    <div class="stat-tile"><div class="st-label">Squad size</div><div class="st-val">${sq.size}</div><div class="st-sub">players selected</div></div>
+  </div>
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h3>📰 News &amp; Alerts</h3>
+        ${newsHTML||'<p class="muted">No news yet.</p>'}
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h3 style="margin:0">💰 Price Tracker</h3>
+          <span class="tag">last ${Object.keys(S.priceHistory).length} rounds</span>
+        </div>
+        ${pthist}
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <h3 style="margin:0">⭐ Watchlist</h3>
+          <span class="tag">${wl.length} players</span>
+        </div>
+        ${wlHTML}
+      </div>
+      <div class="card" style="margin-top:14px">
+        <h3>🚀 Quick Actions</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button class="btn" onclick="setPage('classic')">🏠 My Team</button>
+          <button class="btn" onclick="setPage('trades')">🔄 Make Trade</button>
+          <button class="btn" onclick="setPage('players')">📊 Player Stats</button>
+          <button class="btn" onclick="shareTeam()">📤 Share Team</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ===== DRAFT TIMER ===== */
+let _draftTimerID=null;
+const DRAFT_PICK_SECS=60;
+function startPickTimer(){
+  stopPickTimer();
+  S.ui.draftTimerSecs=DRAFT_PICK_SECS;
+  /* update UI every second */
+  _draftTimerID=setInterval(()=>{
+    S.ui.draftTimerSecs=Math.max(0,(S.ui.draftTimerSecs||DRAFT_PICK_SECS)-1);
+    const el=document.getElementById('draft-timer');
+    if(el){el.textContent=S.ui.draftTimerSecs;el.className='draft-timer-num'+(S.ui.draftTimerSecs<=15?' urgent':'');}
+    const prog=document.querySelector('.draft-timer-bar progress');
+    if(prog)prog.value=S.ui.draftTimerSecs;
+    if(S.ui.draftTimerSecs<=0){
+      stopPickTimer();
+      /* auto-pick best available player */
+      const D=S.draft;
+      if(!D||D.phase!=='draft')return;
+      const ti=draftPickOrder(D.pickNo);
+      if(D.teams[ti].ai)return;
+      const taken=draftTaken();
+      const me=D.teams[D.me];
+      const need=rosterNeeds(me);
+      let pool=PLAYERS.filter(p=>!taken.has(p.id));
+      const needTotal=Object.values(need).reduce((a,b)=>a+b,0);
+      const picksLeft=DRAFT_ROSTER-me.roster.length;
+      if(needTotal>=picksLeft)pool=pool.filter(p=>p.pos.some(x=>need[x]>0));
+      pool.sort((a,b)=>targetAvg(b)-targetAvg(a));
+      if(pool.length>0){myDraftPick(pool[0].id);}
+    }
+  },1000);
+}
+function stopPickTimer(){
+  if(_draftTimerID){clearInterval(_draftTimerID);_draftTimerID=null;}
+}
+
 function renderClassic(){
   $('#pg-classic').innerHTML=`
   <div class="notice">🏆 <b>Classic mode</b> — official NRL Fantasy rules. Standard scoring, 2 trades per round, 30 season trades, captain doubles. No chips or bonus rules.</div>
@@ -1362,12 +1750,15 @@ function renderField(){
   const card=(pid,slot)=>{
     if(pid==null)return `<div class="pcard empty" onclick='openSlotPicker(${JSON.stringify(slot)})'><div style="font-size:22px">+</div><div style="font-size:10px">${slot.posId?POSN[slot.posId]:(slot.kind==='bench'?'INT':'RES')}</div></div>`;
     const p=PLAYERS[pid];
-    return `<div class="pcard" onclick="playerMenu(${pid})">
+    const pk=p.pos[0]===1?'hok':p.pos.some(x=>x===4)?'hlf':p.pos.some(x=>x===5)?'ctr':p.pos.some(x=>x===6)?'wfb':p.pos.some(x=>x===3)?'edg':'mid';
+    const pd=priceChange(pid);const pdHtml=pd?`<span class="${pd>0?'pdelta-up':'pdelta-dn'}">${pd>0?'▲':'▼'}${fmtK(Math.abs(pd))}</span>`:'';
+    return `<div class="pcard pos-${pk}" onclick="playerMenu(${pid})">
       ${L.c===pid?'<div class="badge">C</div>':L.vc===pid?'<div class="badge vc">VC</div>':''}
+      <button class="watch-btn ${isWatched(pid)?'on':''}" onclick="event.stopPropagation();toggleWatch(${pid})">★</button>
       ${avatar(p,40)}
       <div class="nm">${esc(p.name)}</div>
-      <div class="meta">${CLUBS[p.sq].s} · ${posStr(p)}</div>
-      <div class="meta">${fmtK(price(pid))} · avg ${p.avg||'–'}</div>
+      <div class="meta">${CLUBS[p.sq].s} · <span class="posb ${pk}">${posStr(p)}</span></div>
+      <div class="meta">${fmtK(price(pid))} ${pdHtml}· avg ${p.avg||'–'}</div>
       ${scoreOf(pid)}
     </div>`;
   };
@@ -1613,7 +2004,7 @@ function runAIPicks(){
     if(D.pickNo>=D.size*DRAFT_ROSTER){finishDraft();return}
     const ti=draftPickOrder(D.pickNo);
     const team=D.teams[ti];
-    if(!team.ai){renderDraft();return}
+    if(!team.ai){renderDraft();startPickTimer();return}
     const pid=aiDraftPick(team);
     team.roster.push(pid);
     D.log.unshift({pick:D.pickNo+1,team:ti,pid});
@@ -1624,6 +2015,7 @@ function runAIPicks(){
   step();
 }
 function myDraftPick(pid){
+  stopPickTimer();
   const D=S.draft;
   const ti=draftPickOrder(D.pickNo);
   if(D.teams[ti].ai)return;
@@ -1971,6 +2363,11 @@ function draftRoomHTML(){
   const need=rosterNeeds(me);
   const totalPicks=D.size*DRAFT_ROSTER;
   return `
+  ${myTurn?`<div class="draft-timer-bar">
+   <span class="draft-timer-num ${(S.ui.draftTimerSecs||60)<=15?'urgent':''}" id="draft-timer">${S.ui.draftTimerSecs||60}</span>
+   <div style="flex:1"><div class="draft-timer-label">⏱ YOUR PICK — ${60-(S.ui.draftTimerSecs||60)}s elapsed · auto-pick when timer runs out</div>
+   <progress value="${S.ui.draftTimerSecs||60}" max="60" style="width:100%;accent-color:var(--acc)"></progress></div>
+   <button class="btn" onclick="stopPickTimer()">⏸</button></div>`:''}
   <div class="notice ${myTurn?'':''}" style="${myTurn?'border-color:var(--acc);':''}">
    Pick ${D.pickNo+1}/${totalPicks} — Round ${Math.floor(D.pickNo/D.size)+1} of ${DRAFT_ROSTER} —
    <b class="${myTurn?'good':''}">${myTurn?'YOU ARE ON THE CLOCK':esc(onClock.name)+' is picking…'}</b>
@@ -2609,17 +3006,21 @@ function renderPlayers(){
    </div>
    <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.plPos||0)===pi?'on':''}" onclick="S.ui.plPos=${pi};renderPlayers()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
    <div style="overflow-x:auto"><table>
-   <thead><tr><th></th>${sortTh('name','Player')}<th>Club</th><th>Pos</th>${sortTh('price','Price')}${sortTh('avg','Avg')}${sortTh('l3','Last 3')}${sortTh('ppm','PPM')}${sortTh('trend','Form')}${sortTh('gp','Gms')}${sortTh('hi','High')}${sortTh('own','Own%')}</tr></thead>
+   <thead><tr><th></th>${sortTh('name','Player')}<th>Club</th><th>Pos</th>${sortTh('price','Price')}${sortTh('avg','Avg')}${sortTh('l3','Last 3')}${sortTh('ppm','PPM')}${sortTh('trend','Form')}${sortTh('gp','Gms')}${sortTh('hi','High')}${sortTh('own','Own%')}<th>⇔</th></tr></thead>
    <tbody>
    ${list.slice(0,200).map(p=>{
      const delta=price(p.id)-basePriceR1(p.id);
      const t=trendOf(p.id),sv=starterValue(p.id);
      return `<tr style="cursor:pointer" onclick="showPlayer(${p.id})">
-     <td>${avatar(p,28)}</td><td>${namedTick(p.id)}<b>${esc(p.name)}</b>${sv?' <span title="Starter value: named to start; averages '+sv.sAvg+' when starting (+'+sv.uplift+' uplift)">🔥</span>':''}</td>
+     <td>${avatar(p,28)}</td><td>
+       <button class="watch-btn" style="position:static;font-size:16px;padding:0 4px 0 0;${isWatched(p.id)?'text-shadow:0 0 0 var(--amber)':'text-shadow:0 0 0 var(--dim)'}" onclick="event.stopPropagation();toggleWatch(${p.id});renderPlayers()">★</button>
+       ${namedTick(p.id)}<b>${esc(p.name)}</b>${sv?' <span title="Starter value: named to start; averages '+sv.sAvg+' when starting (+'+sv.uplift+' uplift)">🔥</span>':''}
+     </td>
      <td><span class="clubb">${clubDot(p.sq)} ${CLUBS[p.sq].s}</span></td>
      <td>${p.pos.map(x=>`<span class="posb">${POSN[x]}</span>`).join('')}</td>
      <td>${fmtK(price(p.id))} ${delta?`<span class="${delta>0?'good':'bad'}" style="font-size:10px">${delta>0?'▲':'▼'}${fmtK(Math.abs(delta))}</span>`:''}</td>
-     <td><b>${p.avg||'–'}</b></td><td>${p.l3||'–'}</td><td>${ppmC[p.id]!=null?ppmC[p.id].toFixed(2):'–'}</td><td>${trendIcon(t)}</td><td>${p.gp}</td><td>${p.hi}</td><td>${p.own}%</td></tr>`;
+     <td><b>${p.avg||'–'}</b></td><td>${p.l3||'–'}</td><td>${ppmC[p.id]!=null?ppmC[p.id].toFixed(2):'–'}</td><td>${trendIcon(t)}</td><td>${p.gp}</td><td>${p.hi}</td><td>${p.own}%</td>
+     <td><button class="btn" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();openComparison(${p.id})">⇔</button></td></tr>\`;
    }).join('')}
    </tbody></table></div>
    ${list.length>200?'<p class="muted" style="margin-top:8px">Showing first 200 — refine your search.</p>':''}
@@ -2812,7 +3213,8 @@ function renderAll(){
   b.disabled=over;
   b.textContent=over?'Season over':(S.round<=MAXR?'▶ Play Round '+S.round+' (real results)':'⏳ Awaiting Round '+S.round+' results');
   const pg=S.ui.page||'classic';
-  if(pg==='classic')renderClassic();
+  if(pg==='home')renderHome();
+  else if(pg==='classic')renderClassic();
   else if(pg==='custom')renderCustom();
   else if(pg==='trades')renderTrades();
   else if(pg==='draft')renderDraft();
