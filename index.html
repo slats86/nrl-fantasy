@@ -649,6 +649,7 @@ const SQUAD_FEED_IDS=[500011,500010,500012,500723,500022,500031,500003,500014,50
 
 /* ===== parse REAL ===== */
 let MAXR=14;
+let LIVE={round:0,scores:{},fetched:0,status:'idle'};/* live scores for current round */
 const RFIX={},RPRICE={},OFFS={},RST={};
 (function(){
   const fixPart=REAL.slice(REAL.indexOf('@FIX@')+5,REAL.indexOf('@PRICE@'));
@@ -1290,17 +1291,23 @@ function toggleInjured(pid){
 }
 
 function squadInnerHTML(){
-  const val=squadValue(),cap=S.settings.cap,rem=S.classic.bank!=null?S.classic.bank:cap-val,n=S.classic.squad.length;
+  const val=squadValue(),n=S.classic.squad.length;
   const lastR=S.round-1;
   const lastScore=lastR>=1&&S.classic.history[lastR]?lineupScore(S.classic.history[lastR],lastR).total:null;
   let totalPts=0;for(let r=1;r<=lastR;r++)if(S.classic.history[r])totalPts+=lineupScore(S.classic.history[r],r).total;
+  /* use custom-mode bank/cap when viewing from Custom tab */
+  const isInCustom=(S.ui.page==='custom'||S.ui.customTab!=null&&S.customLeague);
+  const cap=isInCustom?clCap():S.settings.cap;
+  const rem=isInCustom?(clBank()):(S.classic.bank!=null?S.classic.bank:cap-val);
+  const trLeft=isInCustom?(clTpr()-(cl().tradesRound||0)):(S.settings.tradesPerRound-S.classic.tradesRound);
+  const trSLeft=isInCustom?(clSts()-(cl().tradesSeason||0)):(S.settings.seasonTrades-S.classic.tradesSeason);
   return `
   <div class="statbar">
     <div class="stat"><div class="v">${n}/${SQUAD_N}</div><div class="l">Squad</div></div>
     <div class="stat ${rem<0?'warn':''}"><div class="v">${fmtM(rem)}</div><div class="l">Salary remaining</div></div>
     <div class="stat"><div class="v">${fmtM(val)}</div><div class="l">Team value</div></div>
-    <div class="stat"><div class="v">${seasonStarted()?(S.settings.tradesPerRound-S.classic.tradesRound):'∞'}</div><div class="l">Trades this round</div></div>
-    <div class="stat"><div class="v">${seasonStarted()?(S.settings.seasonTrades-S.classic.tradesSeason):'—'}</div><div class="l">Season trades left</div></div>
+    <div class="stat"><div class="v">${seasonStarted()?trLeft:'∞'}</div><div class="l">Trades this round</div></div>
+    <div class="stat"><div class="v">${seasonStarted()?trSLeft:'—'}</div><div class="l">Season trades left</div></div>
     <div class="stat"><div class="v">${lastScore!=null?lastScore:'—'}</div><div class="l">Rd ${lastR>0?lastR:'—'} score</div></div>
     <div class="stat"><div class="v">${totalPts}</div><div class="l">Total points</div></div>
   </div>
@@ -1467,6 +1474,111 @@ function getDashNews(){
   return items.slice(0,6);
 }
 
+/* ===== LIVE SCORES ===== */
+async function fetchLiveScores(btnEl){
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='⟳ Fetching…';}
+  LIVE.status='loading';
+  try{
+    const [players,rounds]=await Promise.all([
+      fetch('https://fantasy.nrl.com/data/nrl/players.json').then(r=>r.json()),
+      fetch('https://fantasy.nrl.com/data/nrl/rounds.json').then(r=>r.json())
+    ]);
+    const liveRnd=rounds.find(r=>r.status==='active')||rounds.filter(r=>r.status==='complete').sort((a,b)=>b.id-a.id)[0];
+    if(!liveRnd){LIVE.status='no-data';return;}
+    const r=liveRnd.id;
+    const idMap={};FEEDIDS.forEach((id,i)=>idMap[id]=i);
+    const sc={};
+    players.forEach(p=>{const i=idMap[p.id];if(i==null)return;if(p.stats?.scores?.[r]!=null)sc[i]=p.stats.scores[r];});
+    LIVE={round:r,scores:sc,fetched:Date.now(),status:liveRnd.status==='active'?'live':'final'};
+    /* also patch data so it persists */
+    buildPatchFromFeeds(players,rounds);
+  }catch(e){
+    LIVE.status='cors';
+  }finally{
+    if(btnEl){btnEl.disabled=false;btnEl.textContent='⟳ Refresh Live Scores';}
+    renderAll();
+  }
+}
+function livePts(pid){return LIVE.scores[pid]??null;}
+function liveTeamScore(line){
+  /* score the lineup using LIVE scores instead of stored official scores */
+  if(!line)return 0;
+  const chips=getChips();const active=chips.active||{};
+  const captainMult=S.settings.captainMult||2;
+  let total=0;
+  const benchAvail=(line.res||[]).filter(x=>x!=null&&livePts(x)!=null).sort((a,b)=>(livePts(b)||0)-(livePts(a)||0));
+  const subUsed=new Set();
+  for(const[posId,]of FIELD_STRUCT){for(const pid of (line.starters[posId]||[])){
+    if(pid==null)continue;
+    let ap=pid;
+    if(livePts(pid)==null){const rep=benchAvail.find(x=>!subUsed.has(x)&&PLAYERS[x].pos.includes(posId));if(rep!=null){subUsed.add(rep);ap=rep;}else continue;}
+    let pts=livePts(ap)||0;
+    if(ap===(line.c!=null&&livePts(line.c)!=null?line.c:(line.vc!=null&&livePts(line.vc)!=null?line.vc:null)))pts=Math.round(pts*captainMult);
+    total+=pts;
+  }}
+  return total;
+}
+/* render a compact live scores card for the user's squad */
+function liveScoresHTML(){
+  const r=LIVE.round;const sq=squadIds();
+  if(LIVE.status==='cors')return `<div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h3 style="margin:0">📡 Live Scores — Round ${S.round}</h3>
+      <button class="btn sec" style="font-size:12px" onclick="fetchLiveScores(this)">⟳ Refresh Live Scores</button>
+    </div>
+    <div class="notice" style="margin-bottom:0">CORS blocked auto-fetch. <a href="https://fantasy.nrl.com/data/nrl/players.json" target="_blank" style="color:var(--acc)">Open players.json</a> and <a href="https://fantasy.nrl.com/data/nrl/rounds.json" target="_blank" style="color:var(--acc)">rounds.json</a>, save both files, then use <b>⟳ Update data</b> in Settings.</div>
+  </div>`;
+  if(LIVE.status==='loading')return `<div class="card" style="margin-bottom:14px"><h3>📡 Live Scores</h3><p class="muted">Fetching…</p></div>`;
+  if(LIVE.status==='no-data'||r===0)return `<div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <h3 style="margin:0">📡 Live Scores — Round ${S.round}</h3>
+      <button class="btn sec" style="font-size:12px" onclick="fetchLiveScores(this)">⟳ Fetch Live Scores</button>
+    </div>
+    <p class="muted">No live data yet for Round ${S.round}. Click Fetch when the round is in progress.</p>
+  </div>`;
+  const myTotal=liveTeamScore(S.classic.history[r]||S.classic.line);
+  const pids=[...sq].filter(pid=>livePts(pid)!=null).sort((a,b)=>(livePts(b)||0)-(livePts(a)||0));
+  const age=Math.round((Date.now()-LIVE.fetched)/60000);
+  const statusTag=LIVE.status==='live'
+    ?'<span class="tag" style="background:rgba(0,230,118,.15);color:var(--acc)">🔴 LIVE</span>'
+    :'<span class="tag">✅ Final</span>';
+  return `<div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <h3 style="margin:0">📡 Live Scores — Round ${r} ${statusTag}</h3>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="muted" style="font-size:11px">${age<1?'just now':age+'m ago'}</span>
+        <button class="btn sec" style="font-size:12px" onclick="fetchLiveScores(this)">⟳ Refresh</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:8px;background:var(--bg2);border-radius:8px">
+      <div style="font-size:28px;font-weight:800;color:var(--acc)">${myTotal}</div>
+      <div style="font-size:13px;color:var(--dim)">projected pts this round</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px">
+    ${pids.map(pid=>{
+      const p=PLAYERS[pid];
+      const pts=livePts(pid);
+      const g=pts!=null?(()=>{const avg=p.avg||0;if(avg<=0)return pts>=50?'A+':pts>=30?'A':pts>=15?'B':'C';const rt=pts/avg;return rt>=1.6?'A+':rt>=1.2?'A':rt>=0.85?'B':rt>=0.5?'C':'D';})():null;
+      const gc=g==='A+'?'grade-aplus':g==='A'?'grade-a':g==='B'?'grade-b':g==='C'?'grade-c':'grade-d';
+      const isC=S.classic.line.c===pid,isVC=S.classic.line.vc===pid;
+      return `<div style="background:var(--card);border-radius:7px;padding:7px 9px;border:1px solid var(--line)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--dim)">${CLUBS[p.sq].s} · ${posStr(p)}</span>
+          ${g?`<span class="grade ${gc}">${g}</span>`:''}
+        </div>
+        <div style="font-weight:700;font-size:13px;margin:2px 0">${esc(p.name)}${isC?' <span style="color:var(--acc);font-size:10px">C</span>':isVC?' <span style="color:var(--dim);font-size:10px">VC</span>':''}</div>
+        <div style="font-size:19px;font-weight:800;color:${pts>=p.avg?'var(--acc)':'var(--txt)'}">${pts!=null?pts:'—'}</div>
+      </div>`;
+    }).join('')}
+    ${[...sq].filter(pid=>livePts(pid)==null).map(pid=>{const p=PLAYERS[pid];return `<div style="background:var(--card);border-radius:7px;padding:7px 9px;border:1px solid var(--line);opacity:.5">
+        <div style="font-size:11px;color:var(--dim)">${CLUBS[p.sq].s} · ${posStr(p)}</div>
+        <div style="font-weight:700;font-size:13px;margin:2px 0">${esc(p.name)}</div>
+        <div style="font-size:19px;font-weight:800;color:var(--dim)">—</div>
+      </div>`}).join('')}
+    </div>
+  </div>`;
+}
+
 /* ===== HOME DASHBOARD ===== */
 function renderHome(){
   const el=document.getElementById('pg-home');
@@ -1533,17 +1645,20 @@ function renderHome(){
       ${rws}
     </tbody></table></div>`;
   })();
+  /* try auto-fetch live scores on first home load if stale */
+  if(LIVE.status==='idle'&&S.classic.squad.length>0){fetchLiveScores();}
   el.innerHTML=`
   <div class="page-header" style="margin-bottom:18px">
     <h1 style="margin:0 0 4px;font-size:22px">📈 Dashboard</h1>
     <div style="color:var(--dim);font-size:13px">Season 2026 · Round ${S.round}</div>
   </div>
   ${byeHTML}
+  ${liveScoresHTML()}
   <div class="dash-grid">
     <div class="stat-tile"><div class="st-label">Round ${lastR>=1?lastR:'—'} score</div><div class="st-val">${roundPts}</div><div class="st-sub">pts this round</div></div>
     <div class="stat-tile"><div class="st-label">Season total</div><div class="st-val">${totalPts}</div><div class="st-sub">pts across ${lastR>=1?lastR:0} rounds</div></div>
     <div class="stat-tile"><div class="st-label">Team value</div><div class="st-val">${fmtK(tv)}</div><div class="st-sub">Bank: ${fmtK(S.classic.bank||0)}</div></div>
-    <div class="stat-tile"><div class="st-label">Squad size</div><div class="st-val">${sq.size}</div><div class="st-sub">players selected</div></div>
+    <div class="stat-tile"${LIVE.round>0?' style="border-color:var(--acc)"':''}><div class="st-label">Round ${LIVE.round>0?LIVE.round:S.round} live</div><div class="st-val" style="color:var(--acc)">${LIVE.round>0?liveTeamScore(S.classic.history[LIVE.round]||S.classic.line):'—'}</div><div class="st-sub">${LIVE.status==='live'?'🔴 in progress':LIVE.status==='final'?'✅ final':'awaiting data'}</div></div>
   </div>
   <div class="grid2">
     <div>
@@ -2007,6 +2122,7 @@ function bestBallScore(roster,r){
 function renderField(){
   const L=S.classic.line,lastR=S.round-1;
   const sc=lastR>=1&&S.classic.history[lastR]?lineupScore(S.classic.history[lastR],lastR):null;
+  const liveR=LIVE.round>0?LIVE.round:null;
   const scoreOf=pid=>{
     if(!sc)return '';
     const d=sc.detail.find(x=>x.orig===pid||x.pid===pid);
@@ -3281,11 +3397,15 @@ function tradeInHTML(){
 function execTrade(outPid,inPid){
   const slot=lineSlots(S.classic.line).find(s=>s.pid===outPid);
   if(!slot)return;
-  if(price(inPid)-price(outPid)>S.classic.bank){alert('Not enough salary.');return}
-  const injWild=!!(getChips().active||{}).injuryWildcard;
   const trMode=S.ui.trPage||'classic';
+  const isCustomMode=trMode==='custom';
+  /* use the mode-appropriate bank for the affordability check */
+  const availBank=isCustomMode?clBank():S.classic.bank;
+  const cost=price(inPid)-price(outPid);
+  if(cost>availBank){alert('Not enough salary. Bank: '+fmtM(availBank)+', Cost: '+fmtM(cost));return}
+  const injWild=!!(getChips().active||{}).injuryWildcard;
   if(seasonStarted()&&!injWild){
-    if(trMode==='custom'){
+    if(isCustomMode){
       const tpr=clTpr(),sts=clSts();
       if((cl().tradesRound||0)>=tpr){alert('No custom league trades left this round.');return}
       if((cl().tradesSeason||0)>=sts){alert('No custom league season trades left.');return}
@@ -3303,6 +3423,9 @@ function execTrade(outPid,inPid){
   addToSlot(inPid,slot);
   if(wasC)S.classic.line.c=inPid;
   if(wasVC)S.classic.line.vc=inPid;
+  /* update bank — squad is shared so update both; custom has its own separate balance */
+  if(S.classic.bank!=null)S.classic.bank-=cost;
+  if(S.customLeague&&S.customLeague.bank!=null)S.customLeague.bank-=cost;
   S.ui.trOut=null;
   save();refreshTrades();
 }
