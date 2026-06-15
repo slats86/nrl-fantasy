@@ -335,7 +335,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
       <span class="topbar-brand"><span class="ball">🏉</span> NRL Fantasy</span>
       <div class="rd-pill">
         <span class="pill" id="hdr-round">Round 1</span>
-        <button class="btn" id="btn-sim">&#9654; Play Round</button>
+        <button class="btn" id="btn-update" onclick="updateData()">⟳ Update Data</button>
       </div>
       <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none"></div>
     </div>
@@ -540,6 +540,11 @@ function load(){
     }
     if(S.settings&&S.settings.bestBall===undefined)S.settings.bestBall=false;
     if(S.settings&&!S.settings.scoringPeriod)S.settings.scoringPeriod=1;
+    /* new model: startRound — set to 1 for existing teams, 0 for fresh starts */
+    if(S.classic&&S.classic.startRound==null)S.classic.startRound=S.classic.squad.length>0?1:0;
+    /* auto-advance any rounds that have real data but weren't applied yet */
+    if(S.round<=MAXR){applyDataPatch();autoAdvanceRounds(S.round-1);}
+    else if(S.round<MAXR+1)S.round=MAXR+1;
     if(S.draft&&!S.draft.waivers)S.draft.waivers=[];
     if(S.settings&&!S.settings.layout){ /* migrate: preserve this save's existing squad shape */
       S.settings.layout={...DEFAULT_LAYOUT};
@@ -693,6 +698,7 @@ function buildPatchFromFeeds(players,rounds){
   const sqMap={};SQUAD_FEED_IDS.forEach((id,i)=>sqMap[id]=i);
   const doneRounds=rounds.filter(r=>r.status==='complete').map(r=>r.id);
   const newMax=doneRounds.length?Math.max(...doneRounds):MAXR;
+  const oldMaxBefore=MAXR;/* snapshot before patch mutates MAXR */
   const P=S.dataPatch||{};P.maxR=Math.max(newMax,P.maxR||0);
   P.off=P.off||{};P.price=P.price||{};P.fix=P.fix||{};P.st=P.st||{};
   players.forEach(p=>{
@@ -706,7 +712,7 @@ function buildPatchFromFeeds(players,rounds){
     P.fix[rd.id]={byes:(rd.bye_squads||[]).map(x=>sqMap[x]).filter(x=>x!=null),
       games:(rd.matches||[]).map(m=>[sqMap[m.home_squad_id],sqMap[m.away_squad_id],m.status==='complete'?m.home_score:null,m.status==='complete'?m.away_score:null])};
   });
-  S.dataPatch=P;applyDataPatch();save();
+  S.dataPatch=P;applyDataPatch();const _adv=autoAdvanceRounds(oldMaxBefore);save();return _adv;
 }
 async function updateData(){
   const btn=$('#btn-update');if(btn){btn.disabled=true;btn.textContent='Updating…'}
@@ -733,7 +739,7 @@ async function updateData(){
       }
       applyDataPatch();save();
     }
-    alert('Data updated — real results loaded through Round '+MAXR+'.');
+    const newRounds=Object.keys(S.season.rounds).length;const msg=MAXR>14?('Data updated — real results through Round '+MAXR+(newRounds>0?'. Round '+S.round+' is your next upcoming round.':'.')):'Data is current — real results loaded through Round '+MAXR+'.';alert(msg);
   }catch(e){
     openModal(`<h3>Couldn't fetch automatically</h3>
     <p class="muted" style="margin:10px 0">Your browser blocked the request (CORS). Do it manually — takes 30 seconds:</p>
@@ -1112,6 +1118,48 @@ function simulateRound(){
   save();renderAll();
 }
 
+/* ── auto-advance all rounds with real data (called after data update) ── */
+function autoAdvanceRounds(oldMax){
+  const newMax=MAXR;
+  if(newMax<=oldMax)return 0;
+  let advanced=0;
+  for(let r=oldMax+1;r<=newMax;r++){
+    if(!RFIX[r])continue;
+    /* mark this round as real */
+    S.season.rounds[r]={fix:RFIX[r].games,byes:RFIX[r].byes,real:true};
+    /* lock classic lineup into history for this round (if team exists and not already locked) */
+    if(S.classic.squad.length>0&&!S.classic.history[r]){
+      if(S.league)S.league.teams[0].line=JSON.parse(JSON.stringify(S.classic.line));
+      S.classic.history[r]=JSON.parse(JSON.stringify(S.classic.line));
+    }
+    /* league history */
+    if(S.league){S.league.history=S.league.history||{};
+      if(!S.league.history[r])S.league.history[r]=S.league.teams.map(t=>JSON.parse(JSON.stringify(t.line)));}
+    /* draft history */
+    if(S.draft&&S.draft.done){
+      S.draft.teams.forEach(t=>{if(t.ai)autoSetDraftLineup(t);});
+      S.draft.history=S.draft.history||{};
+      if(!S.draft.history[r])S.draft.history[r]=S.draft.teams.map(t=>JSON.parse(JSON.stringify(t.line)));
+    }
+    /* reset per-round counters */
+    S.classic.tradesRound=0;
+    if(S.customLeague)S.customLeague.tradesRound=0;
+    /* expire round-only chips */
+    const ch=S.classic.chips;
+    if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
+    /* expire waivers */
+    if(S.draft&&S.draft.waivers)S.draft.waivers=S.draft.waivers.filter(w=>w.round>=r);
+    /* price history snapshot */
+    const ph={};PLAYERS.forEach(p=>ph[p.id]=price(p.id));
+    S.priceHistory[r]=ph;
+    advanced++;
+  }
+  /* always keep S.round at MAXR+1 */
+  S.round=MAXR+1;
+  if(advanced>0)S.ui.mcRound=newMax;
+  return advanced;
+}
+
 /* league ladder from history (recomputed under current rules) */
 function leagueLadder(lg,isDraft){
   const teams=lg.teams.map((t,i)=>({i,name:t.name,w:0,l:0,d:0,pf:0,pa:0,pts:0}));
@@ -1295,7 +1343,8 @@ function squadInnerHTML(){
   const val=squadValue(),n=S.classic.squad.length;
   const lastR=S.round-1;
   const lastScore=lastR>=1&&S.classic.history[lastR]?lineupScore(S.classic.history[lastR],lastR).total:null;
-  let totalPts=0;for(let r=1;r<=lastR;r++)if(S.classic.history[r])totalPts+=lineupScore(S.classic.history[r],r).total;
+  const sr=S.classic.startRound||1;
+  let totalPts=0;for(let r=sr;r<=lastR;r++)if(S.classic.history[r])totalPts+=lineupScore(S.classic.history[r],r).total;
   /* use custom-mode bank/cap when viewing from Custom tab */
   const isInCustom=(S.ui.page==='custom'||S.ui.customTab!=null&&S.customLeague);
   const cap=isInCustom?clCap():S.settings.cap;
@@ -1591,9 +1640,10 @@ function renderHome(){
     const sc=lineupScore(S.classic.history[lastR],lastR);
     roundScore=sc.total;roundPts=sc.total+'';
   }
-  /* total season score */
+  /* total season score — only from startRound */
+  const _sr=S.classic.startRound||1;
   let totalPts=0;
-  for(let r=1;r<S.round;r++){
+  for(let r=_sr;r<S.round;r++){
     if(S.classic.history[r])totalPts+=lineupScore(S.classic.history[r],r).total;
   }
   /* team value */
@@ -1657,7 +1707,7 @@ function renderHome(){
   ${liveScoresHTML()}
   <div class="dash-grid">
     <div class="stat-tile"><div class="st-label">Round ${lastR>=1?lastR:'—'} score</div><div class="st-val">${roundPts}</div><div class="st-sub">pts this round</div></div>
-    <div class="stat-tile"><div class="st-label">Season total</div><div class="st-val">${totalPts}</div><div class="st-sub">pts across ${lastR>=1?lastR:0} rounds</div></div>
+    <div class="stat-tile"><div class="st-label">Season total</div><div class="st-val">${totalPts}</div><div class="st-sub">Rds ${_sr}–${Math.max(_sr,lastR>=1?lastR:0)}</div></div>
     <div class="stat-tile"><div class="st-label">Team value</div><div class="st-val">${fmtK(tv)}</div><div class="st-sub">Bank: ${fmtK(S.classic.bank||0)}</div></div>
     <div class="stat-tile"${LIVE.round>0?' style="border-color:var(--acc)"':''}><div class="st-label">Round ${LIVE.round>0?LIVE.round:S.round} live</div><div class="st-val" style="color:var(--acc)">${LIVE.round>0?liveTeamScore(S.classic.history[LIVE.round]||S.classic.line):'—'}</div><div class="st-sub">${LIVE.status==='live'?'🔴 in progress':LIVE.status==='final'?'✅ final':'awaiting data'}</div></div>
   </div>
@@ -1809,9 +1859,15 @@ function renderClassic(){
   const tab=S.ui.classicTab||'team';
   const bank=S.classic.bank,started=seasonStarted();
   S.ui.trPage='classic';
+  const sr=S.classic.startRound;
+  const notStarted=sr===0&&S.classic.squad.length===0;
+  const lateJoin=sr>1&&S.classic.squad.length>0;
   el.innerHTML=`
   <div class="mode-hdr">
-    <div><h1>🏆 Classic</h1><div class="msub">Official NRL Fantasy · cap ${fmtK(S.settings.cap)}</div></div>
+    <div><h1>🏆 Classic</h1>
+      <div class="msub">Official NRL Fantasy · cap ${fmtK(S.settings.cap)} · Round ${S.round}</div>
+      ${lateJoin?`<div style="font-size:11px;color:var(--amber);margin-top:2px">⚠ Joined Round ${sr} — scores counted from Round ${sr}</div>`:''}
+    </div>
     <span class="spacer"></span>
     <div style="display:flex;gap:18px">
       <div class="mstat"><b class="${bank<0?'bad':''}">${fmtM(bank)}</b><span>Bank</span></div>
@@ -1819,6 +1875,7 @@ function renderClassic(){
       <div class="mstat"><b>${fmtM(squadValue())}</b><span>Team value</span></div>
     </div>
   </div>
+  ${notStarted?'<div class="notice" style="margin-bottom:14px">👋 Pick your squad below to join the season from <b>Round '+S.round+'</b>. Your scores will be tracked from that round onwards.</div>':''}
   <div class="mode-tabs">
     <button class="${tab==='team'?'on':''}" onclick="S.ui.classicTab='team';renderClassic()">👥 My Team</button>
     <button class="${tab==='trades'?'on':''}" onclick="S.ui.classicTab='trades';renderClassic()">🔄 Trades</button>
@@ -3052,8 +3109,8 @@ function renderMatch(){
   if(!allRounds.length){
     el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><h3 style="justify-content:center">📺 Match Centre</h3>
     <p class="muted" style="margin:10px 0">No rounds available yet.</p>
-    <button class="btn sec" style="margin-right:8px" onclick="simulateRound()">▶ Play Round 1 (real results)</button>
-    <button class="btn sec" onclick="fetchLiveScores(this)">📡 Fetch Live Scores</button></div>`;
+    <button class="btn sec" onclick="fetchLiveScores(this)">📡 Fetch Live Scores</button>
+    <button class="btn sec" onclick="updateData()">⟳ Update Data</button></div>`;
     return;
   }
   /* default to live round if available, else last played */
@@ -3108,7 +3165,7 @@ function renderMatch(){
       </select>
     </label>
     ${liveTag}
-    ${!isLive&&S.round>r&&!S.season.rounds[r]?`<button class="btn sec" style="font-size:12px" onclick="S.ui.mcRound=${r};simulateRound();renderMatch()">▶ Load this round</button>`:''}
+
     <span class="muted" style="font-size:12px">Bye: ${byes.length?byes.map(b=>CLUBS[b].s).join(', '):'—'}</span>
     <span class="spacer"></span>
     ${myRoundSummary(r,isLive)}
@@ -3140,13 +3197,15 @@ function renderMatch(){
   </div>`;
 }
 function myRoundSummary(r,isLive){
+  const sr=S.classic.startRound||0;
+  if(sr>0&&r<sr)return '';/* team didn't exist this round */
   if(isLive&&LIVE.round===r){
     const liveSc=liveTeamScore(S.classic.history[r]||S.classic.line);
     return `<span class="pill" style="background:var(--card2);border:1px solid var(--acc);border-radius:18px;padding:6px 14px">My score Rd ${r}: <b class="good">${liveSc}</b> <span style="color:var(--acc);font-size:11px">LIVE</span></span>`;
   }
   if(!S.classic.history[r])return '';
   const sc=lineupScore(S.classic.history[r],r);
-  return `<span class="pill" style="background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:6px 14px">My Classic score Rd ${r}: <b class="good">${sc.total}</b></span>`;
+  return `<span class="pill" style="background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:6px 14px">My score Rd ${r}: <b class="good">${sc.total}</b></span>`;
 }
 function showStatLine(pid,r){
   const p=PLAYERS[pid],st=RST[pid]&&RST[pid][r],pts=playerPts(pid,r);
@@ -3321,12 +3380,7 @@ function createLeague(){
   S.league={name,teams:list,history:{}};
   closeModal();save();renderLeagues();
 }
-/* user's league lineup = classic lineup; patch history capture */
-const _origSim=simulateRound;
-simulateRound=function(){
-  if(S.league)S.league.teams[0].line=JSON.parse(JSON.stringify(S.classic.line));
-  _origSim();
-};
+/* league lineup is captured inside autoAdvanceRounds() — no monkey-patch needed */
 </script>
 <script>
 /* ================= TRADES PAGE ================= */
@@ -3695,9 +3749,9 @@ function renderSettings(){
   const el=$('#pg-settings');
   const st=S.settings;
   el.innerHTML=`
-  <div class="card"><h3>Season data <span class="tag">real results loaded through Round ${MAXR} of ${st.totalRounds}</span></h3>
+  <div class="card"><h3>Season data <span class="tag">results through Rd ${MAXR} · current round: ${S.round}</span></h3>
    <p class="muted" style="margin-bottom:10px">Prices are the official round-by-round prices. When new rounds finish, update to pull in the latest scores, stat lines, prices and results.</p>
-   <div class="flex"><button class="btn" id="btn-update" onclick="updateData()">⟳ Update data from NRL Fantasy</button></div>
+   <div class="flex"><button class="btn" onclick="updateData()">⟳ Update data from NRL Fantasy</button></div>
   </div>
   <div class="card"><h3>Save &amp; restore</h3>
    <div class="flex">
@@ -3791,17 +3845,19 @@ function setPage(pg){
   renderAll();save();
 }
 $$('#sidebar-nav .navitem, #bottom-tabbar .btab').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.pg)));
-$('#btn-sim').addEventListener('click',()=>{
-  if(S.classic.squad.length<SQUAD_N&&!confirm('Your Classic squad is incomplete ('+S.classic.squad.length+'/'+SQUAD_N+'). Apply the round anyway?'))return;
-  simulateRound();
-});
 
 function renderAll(){
   const over=S.round>S.settings.totalRounds;
-  $('#hdr-round').textContent=over?'Season over':'Round '+S.round;
-  const b=$('#btn-sim');
-  b.disabled=over;
-  b.textContent=over?'Season over':(S.round<=MAXR?'▶ Play Round '+S.round+' (real results)':'⏳ Awaiting Round '+S.round+' results');
+  const awaitingData=S.round>MAXR;
+  const b=$('#btn-update');
+  if(b){
+    b.disabled=false;
+    b.textContent='⟳ Update Data';
+    b.title=awaitingData
+      ?'Check for new round results from NRL Fantasy'
+      :'Data current through Round '+MAXR+'. Click to check for updates.';
+  }
+  $('#hdr-round').textContent=over?'Season complete':('Round '+S.round+(LIVE.status==='live'?' 🔴':''));
   const pg=S.ui.page||'classic';
   try{
     if(pg==='home')renderHome();
