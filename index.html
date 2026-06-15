@@ -3199,7 +3199,8 @@ function renderMatch(){
   const defR=liveR||played[played.length-1]||S.round||1;
   const r=S.ui.mcRound?Math.min(Math.max(1,S.ui.mcRound),allRounds[allRounds.length-1]):defR;
   /* get fixture data: try season history first, then RFIX for upcoming/live */
-  const isLive=liveR===r&&LIVE.status!=='idle';
+  /* isLive = round is actively IN PROGRESS; 'final' rounds use playerPts from OFFS */
+  const isLive=liveR===r&&LIVE.status==='live';
   const rdFix=S.season.rounds[r]?S.season.rounds[r]:(RFIX[r]?{fix:RFIX[r].games,byes:RFIX[r].byes,real:false}:null);
   if(!rdFix){S.ui.mcRound=defR;return renderMatch();}
   const mi=Math.min(S.ui.mcMatch||0,rdFix.fix.length-1);
