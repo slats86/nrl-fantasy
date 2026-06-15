@@ -1,0 +1,47 @@
+name: Fetch NRL Fantasy Data
+
+on:
+  schedule:
+    # Every 30 min during NRL game windows (Thu-Sun, 17:00-23:00 AEST = 07:00-13:00 UTC)
+    - cron: '*/30 7-13 * * 4-0'
+    # Every 4 hours otherwise to catch round completion
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch NRL Fantasy JSON
+        run: |
+          mkdir -p public
+          curl -fsSL \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Accept-Language: en-AU,en;q=0.9" \
+            -H "Referer: https://fantasy.nrl.com/" \
+            -H "Origin: https://fantasy.nrl.com" \
+            "https://fantasy.nrl.com/data/nrl/players.json" \
+            -o public/players.json
+
+          curl -fsSL \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Accept-Language: en-AU,en;q=0.9" \
+            -H "Referer: https://fantasy.nrl.com/" \
+            -H "Origin: https://fantasy.nrl.com" \
+            "https://fantasy.nrl.com/data/nrl/rounds.json" \
+            -o public/rounds.json
+
+          # Validate JSON
+          python3 -c "import json; d=json.load(open('public/players.json')); print(f'players.json OK: {len(d)} players')"
+          python3 -c "import json; d=json.load(open('public/rounds.json')); print(f'rounds.json OK: {len(d)} rounds'); [print(f'  Round {r[\"id\"]}: {r[\"status\"]}') for r in d if r.get('id',0)>=14]"
+
+      - name: Commit if changed
+        run: |
+          git config user.name "nrl-data-bot"
+          git config user.email "bot@nrl-fantasy"
+          git add public/players.json public/rounds.json
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update NRL Fantasy scores" && git push)

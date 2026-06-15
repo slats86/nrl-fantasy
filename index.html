@@ -1122,6 +1122,7 @@ function simulateRound(){
 
 /* ── auto-advance all rounds with real data (called after data update) ── */
 function autoAdvanceRounds(oldMax){
+  if(isNaN(oldMax)||oldMax==null)oldMax=0;/* treat NaN/null as "start from scratch" */
   const newMax=MAXR;
   if(newMax<=oldMax)return 0;
   let advanced=0;
