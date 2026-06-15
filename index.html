@@ -718,8 +718,9 @@ function buildPatchFromFeeds(players,rounds){
 async function updateData(){
   const btn=$('#btn-update');if(btn){btn.disabled=true;btn.textContent='Updating…'}
   try{
-    const players=await fetch('https://fantasy.nrl.com/data/nrl/players.json').then(r=>r.json());
-    const rounds=await fetch('https://fantasy.nrl.com/data/nrl/rounds.json').then(r=>r.json());
+    const _loc=location.hostname==='localhost'||location.hostname==='127.0.0.1';
+    const players=await fetch(_loc?'https://fantasy.nrl.com/data/nrl/players.json':'/api/players').then(r=>r.json());
+    const rounds=await fetch(_loc?'https://fantasy.nrl.com/data/nrl/rounds.json':'/api/rounds').then(r=>r.json());
     const oldMax=MAXR;
     buildPatchFromFeeds(players,rounds);
     /* try to fetch detailed stat lines for new rounds (for custom scoring + breakdowns) */
@@ -745,8 +746,8 @@ async function updateData(){
     openModal(`<h3>Couldn't fetch automatically</h3>
     <p class="muted" style="margin:10px 0">Your browser blocked the request (CORS). Do it manually — takes 30 seconds:</p>
     <ol style="margin:0 0 12px 18px;line-height:1.7;font-size:13px">
-      <li>Open <b>fantasy.nrl.com/data/nrl/players.json</b> — save the page as <b>players.json</b></li>
-      <li>Open <b>fantasy.nrl.com/data/nrl/rounds.json</b> — save as <b>rounds.json</b></li>
+      <li>Scores update automatically — no manual steps needed in the live app</li>
+      <li>To force a refresh, use the button above</li>
       <li>Pick both files below</li>
     </ol>
     <input type="file" id="upd-files" multiple accept=".json">
@@ -1589,9 +1590,10 @@ function scheduleNextRefresh(){
 async function autoRefresh(manual){
   /* unified fetch: scores + round data + kick-off times */
   try{
+  const _isLocal=location.hostname==='localhost'||location.hostname==='127.0.0.1';
     const [players,rounds]=await Promise.all([
-      fetch('https://fantasy.nrl.com/data/nrl/players.json').then(r=>r.json()),
-      fetch('https://fantasy.nrl.com/data/nrl/rounds.json').then(r=>r.json())
+      fetch(_isLocal?'https://fantasy.nrl.com/data/nrl/players.json':'/api/players').then(r=>r.json()),
+      fetch(_isLocal?'https://fantasy.nrl.com/data/nrl/rounds.json':'/api/rounds').then(r=>r.json())
     ]);
     /* advance rounds if new data */
     buildPatchFromFeeds(players,rounds);
@@ -1664,7 +1666,7 @@ function liveScoresHTML(){
       <h3 style="margin:0">📡 Live Scores — Round ${S.round}</h3>
       <button class="btn sec" style="font-size:12px" onclick="fetchLiveScores(this)">⟳ Refresh Live Scores</button>
     </div>
-    <div class="notice" style="margin-bottom:0">CORS blocked auto-fetch. <a href="https://fantasy.nrl.com/data/nrl/players.json" target="_blank" style="color:var(--acc)">Open players.json</a> and <a href="https://fantasy.nrl.com/data/nrl/rounds.json" target="_blank" style="color:var(--acc)">rounds.json</a>, save both files, then use <b>⟳ Update data</b> in Settings.</div>
+    <div class="notice" style="margin-bottom:0">Score data is temporarily unavailable — it will retry automatically. If the problem persists, check your connection.</div>
   </div>`;
   if(LIVE.status==='loading')return `<div class="card" style="margin-bottom:14px"><h3>📡 Live Scores</h3><p class="muted">Fetching…</p></div>`;
   if(LIVE.status==='no-data'||r===0)return `<div class="card" style="margin-bottom:14px">
