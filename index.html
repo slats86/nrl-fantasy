@@ -215,6 +215,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .grade-b{background:#ffc107;color:#07070c}
 .grade-c{background:#ff9800;color:#07070c}
 .grade-d{background:var(--red);color:#fff}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
 /* ---- SHARE TEAM MODAL ---- */
 .share-box{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;white-space:pre;overflow-x:auto;max-height:320px;overflow-y:auto;color:var(--txt)}
@@ -1645,8 +1646,8 @@ function renderHome(){
       ${rws}
     </tbody></table></div>`;
   })();
-  /* try auto-fetch live scores on first home load if stale */
-  if(LIVE.status==='idle'&&S.classic.squad.length>0){fetchLiveScores();}
+  /* auto-fetch live scores on first home load if stale */
+  if(LIVE.status==='idle'){fetchLiveScores();}
   el.innerHTML=`
   <div class="page-header" style="margin-bottom:18px">
     <h1 style="margin:0 0 4px;font-size:22px">📈 Dashboard</h1>
@@ -3014,47 +3015,123 @@ function clubPts(ci,r){
   PLAYERS.forEach(p=>{if(p.sq===ci&&playedIn(p.id,r))t+=playerPts(p.id,r)});
   return t;
 }
+function clubLivePts(ci){
+  /* sum live scores for all squad players of this club */
+  let t=0;
+  PLAYERS.forEach(p=>{if(p.sq===ci){const lp=livePts(p.id);if(lp!=null)t+=lp;}});
+  return t;
+}
+function isLiveRound(r){return LIVE.round===r&&LIVE.status==='live';}
+function mcPts(pid,r){
+  /* prefer live score for live round, otherwise official */
+  if(isLiveRound(r)){const lp=livePts(pid);if(lp!=null)return lp;}
+  return playerPts(pid,r);
+}
+function mcClubPts(ci,r){
+  if(isLiveRound(r)){return clubLivePts(ci);}
+  return clubPts(ci,r);
+}
+/* Match Centre auto-poll */
+let _mcPollId=null;
+function startMcPoll(){
+  if(_mcPollId)return;
+  _mcPollId=setInterval(async()=>{
+    if(S.ui.page!=='match'||!isLiveRound(S.ui.mcRound||LIVE.round)){stopMcPoll();return;}
+    await fetchLiveScores();
+    if(S.ui.page==='match')renderMatch();
+  },60000);/* refresh every 60s while live */
+}
+function stopMcPoll(){if(_mcPollId){clearInterval(_mcPollId);_mcPollId=null;}}
+
 function renderMatch(){
   const el=$('#pg-match');
   const played=Object.keys(S.season.rounds).map(Number).sort((a,b)=>a-b);
-  if(!played.length){
+  /* include live round even if not yet simulated */
+  const liveR=LIVE.round>0?LIVE.round:null;
+  const allRounds=[...new Set([...played,liveR].filter(Boolean))].sort((a,b)=>a-b);
+  if(!allRounds.length){
     el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><h3 style="justify-content:center">📺 Match Centre</h3>
-    <p class="muted" style="margin:10px 0">No rounds applied yet. Hit <b>▶ Play Round 1</b> (top right) to bring in the real Round 1 results — actual match scores, every player's official fantasy points and full stat lines.</p>
-    <button class="btn" onclick="simulateRound()">▶ Play Round 1 (real results)</button></div>`;
+    <p class="muted" style="margin:10px 0">No rounds available yet.</p>
+    <button class="btn sec" style="margin-right:8px" onclick="simulateRound()">▶ Play Round 1 (real results)</button>
+    <button class="btn sec" onclick="fetchLiveScores(this)">📡 Fetch Live Scores</button></div>`;
     return;
   }
-  const r=Math.min(Math.max(1,S.ui.mcRound||played[played.length-1]),played[played.length-1]);
-  const rd=S.season.rounds[r];
-  if(!rd){S.ui.mcRound=played[played.length-1];return renderMatch()}
-  const mi=Math.min(S.ui.mcMatch||0,rd.fix.length-1);
-  const [h,a]=rd.fix[mi];
-  const hp=clubPts(h,r),ap=clubPts(a,r);
-  const byes=rd.byes||[];
+  /* default to live round if available, else last played */
+  const defR=liveR||played[played.length-1]||1;
+  const r=S.ui.mcRound?Math.min(Math.max(1,S.ui.mcRound),allRounds[allRounds.length-1]):defR;
+  /* get fixture data: live round uses RFIX directly, played rounds use S.season */
+  const isLive=liveR===r&&LIVE.status!=='idle';
+  const rdFix=S.season.rounds[r]?S.season.rounds[r]:(isLive&&RFIX[r]?{fix:RFIX[r].games,byes:RFIX[r].byes,real:false}:null);
+  if(!rdFix){S.ui.mcRound=defR;return renderMatch();}
+  const mi=Math.min(S.ui.mcMatch||0,rdFix.fix.length-1);
+  const [h,a]=rdFix.fix[mi];
+  const hp=mcClubPts(h,r),ap=mcClubPts(a,r);
+  const byes=rdFix.byes||[];
+  /* start/stop live poll */
+  if(isLive&&LIVE.status==='live')startMcPoll();else stopMcPoll();
+  const age=isLive&&LIVE.fetched?Math.round((Date.now()-LIVE.fetched)/60000):null;
+  const liveTag=isLive
+    ?(LIVE.status==='live'
+      ?`<span class="tag" style="background:rgba(255,60,60,.15);color:#ff6060;animation:pulse 1.5s infinite">🔴 LIVE${age!==null?' · '+age+'m ago':''}</span>`
+      :`<span class="tag" style="background:rgba(0,230,118,.1);color:var(--acc)">✅ Final</span>`)
+    :'';
   const lister=ci=>{
-    const rows=PLAYERS.filter(p=>p.sq===ci&&playedIn(p.id,r)).map(p=>({p,pts:playerPts(p.id,r)})).sort((x,y)=>y.pts-x.pts);
-    return rows.map(({p,pts})=>`<tr style="cursor:pointer" onclick="showStatLine(${p.id},${r})">
-      <td>${avatar(p,26)}</td><td><b>${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${posStr(p)}</span></td>
-      <td style="text-align:right"><b class="${pts>=60?'good':pts<20?'bad':''}">${pts}</b></td></tr>`).join('');
+    /* for live round use LIVE scores + all players with data; for historical use played filter */
+    let rows;
+    if(isLive){
+      rows=PLAYERS.filter(p=>p.sq===ci&&livePts(p.id)!=null)
+        .map(p=>({p,pts:livePts(p.id)})).sort((x,y)=>y.pts-x.pts);
+    }else{
+      rows=PLAYERS.filter(p=>p.sq===ci&&playedIn(p.id,r))
+        .map(p=>({p,pts:playerPts(p.id,r)})).sort((x,y)=>y.pts-x.pts);
+    }
+    if(!rows.length)return '<tr><td colspan="3" class="muted" style="padding:10px">No data yet</td></tr>';
+    return rows.map(({p,pts})=>{
+      const g=pts!=null?(()=>{const avg=p.avg||0;if(avg<=0)return pts>=50?'A+':pts>=30?'A':pts>=15?'B':'C';const rt=pts/avg;return rt>=1.6?'A+':rt>=1.2?'A':rt>=0.85?'B':rt>=0.5?'C':'D';})():null;
+      const gc=g==='A+'?'grade-aplus':g==='A'?'grade-a':g==='B'?'grade-b':g==='C'?'grade-c':'grade-d';
+      const sq=squadIds();const inMy=sq.has(p.id);
+      return `<tr style="cursor:pointer${inMy?';background:rgba(132,204,22,.06)':''}" onclick="${isLive?'':('showStatLine('+p.id+','+r+')')}">
+        <td>${avatar(p,26)}</td>
+        <td><b>${esc(p.name)}</b>${inMy?'<span class="tag" style="font-size:9px;margin-left:4px;background:rgba(132,204,22,.12);color:var(--acc)">MY</span>':''}
+          <br><span class="muted" style="font-size:11px">${posStr(p)}</span></td>
+        <td style="text-align:right">
+          ${g?`<span class="grade ${gc}">${g}</span>`:''}
+          <b class="${pts>=60?'good':pts<20?'bad':''}">${pts??'—'}</b>
+        </td></tr>`;
+    }).join('');
   };
   el.innerHTML=`
-  <div class="flex" style="margin-bottom:12px">
-    <label>Round <select onchange="S.ui.mcRound=+this.value;S.ui.mcMatch=0;renderMatch()">${played.map(x=>`<option value="${x}" ${x===r?'selected':''}>Round ${x}</option>`).join('')}</select></label>
-    <span class="muted">Bye: ${byes.length?byes.map(b=>CLUBS[b].n).join(', '):'—'}</span>
+  <div class="flex" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <label style="display:flex;align-items:center;gap:6px">Round
+      <select onchange="S.ui.mcRound=+this.value;S.ui.mcMatch=0;renderMatch()">
+        ${allRounds.map(x=>`<option value="${x}" ${x===r?'selected':''}>${x===liveR?'Round '+x+' 🔴':('Round '+x)}</option>`).join('')}
+      </select>
+    </label>
+    ${liveTag}
+    ${!isLive&&S.round>r&&!S.season.rounds[r]?`<button class="btn sec" style="font-size:12px" onclick="S.ui.mcRound=${r};simulateRound();renderMatch()">▶ Load this round</button>`:''}
+    <span class="muted" style="font-size:12px">Bye: ${byes.length?byes.map(b=>CLUBS[b].s).join(', '):'—'}</span>
     <span class="spacer"></span>
-    ${myRoundSummary(r)}
+    ${myRoundSummary(r,isLive)}
+    ${isLive?`<button class="btn sec" style="font-size:12px" onclick="fetchLiveScores(this).then(()=>renderMatch())">⟳ Refresh</button>`:''}
   </div>
   <div class="grid2">
-   <div class="card"><h3>Round ${r} — real results <span class="tag">NRL score · fantasy = sum of player points</span></h3>
-    ${rd.fix.map(([x,y,xs,ys],i)=>{
-      const fx=clubPts(x,r),fy=clubPts(y,r);
+   <div class="card">
+    <h3>Round ${r} — ${isLive?'live NRL Fantasy':'real results'} <span class="tag">${isLive?'scores update each minute':'NRL score · fantasy = sum of player points'}</span></h3>
+    ${rdFix.fix.map(([x,y,xs,ys],i)=>{
+      const fx=mcClubPts(x,r),fy=mcClubPts(y,r);
+      const nrlH=isLive?'–':(xs!=null?xs:'–');
+      const nrlA=isLive?'–':(ys!=null?ys:'–');
       return `<div class="match" style="${i===mi?'border-color:var(--acc)':''}" onclick="S.ui.mcMatch=${i};renderMatch()">
-      <div class="teams"><div class="t">${clubDot(x)} ${CLUBS[x].n}</div>
-      <div class="score">${xs!=null?xs:'–'} – ${ys!=null?ys:'–'}</div>
-      <div class="t away">${CLUBS[y].n} ${clubDot(y)}</div></div>
-      <div style="text-align:center;font-size:11px;color:var(--dim);margin-top:3px">fantasy: ${fx} – ${fy}</div></div>`;
+        <div class="teams"><div class="t">${clubDot(x)} ${CLUBS[x].n}</div>
+        <div class="score">${nrlH} – ${nrlA}</div>
+        <div class="t away">${CLUBS[y].n} ${clubDot(y)}</div></div>
+        <div style="text-align:center;font-size:11px;color:var(--dim);margin-top:3px">fantasy: <b>${fx}</b> – <b>${fy}</b></div>
+      </div>`;
     }).join('')}
    </div>
-   <div class="card"><h3>${CLUBS[h].n} ${hp} — ${ap} ${CLUBS[a].n} <span class="tag">fantasy points · click player for official stat line</span></h3>
+   <div class="card">
+    <h3>${CLUBS[h].n} <span style="color:var(--acc)">${hp}</span> — <span style="color:var(--acc)">${ap}</span> ${CLUBS[a].n}
+      <span class="tag">fantasy pts${isLive?'':' · tap for stat line'}</span></h3>
     <div class="grid2">
       <div><table><thead><tr><th colspan="2">${CLUBS[h].n}</th><th style="text-align:right">Pts</th></tr></thead><tbody>${lister(h)}</tbody></table></div>
       <div><table><thead><tr><th colspan="2">${CLUBS[a].n}</th><th style="text-align:right">Pts</th></tr></thead><tbody>${lister(a)}</tbody></table></div>
@@ -3062,7 +3139,11 @@ function renderMatch(){
    </div>
   </div>`;
 }
-function myRoundSummary(r){
+function myRoundSummary(r,isLive){
+  if(isLive&&LIVE.round===r){
+    const liveSc=liveTeamScore(S.classic.history[r]||S.classic.line);
+    return `<span class="pill" style="background:var(--card2);border:1px solid var(--acc);border-radius:18px;padding:6px 14px">My score Rd ${r}: <b class="good">${liveSc}</b> <span style="color:var(--acc);font-size:11px">LIVE</span></span>`;
+  }
   if(!S.classic.history[r])return '';
   const sc=lineupScore(S.classic.history[r],r);
   return `<span class="pill" style="background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:6px 14px">My Classic score Rd ${r}: <b class="good">${sc.total}</b></span>`;
@@ -3702,6 +3783,7 @@ function closeModal(){$('#modal-bg').classList.remove('on')}
 $('#modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')closeModal()});
 
 function setPage(pg){
+  if(pg!=='match')stopMcPoll();
   S.ui.page=pg;
   $$('#sidebar-nav .navitem').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
   $$('#bottom-tabbar .btab').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
@@ -3727,7 +3809,7 @@ function renderAll(){
     else if(pg==='classic')renderClassic();
     else if(pg==='custom')renderCustom();
     else if(pg==='draft')renderDraft();
-    else if(pg==='match')renderMatch();
+    else if(pg==='match'){if(LIVE.status==='idle')fetchLiveScores();renderMatch();}
     else if(pg==='leagues')renderLeagues();
     else if(pg==='players')renderPlayers();
     else if(pg==='settings')renderSettings();
