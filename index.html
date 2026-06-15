@@ -544,7 +544,7 @@ function load(){
     /* new model: startRound — set to 1 for existing teams, 0 for fresh starts */
     if(S.classic&&S.classic.startRound==null)S.classic.startRound=S.classic.squad.length>0?1:0;
     /* auto-advance any rounds that have real data but weren't applied yet */
-    if(S.round<=MAXR){applyDataPatch();autoAdvanceRounds(S.round-1);}
+    if(S.round<=MAXR||isNaN(MAXR)){applyDataPatch();if(!isNaN(MAXR))autoAdvanceRounds(S.round-1);}
     else if(S.round<MAXR+1)S.round=MAXR+1;
     if(S.draft&&!S.draft.waivers)S.draft.waivers=[];
     if(S.settings&&!S.settings.layout){ /* migrate: preserve this save's existing squad shape */
@@ -686,7 +686,7 @@ const RFIX={},RPRICE={},OFFS={},RST={};
 function applyDataPatch(){
   if(!S||!S.dataPatch)return;
   const P=S.dataPatch;
-  if(P.maxR>MAXR)MAXR=P.maxR;
+  if(P.maxR&&(isNaN(MAXR)||P.maxR>MAXR))MAXR=P.maxR;
   if(P.off)for(const pid in P.off)for(const r in P.off[pid]){if(!OFFS[pid])OFFS[pid]=[];OFFS[pid][r-1]=P.off[pid][r]}
   if(P.price)for(const pid in P.price)for(const r in P.price[pid]){if(!RPRICE[pid])RPRICE[pid]=[];RPRICE[pid][r-1]=P.price[pid][r]}
   if(P.fix)for(const r in P.fix)RFIX[r]=P.fix[r];
@@ -3182,21 +3182,25 @@ function stopMcPoll(){}
 function renderMatch(){
   const el=$('#pg-match');
   const played=Object.keys(S.season.rounds).map(Number).sort((a,b)=>a-b);
-  /* include live round even if not yet simulated */
+  /* include live round + current/upcoming round if fixture exists */
   const liveR=LIVE.round>0?LIVE.round:null;
-  const allRounds=[...new Set([...played,liveR].filter(Boolean))].sort((a,b)=>a-b);
+  const extraR=new Set();
+  if(liveR)extraR.add(liveR);
+  /* always show current round (MAXR+1) if we have fixture data for it */
+  if(RFIX[S.round])extraR.add(S.round);
+  const allRounds=[...new Set([...played,...extraR])].sort((a,b)=>a-b);
   if(!allRounds.length){
     el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><h3 style="justify-content:center">📺 Match Centre</h3>
     <p class="muted" style="margin:10px 0">No rounds available yet.</p>
     <p class="muted" style="margin-top:8px;font-size:12px">Scores update automatically when rounds begin.</p></div>`;
     return;
   }
-  /* default to live round if available, else last played */
-  const defR=liveR||played[played.length-1]||1;
+  /* default to live round if active, else last completed round */
+  const defR=liveR||played[played.length-1]||S.round||1;
   const r=S.ui.mcRound?Math.min(Math.max(1,S.ui.mcRound),allRounds[allRounds.length-1]):defR;
-  /* get fixture data: live round uses RFIX directly, played rounds use S.season */
+  /* get fixture data: try season history first, then RFIX for upcoming/live */
   const isLive=liveR===r&&LIVE.status!=='idle';
-  const rdFix=S.season.rounds[r]?S.season.rounds[r]:(isLive&&RFIX[r]?{fix:RFIX[r].games,byes:RFIX[r].byes,real:false}:null);
+  const rdFix=S.season.rounds[r]?S.season.rounds[r]:(RFIX[r]?{fix:RFIX[r].games,byes:RFIX[r].byes,real:false}:null);
   if(!rdFix){S.ui.mcRound=defR;return renderMatch();}
   const mi=Math.min(S.ui.mcMatch||0,rdFix.fix.length-1);
   const [h,a]=rdFix.fix[mi];
@@ -3955,6 +3959,10 @@ function renderAll(){
 load();
 applyLayout();
 applyDataPatch();
+if(!isNaN(MAXR)){/* dataPatch applied — advance any rounds the load() pass missed */
+  if(S.round<=MAXR)autoAdvanceRounds(S.round-1);
+  if(S.round<MAXR+1)S.round=MAXR+1;
+}
 if(S.classic.bank==null)S.classic.bank=S.settings.cap-squadValue(); /* migrate: bank = cap - current value */
 /* LOGIN DISABLED — set a guest user so the app loads directly */
 if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};showApp();
