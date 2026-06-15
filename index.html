@@ -209,6 +209,12 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 /* ---- PRICE DELTA ---- */
 .pdelta-up{color:var(--acc);font-size:10px}
 .pdelta-dn{color:var(--red);font-size:10px}
+.grade{display:inline-block;font-size:9px;font-weight:800;padding:1px 4px;border-radius:4px;margin-left:3px;letter-spacing:.03em}
+.grade-aplus{background:#00e676;color:#07070c}
+.grade-a{background:#69f0ae;color:#07070c}
+.grade-b{background:#ffc107;color:#07070c}
+.grade-c{background:#ff9800;color:#07070c}
+.grade-d{background:var(--red);color:#fff}
 
 /* ---- SHARE TEAM MODAL ---- */
 .share-box{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;white-space:pre;overflow-x:auto;max-height:320px;overflow-y:auto;color:var(--txt)}
@@ -408,7 +414,8 @@ const DEFAULT_SETTINGS={
   totalRounds:27, rules:{...DEFAULT_RULES}, layout:{...DEFAULT_LAYOUT},
   bonusEvents:false, bonusMetre:5, bonusTackle:5, bonusTryInv:5,
   consistencyBonus:false, consistencyStreak:3, consistencyMult:1.1,
-  upsetBonus:false, upsetThreshold:60, upsetBonusPts:10
+  upsetBonus:false, upsetThreshold:60, upsetBonusPts:10,
+  bestBall:false, scoringPeriod:1
 };
 
 /* ===== CHIPS ===== */
@@ -456,6 +463,7 @@ function defaultState(){
     watchlist:[],      /* [pid,...] starred players */
     priceHistory:{},   /* {round:{pid:price}} snapshot after each simulated round */
     plannedTrades:[],  /* [{out:pid,in:pid,note:''}] staged future trades */
+    corrections:{},    /* {r:{pid:pts}} commissioner score overrides */
     user:null,   /* {name,email,method,initials} */
     ui:{page:'classic',classicTab:'team',draftPostTab:'team',trPage:'classic',trTab:'centre',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',slotPick:null,draftQ:'',draftPos:0}
   };
@@ -518,6 +526,10 @@ function load(){
     if(['scoring','bonuses','rules'].includes(S.ui.customTab))S.ui.customTab='settings';
     if(!S.priceHistory)S.priceHistory={};
     if(!S.plannedTrades)S.plannedTrades=[];
+    if(!S.corrections)S.corrections={};
+    if(S.settings&&S.settings.bestBall===undefined)S.settings.bestBall=false;
+    if(S.settings&&!S.settings.scoringPeriod)S.settings.scoringPeriod=1;
+    if(S.draft&&!S.draft.waivers)S.draft.waivers=[];
     if(S.settings&&!S.settings.layout){ /* migrate: preserve this save's existing squad shape */
       S.settings.layout={...DEFAULT_LAYOUT};
       try{
@@ -869,6 +881,8 @@ function playedIn(pid,r){
 /* official points, or recomputed from real stat line under custom rules */
 function playerPts(pid,r){
   if(!playedIn(pid,r))return null;
+  /* commissioner correction overrides everything */
+  if(S.corrections&&S.corrections[r]&&S.corrections[r][pid]!=null)return S.corrections[r][pid];
   const off=OFFS[pid]?OFFS[pid][r-1]:null;
   if(S.settings.scoreMode!=='custom')return off!=null?off:ptsFromStats(RST[pid]&&RST[pid][r]);
   const st=RST[pid]&&RST[pid][r];
@@ -920,7 +934,8 @@ function upsetBonus(pid,r){
 function getChips(){return (S.classic&&S.classic.chips)||{active:{},used:{},injured:[]};}
 
 /* team score for a classic lineup snapshot at round r (official results) */
-function lineupScore(line,r){
+function lineupScore(line,r,bestBallOverride){
+  if((bestBallOverride||S.settings.bestBall)&&line&&line.c===undefined){/* best ball: use roster array */return bestBallScore(Object.values(line).flat().filter(x=>x!=null&&typeof x==='number'),r);}
   if(!S.season.rounds[r])return {total:0,detail:[]};
   const chips=getChips();const active=chips.active||{};
   const detail=[];let total=0;
@@ -1063,6 +1078,8 @@ function simulateRound(){
   /* clear round-only chips after each round */
   const ch=S.classic.chips;
   if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
+  /* clear expired waivers — players become FA after 1 round */
+  if(S.draft&&S.draft.waivers)S.draft.waivers=S.draft.waivers.filter(w=>w.round>=r);
   /* price history snapshot */
   const ph={};PLAYERS.forEach(p=>ph[p.id]=price(p.id));
   S.priceHistory[r]=ph;
@@ -1075,16 +1092,41 @@ function simulateRound(){
 function leagueLadder(lg,isDraft){
   const teams=lg.teams.map((t,i)=>({i,name:t.name,w:0,l:0,d:0,pf:0,pa:0,pts:0}));
   const maxR=Math.min(S.round-1,24);
-  for(let r=1;r<=maxR;r++){
-    if(!S.season.rounds[r]||!lg.history||!lg.history[r])continue;
-    const fx=leagueFixtures(lg.teams.length,r);
-    for(const[a,b]of fx){
-      const sa=isDraft?draftScoreSnap(lg,a,r):lineupScore(lg.history[r][a],r).total;
-      const sb=isDraft?draftScoreSnap(lg,b,r):lineupScore(lg.history[r][b],r).total;
-      teams[a].pf+=sa;teams[a].pa+=sb;teams[b].pf+=sb;teams[b].pa+=sa;
-      if(sa>sb){teams[a].w++;teams[a].pts+=2;teams[b].l++}
-      else if(sb>sa){teams[b].w++;teams[b].pts+=2;teams[a].l++}
-      else{teams[a].d++;teams[b].d++;teams[a].pts++;teams[b].pts++}
+  const sp=(!isDraft&&S.settings.scoringPeriod)||1; /* scoring period length in rounds */
+  const teamScore=(ti,r)=>isDraft?draftScoreSnap(lg,ti,r):lineupScore(lg.history[r]&&lg.history[r][ti],r).total;
+  if(sp<=1){
+    /* standard: one matchup per round */
+    for(let r=1;r<=maxR;r++){
+      if(!S.season.rounds[r]||!lg.history||!lg.history[r])continue;
+      const fx=leagueFixtures(lg.teams.length,r);
+      for(const[a,b]of fx){
+        const sa=teamScore(a,r),sb=teamScore(b,r);
+        teams[a].pf+=sa;teams[a].pa+=sb;teams[b].pf+=sb;teams[b].pa+=sa;
+        if(sa>sb){teams[a].w++;teams[a].pts+=2;teams[b].l++}
+        else if(sb>sa){teams[b].w++;teams[b].pts+=2;teams[a].l++}
+        else{teams[a].d++;teams[b].d++;teams[a].pts++;teams[b].pts++}
+      }
+    }
+  }else{
+    /* grouped: accumulate sp rounds, one matchup per group */
+    for(let start=1;start<=maxR;start+=sp){
+      const end=Math.min(start+sp-1,maxR);
+      /* check any round in this period has data */
+      let hasData=false;
+      for(let r=start;r<=end;r++)if(S.season.rounds[r]&&lg.history&&lg.history[r]){hasData=true;break;}
+      if(!hasData)continue;
+      const fx=leagueFixtures(lg.teams.length,start);
+      for(const[a,b]of fx){
+        let sa=0,sb=0;
+        for(let r=start;r<=end;r++){
+          if(!S.season.rounds[r]||!lg.history||!lg.history[r])continue;
+          sa+=teamScore(a,r);sb+=teamScore(b,r);
+        }
+        teams[a].pf+=sa;teams[a].pa+=sb;teams[b].pf+=sb;teams[b].pa+=sa;
+        if(sa>sb){teams[a].w++;teams[a].pts+=2;teams[b].l++}
+        else if(sb>sa){teams[b].w++;teams[b].pts+=2;teams[a].l++}
+        else{teams[a].d++;teams[b].d++;teams[a].pts++;teams[b].pts++}
+      }
     }
   }
   return teams.sort((x,y)=>y.pts-x.pts||((y.pf-y.pa)-(x.pf-x.pa)));
@@ -1725,6 +1767,32 @@ function createCustomLeague(){
   S.ui.customTab='team';
   save();renderCustom();
 }
+
+/* ===== STAT CORRECTION HELPERS ===== */
+let _corrSearch=[];
+function updateCorrList(q){
+  _corrSearch=q.length>=2?PLAYERS.filter(p=>p.name.toLowerCase().includes(q.toLowerCase())).slice(0,20):[];
+  const dl=document.getElementById('corr-list');
+  if(dl)dl.innerHTML=_corrSearch.map(p=>`<option value="${esc(p.name)}" data-pid="${p.id}">`).join('');
+}
+function applyCorrection(){
+  const rEl=document.getElementById('corr-r');
+  const nameEl=document.getElementById('corr-pid');
+  const ptsEl=document.getElementById('corr-pts');
+  if(!rEl||!nameEl||!ptsEl)return;
+  const r=+rEl.value;
+  const pts=+ptsEl.value;
+  if(!r||isNaN(pts)){alert('Enter a valid round and score.');return;}
+  /* match player name to id */
+  const q=nameEl.value.toLowerCase().trim();
+  const player=PLAYERS.find(p=>p.name.toLowerCase()===q)||PLAYERS.find(p=>p.name.toLowerCase().includes(q));
+  if(!player){alert('Player not found: '+nameEl.value);return;}
+  if(!S.corrections)S.corrections={};
+  if(!S.corrections[r])S.corrections[r]={};
+  S.corrections[r][player.id]=pts;
+  save();renderCustom();
+}
+
 function renderCustom(){
   const el=$('#pg-custom');
   /* ── Gate: show wizard if no custom league created yet ── */
@@ -1807,6 +1875,45 @@ function renderCustom(){
     <div class="set-item"><label>Bonus pts awarded</label><input type="number" value="${st.upsetBonusPts}" onchange="S.settings.upsetBonusPts=+this.value;save()"></div>`:''}
    </div>
   </div>
+
+  <div class="card"><h3>🎱 Best Ball <span class="tag">auto-lineup</span></h3>
+   <div class="notice" style="margin-bottom:10px">When enabled, each round automatically uses your top ${STARTERS_N} scoring players — no lineup decisions needed. Great for set-and-forget leagues.</div>
+   <div class="settings-grid">
+    <div class="set-item"><label>Best Ball mode</label>
+     <select onchange="S.settings.bestBall=this.value==='1';save();renderCustom()">
+      <option value="0" ${st.bestBall?'':'selected'}>Off — use set lineup</option>
+      <option value="1" ${st.bestBall?'selected':''}>On — auto pick top scorers</option>
+     </select></div>
+   </div>
+  </div>
+  <div class="card"><h3>📅 Scoring period <span class="tag">rounds per matchup</span></h3>
+   <div class="notice" style="margin-bottom:10px">Accumulate scores across multiple rounds before deciding a winner. Reduces luck from a single bad week.</div>
+   <div class="settings-grid">
+    <div class="set-item"><label>Rounds per period</label>
+     <select onchange="S.settings.scoringPeriod=+this.value;save();renderCustom()">
+      <option value="1" ${st.scoringPeriod===1?'selected':''}>Weekly (1 round)</option>
+      <option value="2" ${st.scoringPeriod===2?'selected':''}>Bi-weekly (2 rounds)</option>
+      <option value="4" ${st.scoringPeriod===4?'selected':''}>Monthly (4 rounds)</option>
+     </select></div>
+   </div>
+  </div>
+  <div class="card"><h3>✏️ Stat corrections <span class="tag">commissioner overrides</span></h3>
+   <div class="notice" style="margin-bottom:10px">Override a player's score for a specific round. Useful for correcting stat errors or disputed results.</div>
+   ${(()=>{
+     const entries=Object.entries(S.corrections||{}).flatMap(([r,pids])=>Object.entries(pids).map(([pid,pts])=>({r:+r,pid:+pid,pts})));
+     return entries.length?`<div style="margin-bottom:12px;max-height:160px;overflow-y:auto"><table><thead><tr><th>Round</th><th>Player</th><th>Override pts</th><th></th></tr></thead><tbody>
+      ${entries.map(e=>`<tr><td>Rd ${e.r}</td><td>${esc(PLAYERS[e.pid]?.name||e.pid)}</td><td><b>${e.pts}</b></td>
+        <td><button class="btn danger" style="padding:2px 8px;font-size:11px" onclick="delete S.corrections[${e.r}][${e.pid}];save();renderCustom()">✕</button></td></tr>`).join('')}
+     </tbody></table></div>`:'<p class="muted" style="margin-bottom:10px">No corrections applied.</p>';
+   })()}
+   <div class="settings-grid" style="grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
+    <div class="set-item"><label>Round</label><input type="number" id="corr-r" min="1" max="26" placeholder="1-26"></div>
+    <div class="set-item"><label>Player</label><input id="corr-pid" placeholder="Search name…" list="corr-list" oninput="updateCorrList(this.value)"><datalist id="corr-list"></datalist></div>
+    <div class="set-item"><label>Score override</label><input type="number" id="corr-pts" placeholder="pts"></div>
+    <button class="btn" style="height:36px" onclick="applyCorrection()">Apply</button>
+   </div>
+  </div>
+
   <div class="card"><h3>🃏 Chip rules <span class="tag">control available chips</span></h3>
    <div class="notice" style="margin-bottom:10px">Set uses per season. 0 = disabled, 99 = unlimited.</div>
    <div class="settings-grid">
@@ -1838,6 +1945,37 @@ function renderCustom(){
   </div>`:''}
   `;
 }
+
+/* ===== LIVE SCORING GRADE ===== */
+function scoreGrade(pid,r){
+  const pts=playerPts(pid,r);
+  if(pts==null)return null;
+  const avg=PLAYERS[pid].avg||0;
+  if(avg<=0)return pts>=50?'A+':pts>=30?'A':pts>=15?'B':'C';
+  const ratio=pts/avg;
+  if(ratio>=1.6)return 'A+';
+  if(ratio>=1.2)return 'A';
+  if(ratio>=0.85)return 'B';
+  if(ratio>=0.5)return 'C';
+  return 'D';
+}
+function gradeClass(g){
+  return g==='A+'?'grade-aplus':g==='A'?'grade-a':g==='B'?'grade-b':g==='C'?'grade-c':'grade-d';
+}
+
+/* ===== BEST BALL SCORING ===== */
+function bestBallScore(roster,r){
+  if(!S.season.rounds[r])return {total:0,detail:[]};
+  /* score every player on roster, take top STARTERS_N scorers */
+  const detail=roster.map(pid=>{
+    const pts=playerPts(pid,r);
+    return {pid,pts:pts??0,played:pts!=null};
+  }).filter(x=>x.played).sort((a,b)=>b.pts-a.pts);
+  const active=detail.slice(0,STARTERS_N);
+  const total=active.reduce((s,x)=>s+x.pts,0);
+  return {total,detail:active};
+}
+
 function renderField(){
   const L=S.classic.line,lastR=S.round-1;
   const sc=lastR>=1&&S.classic.history[lastR]?lineupScore(S.classic.history[lastR],lastR):null;
@@ -1846,7 +1984,9 @@ function renderField(){
     const d=sc.detail.find(x=>x.orig===pid||x.pid===pid);
     if(!d)return '';
     if(d.pts==null)return `<div class="sc dnp">DNP</div>`;
-    return `<div class="sc">${d.pts}${d.sub?'<span style="font-size:9px;color:var(--blue)"> sub</span>':''}</div>`;
+    const g=scoreGrade(d.orig||d.pid,lastR);
+    const gb=g?`<span class="grade ${gradeClass(g)}">${g}</span>`:'';
+    return `<div class="sc">${d.pts}${d.sub?'<span style="font-size:9px;color:var(--blue)"> sub</span>':''}${gb}</div>`;
   };
   const card=(pid,slot)=>{
     if(pid==null)return `<div class="pcard empty" onclick='openSlotPicker(${JSON.stringify(slot)})'><div style="font-size:22px">+</div><div style="font-size:10px">${slot.posId?POSN[slot.posId]:(slot.kind==='bench'?'INT':'RES')}</div></div>`;
@@ -2644,15 +2784,19 @@ function setDraftSlot(pid,posId,bi){
 }
 function draftFATab(){
   const D=S.draft,me=D.teams[D.me],taken=draftTaken();
-  let pool=PLAYERS.filter(p=>!taken.has(p.id));
-  if(S.ui.draftQ)pool=pool.filter(p=>p.name.toLowerCase().includes(S.ui.draftQ.toLowerCase()));
-  if(S.ui.draftPos)pool=pool.filter(p=>p.pos.includes(S.ui.draftPos));
+  const waiverSet=new Set((D.waivers||[]).map(w=>w.pid));
+  let pool=PLAYERS.filter(p=>!taken.has(p.id)&&!waiverSet.has(p.id));
+  let waivers=PLAYERS.filter(p=>waiverSet.has(p.id));
+  if(S.ui.draftQ){const q=S.ui.draftQ.toLowerCase();pool=pool.filter(p=>p.name.toLowerCase().includes(q));waivers=waivers.filter(p=>p.name.toLowerCase().includes(q));}
+  if(S.ui.draftPos){pool=pool.filter(p=>p.pos.includes(S.ui.draftPos));waivers=waivers.filter(p=>p.pos.includes(S.ui.draftPos));}
   pool.sort((a,b)=>targetAvg(b)-targetAvg(a));
   return `<div class="grid2">
    <div class="card"><h3>Free agents <span class="tag">add ↔ drop</span></h3>
    <input placeholder="Search…" style="width:100%" value="${esc(S.ui.draftQ)}" oninput="S.ui.draftQ=this.value;renderDraft()">
    <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.draftPos||0)===pi?'on':''}" onclick="S.ui.draftPos=${pi};renderDraft()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
-   <div style="max-height:480px;overflow-y:auto"><table><tbody>
+   ${waivers.length?`<div style="margin:8px 0"><div class="ttl" style="margin-bottom:4px">⏳ On waivers — available next round</div>
+   <table><tbody>${waivers.map(p=>{const w=(D.waivers||[]).find(x=>x.pid===p.id);return `<tr style="opacity:.6"><td>${avatar(p,26)}</td><td><b>${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${CLUBS[p.sq].n} · ${posStr(p)}</span></td><td>avg <b>${p.avg||'–'}</b></td><td><span class="tag">Rd ${(w?w.round:S.round)+1}</span></td></tr>`}).join('')}</tbody></table></div>`:''}
+   <div style="max-height:420px;overflow-y:auto"><table><tbody>
    ${pool.slice(0,60).map(p=>`<tr><td>${avatar(p,26)}</td><td><b>${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${CLUBS[p.sq].n} · ${posStr(p)}</span></td><td>avg <b>${p.avg||'–'}</b></td>
     <td><button class="btn" style="padding:4px 10px" onclick="faPick(${p.id})">Add</button></td></tr>`).join('')}
    </tbody></table></div></div>
@@ -2673,6 +2817,9 @@ function faDrop(pid){
   const L=me.line;
   for(const[pi,]of FIELD_STRUCT)L.starters[pi]=L.starters[pi].map(x=>x===pid?null:x);
   L.bench=L.bench.map(x=>x===pid?null:x);
+  /* lock dropped player for 1 round (waiver period) */
+  if(!S.draft.waivers)S.draft.waivers=[];
+  S.draft.waivers.push({pid,round:S.round}); /* claimable from round S.round+1 */
   if(faPending!=null&&me.roster.length<DRAFT_ROSTER){me.roster.push(faPending);faPending=null}
   save();renderDraft();
 }
