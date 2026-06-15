@@ -215,6 +215,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .grade-b{background:#ffc107;color:#07070c}
 .grade-c{background:#ff9800;color:#07070c}
 .grade-d{background:var(--red);color:#fff}
+.pcard.locked{opacity:.7;cursor:not-allowed;border-color:var(--amber)!important}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
 /* ---- SHARE TEAM MODAL ---- */
@@ -335,7 +336,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
       <span class="topbar-brand"><span class="ball">🏉</span> NRL Fantasy</span>
       <div class="rd-pill">
         <span class="pill" id="hdr-round">Round 1</span>
-        <button class="btn" id="btn-update" onclick="updateData()">⟳ Update Data</button>
+        <span class="pill" id="hdr-status" style="font-size:11px;background:var(--card2);border:1px solid var(--line);cursor:default"></span>
       </div>
       <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none"></div>
     </div>
@@ -655,7 +656,7 @@ const SQUAD_FEED_IDS=[500011,500010,500012,500723,500022,500031,500003,500014,50
 
 /* ===== parse REAL ===== */
 let MAXR=14;
-let LIVE={round:0,scores:{},fetched:0,status:'idle'};/* live scores for current round */
+let LIVE={round:0,scores:{},fetched:0,status:'idle',kickoffs:{},firstKickoff:null};/* live scores for current round */
 const RFIX={},RPRICE={},OFFS={},RST={};
 (function(){
   const fixPart=REAL.slice(REAL.indexOf('@FIX@')+5,REAL.indexOf('@PRICE@'));
@@ -765,7 +766,7 @@ async function importDataFiles(){
   }
   if(!players||!rounds){alert('Could not recognise the files — need players.json and rounds.json');return}
   buildPatchFromFeeds(players,rounds);
-  closeModal();alert('Imported — real results loaded through Round '+MAXR+'.');renderAll();
+  closeModal();alert('Imported — real results loaded through Round '+MAXR+'.');autoRefresh();
 }
 </script>
 <script>
@@ -1524,30 +1525,117 @@ function getDashNews(){
   return items.slice(0,6);
 }
 
-/* ===== LIVE SCORES ===== */
-async function fetchLiveScores(btnEl){
-  if(btnEl){btnEl.disabled=true;btnEl.textContent='⟳ Fetching…';}
-  LIVE.status='loading';
+/* ===== AUTO-REFRESH ENGINE ===== */
+let _refreshTimer=null;
+
+function isPlayerLocked(pid){
+  /* player is locked once their game has kicked off this round */
+  if(LIVE.round!==S.round)return false;
+  const ko=LIVE.kickoffs&&LIVE.kickoffs[pid];
+  if(ko)return Date.now()>=ko;
+  return livePts(pid)!==null;/* fallback: score present = game started */
+}
+
+function fmtCountdown(ms){
+  if(ms<=0)return'now';
+  const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000);
+  return h>0?`${h}h ${m}m`:`${m}m`;
+}
+
+function updateStatusChip(){
+  const el=document.getElementById('hdr-status');
+  if(!el)return;
+  const now=Date.now();
+  if(LIVE.status==='live'){
+    el.textContent='🔴 LIVE';el.style.color='var(--red)';el.style.borderColor='var(--red)';
+  }else if(LIVE.firstKickoff&&LIVE.firstKickoff>now){
+    const diff=LIVE.firstKickoff-now;
+    el.textContent=(diff<=600000?'🔒 Locks in ':'⏱ Starts in ')+fmtCountdown(diff);
+    el.style.color=diff<=600000?'var(--amber)':'var(--dim)';
+    el.style.borderColor='var(--line)';
+  }else if(LIVE.status==='final'){
+    el.textContent='✅ Complete';el.style.color='var(--acc)';el.style.borderColor='var(--acc)';
+  }else if(LIVE.status==='cors'){
+    el.textContent='⚠ Offline';el.style.color='var(--dim)';el.style.borderColor='var(--line)';
+  }else{
+    el.textContent='';
+  }
+}
+
+function scheduleNextRefresh(){
+  if(_refreshTimer){clearTimeout(_refreshTimer);_refreshTimer=null;}
+  const now=Date.now();
+  let delay;
+  if(LIVE.status==='live'){
+    delay=90000;/* 90s during active round */
+  }else if(LIVE.firstKickoff&&LIVE.firstKickoff>now){
+    const untilKo=LIVE.firstKickoff-now;
+    const untilPre=untilKo-600000;/* 10min before */
+    if(untilPre>0){
+      /* schedule exactly at 10min-before; also cap at 15min so we re-check regularly */
+      delay=Math.min(untilPre,900000);
+    }else{
+      /* within 10min: check every 30s */
+      delay=30000;
+    }
+  }else if(LIVE.status==='final'||LIVE.status==='cors'){
+    delay=900000;/* 15min between rounds */
+  }else{
+    delay=600000;/* 10min idle */
+  }
+  _refreshTimer=setTimeout(()=>autoRefresh(),delay);
+}
+
+async function autoRefresh(manual){
+  /* unified fetch: scores + round data + kick-off times */
   try{
     const [players,rounds]=await Promise.all([
       fetch('https://fantasy.nrl.com/data/nrl/players.json').then(r=>r.json()),
       fetch('https://fantasy.nrl.com/data/nrl/rounds.json').then(r=>r.json())
     ]);
-    const liveRnd=rounds.find(r=>r.status==='active')||rounds.filter(r=>r.status==='complete').sort((a,b)=>b.id-a.id)[0];
-    if(!liveRnd){LIVE.status='no-data';return;}
+    /* advance rounds if new data */
+    buildPatchFromFeeds(players,rounds);
+    /* find current/live round */
+    const liveRnd=rounds.find(r=>r.status==='active')
+      ||rounds.filter(r=>r.status==='complete').sort((a,b)=>b.id-a.id)[0]
+      ||rounds.find(r=>r.status==='scheduled'&&r.id===S.round);
+    if(!liveRnd){LIVE.status='no-data';scheduleNextRefresh();return;}
     const r=liveRnd.id;
+    /* player scores */
     const idMap={};FEEDIDS.forEach((id,i)=>idMap[id]=i);
     const sc={};
     players.forEach(p=>{const i=idMap[p.id];if(i==null)return;if(p.stats?.scores?.[r]!=null)sc[i]=p.stats.scores[r];});
-    LIVE={round:r,scores:sc,fetched:Date.now(),status:liveRnd.status==='active'?'live':'final'};
-    /* also patch data so it persists */
-    buildPatchFromFeeds(players,rounds);
+    /* kick-off times per player */
+    const sqMap={};SQUAD_FEED_IDS.forEach((id,i)=>sqMap[id]=i);
+    const kickoffs={};let firstKo=null;
+    if(liveRnd.matches){
+      liveRnd.matches.forEach(m=>{
+        /* try common field names the NRL Fantasy API might use */
+        const raw=m.start_time||m.kickoff||m.scheduled_start||m.match_time||m.date||null;
+        if(!raw)return;
+        const ts=new Date(raw).getTime();if(isNaN(ts))return;
+        const h=sqMap[m.home_squad_id],a=sqMap[m.away_squad_id];
+        PLAYERS.forEach(p=>{if(p.sq===h||p.sq===a)kickoffs[p.id]=ts;});
+        if(firstKo===null||ts<firstKo)firstKo=ts;
+      });
+    }
+    LIVE={round:r,scores:sc,fetched:Date.now(),
+      status:liveRnd.status==='active'?'live':'final',
+      kickoffs,firstKickoff:firstKo};
   }catch(e){
-    LIVE.status='cors';
-  }finally{
-    if(btnEl){btnEl.disabled=false;btnEl.textContent='⟳ Refresh Live Scores';}
-    renderAll();
+    if(LIVE.status!=='live'&&LIVE.status!=='final')LIVE.status='cors';
   }
+  scheduleNextRefresh();
+  updateStatusChip();
+  if(S.ui.page==='match')renderMatch();
+  else renderAll();
+}
+
+/* legacy alias so any onclick="fetchLiveScores(this)" calls still work */
+async function fetchLiveScores(btnEl){
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='⟳ Fetching…';}
+  await autoRefresh(true);
+  if(btnEl){btnEl.disabled=false;btnEl.textContent='⟳ Refresh';}
 }
 function livePts(pid){return LIVE.scores[pid]??null;}
 function liveTeamScore(line){
@@ -1595,10 +1683,7 @@ function liveScoresHTML(){
   return `<div class="card" style="margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <h3 style="margin:0">📡 Live Scores — Round ${r} ${statusTag}</h3>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="muted" style="font-size:11px">${age<1?'just now':age+'m ago'}</span>
-        <button class="btn sec" style="font-size:12px" onclick="fetchLiveScores(this)">⟳ Refresh</button>
-      </div>
+      <span class="muted" style="font-size:11px">${age<1?'just now':age+'m ago'}</span>
     </div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding:8px;background:var(--bg2);border-radius:8px">
       <div style="font-size:28px;font-weight:800;color:var(--acc)">${myTotal}</div>
@@ -1696,8 +1781,7 @@ function renderHome(){
       ${rws}
     </tbody></table></div>`;
   })();
-  /* auto-fetch live scores on first home load if stale */
-  if(LIVE.status==='idle'){fetchLiveScores();}
+  /* autoRefresh runs on a timer — home just renders current state */
   el.innerHTML=`
   <div class="page-header" style="margin-bottom:18px">
     <h1 style="margin:0 0 4px;font-size:22px">📈 Dashboard</h1>
@@ -2241,6 +2325,7 @@ function renderPool(){
 function refreshPool(){$('#pool-card').innerHTML=renderPool();const inp=$('#pool-card input');inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}
 function openSlotPicker(slot){S.ui.slotPick=slot;renderClassic();}
 function poolClick(pid){
+  if(isPlayerLocked(pid)){alert(esc(PLAYERS[pid].name)+' is locked — their game has already started this round.');return;}
   let slot=S.ui.slotPick;
   if(!slot){ /* auto find a slot */
     const p=PLAYERS[pid];
@@ -3088,17 +3173,9 @@ function mcClubPts(ci,r){
   if(isLiveRound(r)){return clubLivePts(ci);}
   return clubPts(ci,r);
 }
-/* Match Centre auto-poll */
-let _mcPollId=null;
-function startMcPoll(){
-  if(_mcPollId)return;
-  _mcPollId=setInterval(async()=>{
-    if(S.ui.page!=='match'||!isLiveRound(S.ui.mcRound||LIVE.round)){stopMcPoll();return;}
-    await fetchLiveScores();
-    if(S.ui.page==='match')renderMatch();
-  },60000);/* refresh every 60s while live */
-}
-function stopMcPoll(){if(_mcPollId){clearInterval(_mcPollId);_mcPollId=null;}}
+/* Match Centre poll handled by central autoRefresh() — no separate interval needed */
+function startMcPoll(){}
+function stopMcPoll(){}
 
 function renderMatch(){
   const el=$('#pg-match');
@@ -3109,8 +3186,7 @@ function renderMatch(){
   if(!allRounds.length){
     el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><h3 style="justify-content:center">📺 Match Centre</h3>
     <p class="muted" style="margin:10px 0">No rounds available yet.</p>
-    <button class="btn sec" onclick="fetchLiveScores(this)">📡 Fetch Live Scores</button>
-    <button class="btn sec" onclick="updateData()">⟳ Update Data</button></div>`;
+    <p class="muted" style="margin-top:8px;font-size:12px">Scores update automatically when rounds begin.</p></div>`;
     return;
   }
   /* default to live round if available, else last played */
@@ -3169,7 +3245,7 @@ function renderMatch(){
     <span class="muted" style="font-size:12px">Bye: ${byes.length?byes.map(b=>CLUBS[b].s).join(', '):'—'}</span>
     <span class="spacer"></span>
     ${myRoundSummary(r,isLive)}
-    ${isLive?`<button class="btn sec" style="font-size:12px" onclick="fetchLiveScores(this).then(()=>renderMatch())">⟳ Refresh</button>`:''}
+    ${isLive?`<span class="muted" style="font-size:11px">Auto-refreshes every 90s</span>`:''}
   </div>
   <div class="grid2">
    <div class="card">
@@ -3530,6 +3606,8 @@ function tradeInHTML(){
   </tbody></table></div>`;
 }
 function execTrade(outPid,inPid){
+  if(isPlayerLocked(outPid)){alert(esc(PLAYERS[outPid].name)+' is locked — their game has already started this round.');return;}
+  if(isPlayerLocked(inPid)){alert(esc(PLAYERS[inPid].name)+' is locked — their game has already started this round.');return;}
   const slot=lineSlots(S.classic.line).find(s=>s.pid===outPid);
   if(!slot)return;
   const trMode=S.ui.trPage||'classic';
@@ -3848,16 +3926,8 @@ $$('#sidebar-nav .navitem, #bottom-tabbar .btab').forEach(b=>b.addEventListener(
 
 function renderAll(){
   const over=S.round>S.settings.totalRounds;
-  const awaitingData=S.round>MAXR;
-  const b=$('#btn-update');
-  if(b){
-    b.disabled=false;
-    b.textContent='⟳ Update Data';
-    b.title=awaitingData
-      ?'Check for new round results from NRL Fantasy'
-      :'Data current through Round '+MAXR+'. Click to check for updates.';
-  }
-  $('#hdr-round').textContent=over?'Season complete':('Round '+S.round+(LIVE.status==='live'?' 🔴':''));
+  $('#hdr-round').textContent=over?'Season complete':'Round '+S.round;
+  updateStatusChip();
   const pg=S.ui.page||'classic';
   try{
     if(pg==='home')renderHome();
@@ -3865,7 +3935,7 @@ function renderAll(){
     else if(pg==='classic')renderClassic();
     else if(pg==='custom')renderCustom();
     else if(pg==='draft')renderDraft();
-    else if(pg==='match'){if(LIVE.status==='idle')fetchLiveScores();renderMatch();}
+    else if(pg==='match')renderMatch();
     else if(pg==='leagues')renderLeagues();
     else if(pg==='players')renderPlayers();
     else if(pg==='settings')renderSettings();
