@@ -343,7 +343,6 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
       <div class="page on" id="pg-classic"></div>
       <div class="page" id="pg-custom"></div>
       <div class="page" id="pg-draft"></div>
-      <div class="page" id="pg-trades"></div>
       <div class="page" id="pg-match"></div>
       <div class="page" id="pg-leagues"></div>
       <div class="page" id="pg-players"></div>
@@ -458,14 +457,14 @@ function defaultState(){
     classic:{squad:[],line:emptyLine(),tradesRound:0,tradesSeason:0,history:{},
       chips:{active:{},used:{},injured:[]}},
     league:null,       /* classic league {name,teams:[{name,squad,line,ai}],fix:{},...} */
-    customLeague:null, /* {name,created,chipsEnabled} — gates Custom tab */
+    customLeague:null, /* {name,created,chipsEnabled,cap,tradesPerRound,seasonTrades,captainMult,benchScores,bank,tradesRound,tradesSeason} */
     draft:null,        /* {phase,league,size,teams,me,pickNo,done,log,history} */
     watchlist:[],      /* [pid,...] starred players */
     priceHistory:{},   /* {round:{pid:price}} snapshot after each simulated round */
     plannedTrades:[],  /* [{out:pid,in:pid,note:''}] staged future trades */
     corrections:{},    /* {r:{pid:pts}} commissioner score overrides */
     user:null,   /* {name,email,method,initials} */
-    ui:{page:'classic',classicTab:'team',draftPostTab:'team',trPage:'classic',trTab:'centre',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',slotPick:null,draftQ:'',draftPos:0}
+    ui:{page:'classic',classicTab:'team',draftPostTab:'team',trPage:'classic',trTab:'centre',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',plSearch:'',slotPick:null,draftQ:'',draftPos:0}
   };
 }
 function emptyLine(){
@@ -527,6 +526,17 @@ function load(){
     if(!S.priceHistory)S.priceHistory={};
     if(!S.plannedTrades)S.plannedTrades=[];
     if(!S.corrections)S.corrections={};
+    if(S.ui.plSearch===undefined)S.ui.plSearch='';
+    if(S.customLeague&&S.customLeague.cap==null){
+      S.customLeague.cap=S.settings.cap;
+      S.customLeague.tradesPerRound=S.settings.tradesPerRound;
+      S.customLeague.seasonTrades=S.settings.seasonTrades;
+      S.customLeague.captainMult=S.settings.captainMult||2;
+      S.customLeague.benchScores=S.settings.benchScores!==false;
+      S.customLeague.bank=null;
+      S.customLeague.tradesRound=0;
+      S.customLeague.tradesSeason=0;
+    }
     if(S.settings&&S.settings.bestBall===undefined)S.settings.bestBall=false;
     if(S.settings&&!S.settings.scoringPeriod)S.settings.scoringPeriod=1;
     if(S.draft&&!S.draft.waivers)S.draft.waivers=[];
@@ -935,7 +945,18 @@ function getChips(){return (S.classic&&S.classic.chips)||{active:{},used:{},inju
 
 /* team score for a classic lineup snapshot at round r (official results) */
 function lineupScore(line,r,bestBallOverride){
-  if((bestBallOverride||S.settings.bestBall)&&line&&line.c===undefined){/* best ball: use roster array */return bestBallScore(Object.values(line).flat().filter(x=>x!=null&&typeof x==='number'),r);}
+  if(bestBallOverride||S.settings.bestBall){
+    /* best ball: extract all pids from lineup or roster array, pick top STARTERS_N */
+    const allPids=[];
+    if(Array.isArray(line)){allPids.push(...line.filter(x=>x!=null));}
+    else if(line){
+      const st=line.starters||{};
+      for(const arr of Object.values(st))if(Array.isArray(arr))for(const p of arr)if(p!=null)allPids.push(p);
+      if(Array.isArray(line.bench))for(const p of line.bench)if(p!=null)allPids.push(p);
+      if(Array.isArray(line.res))for(const p of line.res)if(p!=null)allPids.push(p);
+    }
+    return bestBallScore(allPids,r);
+  }
   if(!S.season.rounds[r])return {total:0,detail:[]};
   const chips=getChips();const active=chips.active||{};
   const detail=[];let total=0;
@@ -1075,6 +1096,7 @@ function simulateRound(){
     S.draft.history[r]=S.draft.teams.map(t=>JSON.parse(JSON.stringify(t.line)));
   }
   S.classic.tradesRound=0;
+  if(S.customLeague)S.customLeague.tradesRound=0;
   /* clear round-only chips after each round */
   const ch=S.classic.chips;
   if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
@@ -1505,10 +1527,10 @@ function renderHome(){
         const delta=v&&prev?v-prev:null;
         return `<td>${v?fmtK(v):'–'}${delta?`<br><span style="font-size:9px;color:${delta>0?'var(--acc)':'var(--red)'}">${delta>0?'▲':'▼'}${fmtK(Math.abs(delta))}</span>`:''}</td>`;
       }).join('');
-      return `<tr><td>${esc(p.name)}</td>${cells}</tr>`;
+      return `<tr><td>${esc(p.name)}</td>${cells}<td><b>${fmtK(price(pid))}</b></td></tr>`;
     }).join('');
     return `<div style="overflow-x:auto"><table class="price-hist-table"><thead><tr><th>Player</th><th>${hdrs}</th><th>Now</th></tr></thead><tbody>
-      ${rws}${sqArr.map(pid=>`<td>${fmtK(price(pid))}</td>`)}
+      ${rws}
     </tbody></table></div>`;
   })();
   el.innerHTML=`
@@ -1598,17 +1620,22 @@ function stopPickTimer(){
 /* ===== SHARED MODE TRADES HTML ===== */
 function modeTradesHTML(mode){
   S.ui.trPage=mode;
-  const bank=S.classic.bank,started=seasonStarted();
+  const isCustom=mode==='custom';
+  const bank=isCustom?clBank():S.classic.bank,started=seasonStarted();
+  const tpr=isCustom?clTpr():S.settings.tradesPerRound;
+  const sts=isCustom?clSts():S.settings.seasonTrades;
+  const trR=isCustom?(cl().tradesRound||0):S.classic.tradesRound;
+  const trS=isCustom?(cl().tradesSeason||0):S.classic.tradesSeason;
   const sub=S.ui.trTab||'centre';
-  const re=mode==='custom'?'renderCustom()':'renderClassic()';
+  const re=isCustom?'renderCustom()':'renderClassic()';
   if(S.classic.squad.length===0)return `<div class="card" style="text-align:center;padding:40px">
     <p class="muted">Build your squad in My Team first.</p>
-    <button class="btn" onclick="S.ui.${mode==='custom'?'customTab':'classicTab'}='team';${re}">👥 Go to My Team</button></div>`;
+    <button class="btn" onclick="S.ui.${isCustom?'customTab':'classicTab'}='team';${re}">👥 Go to My Team</button></div>`;
   return `<div class="statbar">
     <div class="stat ${bank<0?'warn':''}"><div class="v">${fmtM(bank)}</div><div class="l">Salary remaining</div></div>
     <div class="stat"><div class="v">${fmtM(squadValue())}</div><div class="l">Team value</div></div>
-    <div class="stat"><div class="v">${started?(S.settings.tradesPerRound-S.classic.tradesRound):'∞'}</div><div class="l">Trades this round</div></div>
-    <div class="stat"><div class="v">${started?(S.settings.seasonTrades-S.classic.tradesSeason):'—'}</div><div class="l">Season trades left</div></div>
+    <div class="stat"><div class="v">${started?(tpr-trR):'∞'}</div><div class="l">Trades this round</div></div>
+    <div class="stat"><div class="v">${started?(sts-trS):'—'}</div><div class="l">Season trades left</div></div>
   </div>
   <div class="tabs2">
     <button class="${sub==='centre'?'on':''}" onclick="S.ui.trTab='centre';${re}">🔄 Trade Centre</button>
@@ -1750,20 +1777,21 @@ function customLeagueSetupHTML(){
 }
 function createCustomLeague(){
   const name=($('#cl-name').value||'My Custom League').trim();
+  const cap=+$('#cl-cap').value||S.settings.cap;
+  const captainMult=+$('#cl-capmult').value||2;
+  const benchScores=$('#cl-bench').value==='1';
+  const tradesPerRound=+$('#cl-tpr').value||2;
+  const seasonTrades=+$('#cl-tps').value||30;
+  const chipsEnabled=$('#cl-chips').value==='1';
+  /* scoring rules go to S.settings (custom mode reads them) */
   S.settings.scoreMode=$('#cl-scoremode').value;
-  S.settings.captainMult=+$('#cl-capmult').value||2;
-  S.settings.benchScores=$('#cl-bench').value==='1';
-  const newCap=+$('#cl-cap').value||S.settings.cap;
-  if(S.classic.bank!=null)S.classic.bank+=(newCap-S.settings.cap);
-  S.settings.cap=newCap;
-  S.settings.tradesPerRound=+$('#cl-tpr').value||2;
-  S.settings.seasonTrades=+$('#cl-tps').value||30;
   S.settings.bonusEvents=$('#cl-bonus').value==='1';
   S.settings.consistencyBonus=$('#cl-consist').value==='1';
   S.settings.upsetBonus=$('#cl-upset').value==='1';
-  const chipsEnabled=$('#cl-chips').value==='1';
   S.settings.chipRules=chipsEnabled?{}:Object.fromEntries(Object.keys(CHIP_DEFS).map(k=>[k,0]));
-  S.customLeague={name,created:Date.now(),chipsEnabled};
+  /* cap/trades/bank stored in customLeague — Classic settings untouched */
+  S.customLeague={name,created:Date.now(),chipsEnabled,cap,captainMult,benchScores,
+    tradesPerRound,seasonTrades,bank:null,tradesRound:0,tradesSeason:0};
   S.ui.customTab='team';
   save();renderCustom();
 }
@@ -1807,7 +1835,7 @@ function renderCustom(){
   <div class="flex" style="margin-bottom:14px;align-items:flex-start">
    <div>
     <h3 style="font-size:17px;margin-bottom:2px">⚙ ${esc(cl.name)}</h3>
-    <span class="muted" style="font-size:12px">Custom league · Scoring: <b>${st.scoreMode==='custom'?'Custom rules':'Official NRL Fantasy'}</b></span>
+    <span class="muted" style="font-size:12px">Custom league · Cap: ${fmtK(clCap())} · Scoring: <b>${st.scoreMode==='custom'?'Custom rules':'Official NRL Fantasy'}</b></span>
    </div>
    <span class="spacer"></span>
    <button class="btn sec" style="font-size:12px" onclick="if(confirm('Delete custom league and reset settings?')){S.customLeague=null;save();renderCustom()}">Delete league</button>
@@ -1936,11 +1964,11 @@ function renderCustom(){
   </div>
   <div class="card"><h3>Game rules</h3>
    <div class="settings-grid">
-    <div class="set-item"><label>Salary cap ($)</label><input type="number" step="100000" value="${st.cap}" onchange="if(S.classic.bank!=null)S.classic.bank+=(+this.value-S.settings.cap);S.settings.cap=+this.value;save()"></div>
-    <div class="set-item"><label>Trades per round</label><input type="number" value="${st.tradesPerRound}" onchange="S.settings.tradesPerRound=+this.value;save()"></div>
-    <div class="set-item"><label>Season trade limit</label><input type="number" value="${st.seasonTrades}" onchange="S.settings.seasonTrades=+this.value;save()"></div>
-    <div class="set-item"><label>Captain multiplier</label><input type="number" step="0.5" value="${st.captainMult}" onchange="S.settings.captainMult=+this.value;save()"></div>
-    <div class="set-item"><label>Interchange scores</label><select onchange="S.settings.benchScores=this.value==='1';save()"><option value="1" ${st.benchScores?'selected':''}>On</option><option value="0" ${!st.benchScores?'selected':''}>Off</option></select></div>
+    <div class="set-item"><label>Salary cap ($)</label><input type="number" step="100000" value="${clCap()}" onchange="const d=+this.value-clCap();if(S.customLeague){if(S.customLeague.bank!=null)S.customLeague.bank+=d;S.customLeague.cap=+this.value;}save()"></div>
+    <div class="set-item"><label>Trades per round</label><input type="number" value="${clTpr()}" onchange="if(S.customLeague)S.customLeague.tradesPerRound=+this.value;save()"></div>
+    <div class="set-item"><label>Season trade limit</label><input type="number" value="${clSts()}" onchange="if(S.customLeague)S.customLeague.seasonTrades=+this.value;save()"></div>
+    <div class="set-item"><label>Captain multiplier</label><input type="number" step="0.5" value="${clCaptMult()}" onchange="if(S.customLeague)S.customLeague.captainMult=+this.value;S.settings.captainMult=+this.value;save()"></div>
+    <div class="set-item"><label>Interchange scores</label><select onchange="if(S.customLeague)S.customLeague.benchScores=this.value==='1';S.settings.benchScores=this.value==='1';save()"><option value="1" ${clBenchScores()?'selected':''}>On</option><option value="0" ${!clBenchScores()?'selected':''}>Off</option></select></div>
    </div>
   </div>`:''}
   `;
@@ -2715,7 +2743,7 @@ function draftMatchupTabHTML(){
     </thead><tbody>
     ${ladder.map((t,i)=>`<tr style="${t.i===D.me?'background:rgba(0,230,118,.07);font-weight:700':''}">
       <td>${i+1}</td><td>${esc(D.teams[t.i].name)}</td>
-      <td>${t.w}</td><td>${t.l}</td><td>${t.d}</td><td>${t.pa}</td><td>${t.pa}</td><td><b>${t.pts}</b></td>
+      <td>${t.w}</td><td>${t.l}</td><td>${t.d}</td><td>${t.pf}</td><td>${t.pa}</td><td><b>${t.pts}</b></td>
     </tr>`).join('')}
     </tbody></table></div></div>`;
 }
@@ -3152,6 +3180,8 @@ function byePlan(r){
 }
 
 function renderTrades(){
+  /* legacy redirect — trades now live inside each game mode */
+  S.ui.page='classic';S.ui.classicTab='trades';renderClassic();return;
   const el=$('#pg-trades');
   if(S.classic.squad.length===0){
     el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><h3 style="justify-content:center">🔄 Trade Centre</h3>
@@ -3176,6 +3206,19 @@ function renderTrades(){
 }
 
 /* ---------- trade centre ---------- */
+
+
+/* ── Custom league setting accessors (fallback to S.settings for old saves) ── */
+function cl(){return S.customLeague||{}}
+function clCap(){return cl().cap??S.settings.cap}
+function clTpr(){return cl().tradesPerRound??S.settings.tradesPerRound}
+function clSts(){return cl().seasonTrades??S.settings.seasonTrades}
+function clBank(){
+  if(cl().bank==null&&S.customLeague){S.customLeague.bank=clCap()-squadValue();}
+  return cl().bank??S.classic.bank;
+}
+function clCaptMult(){return cl().captainMult??S.settings.captainMult??2}
+function clBenchScores(){return cl().benchScores??S.settings.benchScores}
 
 function refreshTrades(){
   const m=S.ui.trPage||'classic';
@@ -3240,10 +3283,20 @@ function execTrade(outPid,inPid){
   if(!slot)return;
   if(price(inPid)-price(outPid)>S.classic.bank){alert('Not enough salary.');return}
   const injWild=!!(getChips().active||{}).injuryWildcard;
+  const trMode=S.ui.trPage||'classic';
   if(seasonStarted()&&!injWild){
-    if(S.classic.tradesRound>=S.settings.tradesPerRound){alert('No trades left this round. Use the Injury Wildcard chip if 3+ of your players are injured.');return}
-    if(S.classic.tradesSeason>=S.settings.seasonTrades){alert('No season trades left.');return}
-    S.classic.tradesRound++;S.classic.tradesSeason++;
+    if(trMode==='custom'){
+      const tpr=clTpr(),sts=clSts();
+      if((cl().tradesRound||0)>=tpr){alert('No custom league trades left this round.');return}
+      if((cl().tradesSeason||0)>=sts){alert('No custom league season trades left.');return}
+      if(!S.customLeague.tradesRound)S.customLeague.tradesRound=0;
+      if(!S.customLeague.tradesSeason)S.customLeague.tradesSeason=0;
+      S.customLeague.tradesRound++;S.customLeague.tradesSeason++;
+    }else{
+      if(S.classic.tradesRound>=S.settings.tradesPerRound){alert('No trades left this round. Use the Injury Wildcard chip if 3+ of your players are injured.');return}
+      if(S.classic.tradesSeason>=S.settings.seasonTrades){alert('No season trades left.');return}
+      S.classic.tradesRound++;S.classic.tradesSeason++;
+    }
   }
   const wasC=S.classic.line.c===outPid,wasVC=S.classic.line.vc===outPid;
   removeFromLine(outPid);
@@ -3263,7 +3316,7 @@ function byePlannerHTML(){
     if(!RFIX[r])continue;
     const bp=byePlan(r);
     const risk=bp.fielded<13;
-    rowsHTML+=`<tr style="cursor:pointer;${r===sel?'background:rgba(132,204,22,.12)':''}" onclick="S.ui.byeR=${r};renderTrades()">
+    rowsHTML+=`<tr style="cursor:pointer;${r===sel?'background:rgba(132,204,22,.12)':''}" onclick="S.ui.byeR=${r};refreshTrades()">
      <td><b>Rd ${r}</b>${r>MAXR?'':' <span class="muted" style="font-size:10px">(played)</span>'}</td>
      <td>${bp.byes.length?bp.byes.map(b=>`<span class="posb">${CLUBS[b].s}</span>`).join(''):'<span class="muted">none</span>'}</td>
      <td class="${bp.myByes.length?'warn':'muted'}">${bp.myByes.length}</td>
@@ -3303,7 +3356,7 @@ function byePlannerHTML(){
 function renderPlayers(){
   const el=$('#pg-players');
   let list=PLAYERS.slice();
-  if(S.ui.plQ2)list=list.filter(p=>p.name.toLowerCase().includes(S.ui.plQ2.toLowerCase()));
+  if(S.ui.plSearch)list=list.filter(p=>p.name.toLowerCase().includes(S.ui.plSearch.toLowerCase()));
   if(S.ui.plPos)list=list.filter(p=>p.pos.includes(S.ui.plPos));
   if(S.ui.plClub>=0)list=list.filter(p=>p.sq===S.ui.plClub);
   const key=S.ui.plSort,dir=S.ui.plDir;
@@ -3333,7 +3386,7 @@ function renderPlayers(){
   <div class="card">
    <h3>Player stats centre <span class="tag">${list.length} players · live prices · ✓ named to start · ✓ named on bench · click a player</span></h3>
    <div class="flex" style="margin-bottom:8px">
-     <input placeholder="Search players…" value="${esc(S.ui.plQ2||'')}" oninput="S.ui.plQ2=this.value;renderPlayers()">
+     <input placeholder="Search players…" value="${esc(S.ui.plSearch||'')}" oninput="S.ui.plSearch=this.value;renderPlayers()">
      <select onchange="S.ui.plClub=+this.value;renderPlayers()"><option value="-1">All clubs</option>${CLUBS.map((c,i)=>`<option value="${i}" ${S.ui.plClub===i?'selected':''}>${c.n}</option>`).join('')}</select>
    </div>
    <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.plPos||0)===pi?'on':''}" onclick="S.ui.plPos=${pi};renderPlayers()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
@@ -3545,16 +3598,24 @@ function renderAll(){
   b.disabled=over;
   b.textContent=over?'Season over':(S.round<=MAXR?'▶ Play Round '+S.round+' (real results)':'⏳ Awaiting Round '+S.round+' results');
   const pg=S.ui.page||'classic';
-  if(pg==='home')renderHome();
-  else if(pg==='trades'){S.ui.page='classic';S.ui.classicTab='trades';renderClassic();}
-  else if(pg==='classic')renderClassic();
-  else if(pg==='custom')renderCustom();
-  else if(pg==='trades')renderTrades();
-  else if(pg==='draft')renderDraft();
-  else if(pg==='match')renderMatch();
-  else if(pg==='leagues')renderLeagues();
-  else if(pg==='players')renderPlayers();
-  else if(pg==='settings')renderSettings();
+  try{
+    if(pg==='home')renderHome();
+    else if(pg==='trades'){S.ui.page='classic';S.ui.classicTab='trades';renderClassic();}
+    else if(pg==='classic')renderClassic();
+    else if(pg==='custom')renderCustom();
+    else if(pg==='draft')renderDraft();
+    else if(pg==='match')renderMatch();
+    else if(pg==='leagues')renderLeagues();
+    else if(pg==='players')renderPlayers();
+    else if(pg==='settings')renderSettings();
+  }catch(e){
+    console.error('renderAll error on page',pg,e);
+    const el=document.getElementById('pg-'+pg);
+    if(el)el.innerHTML=`<div class="card notice red" style="margin-top:20px">
+      <b>⚠ Render error on ${pg}:</b> ${e.message}<br>
+      <button class="btn sec" style="margin-top:10px" onclick="S=defaultState();save();location.reload()">Reset app state</button>
+    </div>`;
+  }
 }
 
 /* ================= INIT ================= */
