@@ -2,9 +2,9 @@ name: Fetch NRL Fantasy Data
 
 on:
   schedule:
-    - cron: '*/30 7-14 * * 4-0'   # Every 30min Thu-Sun during NRL hours (AEST)
-    - cron: '0 */4 * * *'          # Every 4h otherwise
-  workflow_dispatch:                # Manual trigger from GitHub UI
+    - cron: '*/30 7-14 * * 4,5,6,0'  # Every 30min Thu-Sun during NRL hours
+    - cron: '0 */4 * * *'             # Every 4h otherwise
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -39,22 +39,22 @@ jobs:
 
             console.log('Fetching players.json...');
             const pRes = await page.goto('https://fantasy.nrl.com/data/nrl/players.json', { waitUntil: 'networkidle' });
-            console.log('players.json status:', pRes.status());
+            console.log('Status:', pRes.status());
             const playersText = await page.evaluate(() => document.body.innerText);
             const players = JSON.parse(playersText);
-            console.log('Players count:', players.length);
+            console.log('Players:', players.length);
             require('fs').writeFileSync('public/players.json', JSON.stringify(players));
 
             console.log('Fetching rounds.json...');
             const rRes = await page.goto('https://fantasy.nrl.com/data/nrl/rounds.json', { waitUntil: 'networkidle' });
-            console.log('rounds.json status:', rRes.status());
+            console.log('Status:', rRes.status());
             const roundsText = await page.evaluate(() => document.body.innerText);
             const rounds = JSON.parse(roundsText);
             const done = rounds.filter(r => r.status === 'complete').map(r => r.id);
-            console.log('Rounds complete:', done.join(', '));
+            console.log('Complete rounds:', done.join(', '));
+            require('fs').writeFileSync('public/rounds.json', JSON.stringify(rounds));
 
             await browser.close();
-            require('fs').writeFileSync('public/rounds.json', JSON.stringify(rounds));
             console.log('Done.');
           })().catch(e => { console.error(e); process.exit(1); });
           JSEOF
@@ -64,4 +64,4 @@ jobs:
           git config user.name "nrl-data-bot"
           git config user.email "bot@nrl-fantasy"
           git add public/players.json public/rounds.json
-          git diff --staged --quiet && echo "No data change" || (git commit -m "data: update NRL Fantasy scores [skip ci]" && git push)
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update NRL Fantasy scores [skip ci]" && git push)
