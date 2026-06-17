@@ -2,11 +2,12 @@ name: Fetch NRL Fantasy Data
 
 on:
   schedule:
-    # Every 30 min during NRL game windows (Thu-Sun, 17:00-23:00 AEST = 07:00-13:00 UTC)
-    - cron: '*/30 7-13 * * 4-0'
-    # Every 4 hours otherwise to catch round completion
-    - cron: '0 */4 * * *'
-  workflow_dispatch:
+    - cron: '*/30 7-14 * * 4-0'   # Every 30min Thu-Sun during NRL hours (AEST)
+    - cron: '0 */4 * * *'          # Every 4h otherwise
+  workflow_dispatch:                # Manual trigger from GitHub UI
+
+permissions:
+  contents: write
 
 jobs:
   fetch:
@@ -14,34 +15,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch NRL Fantasy JSON
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm install playwright@latest
+          npx playwright install chromium --with-deps
+
+      - name: Fetch NRL Fantasy data via browser
         run: |
           mkdir -p public
-          curl -fsSL \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-            -H "Accept: application/json, text/plain, */*" \
-            -H "Accept-Language: en-AU,en;q=0.9" \
-            -H "Referer: https://fantasy.nrl.com/" \
-            -H "Origin: https://fantasy.nrl.com" \
-            "https://fantasy.nrl.com/data/nrl/players.json" \
-            -o public/players.json
+          node << 'JSEOF'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const ctx = await browser.newContext({
+              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              locale: 'en-AU',
+            });
+            const page = await ctx.newPage();
 
-          curl -fsSL \
-            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" \
-            -H "Accept: application/json, text/plain, */*" \
-            -H "Accept-Language: en-AU,en;q=0.9" \
-            -H "Referer: https://fantasy.nrl.com/" \
-            -H "Origin: https://fantasy.nrl.com" \
-            "https://fantasy.nrl.com/data/nrl/rounds.json" \
-            -o public/rounds.json
+            console.log('Fetching players.json...');
+            const pRes = await page.goto('https://fantasy.nrl.com/data/nrl/players.json', { waitUntil: 'networkidle' });
+            console.log('players.json status:', pRes.status());
+            const playersText = await page.evaluate(() => document.body.innerText);
+            const players = JSON.parse(playersText);
+            console.log('Players count:', players.length);
+            require('fs').writeFileSync('public/players.json', JSON.stringify(players));
 
-          # Validate JSON
-          python3 -c "import json; d=json.load(open('public/players.json')); print(f'players.json OK: {len(d)} players')"
-          python3 -c "import json; d=json.load(open('public/rounds.json')); print(f'rounds.json OK: {len(d)} rounds'); [print(f'  Round {r[\"id\"]}: {r[\"status\"]}') for r in d if r.get('id',0)>=14]"
+            console.log('Fetching rounds.json...');
+            const rRes = await page.goto('https://fantasy.nrl.com/data/nrl/rounds.json', { waitUntil: 'networkidle' });
+            console.log('rounds.json status:', rRes.status());
+            const roundsText = await page.evaluate(() => document.body.innerText);
+            const rounds = JSON.parse(roundsText);
+            const done = rounds.filter(r => r.status === 'complete').map(r => r.id);
+            console.log('Rounds complete:', done.join(', '));
+
+            await browser.close();
+            require('fs').writeFileSync('public/rounds.json', JSON.stringify(rounds));
+            console.log('Done.');
+          })().catch(e => { console.error(e); process.exit(1); });
+          JSEOF
 
       - name: Commit if changed
         run: |
           git config user.name "nrl-data-bot"
           git config user.email "bot@nrl-fantasy"
           git add public/players.json public/rounds.json
-          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update NRL Fantasy scores" && git push)
+          git diff --staged --quiet && echo "No data change" || (git commit -m "data: update NRL Fantasy scores [skip ci]" && git push)
