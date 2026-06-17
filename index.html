@@ -3180,104 +3180,140 @@ function mcClubPts(ci,r){
 function startMcPoll(){}
 function stopMcPoll(){}
 
+/* ── Match Centre helpers ── */
+function mcGetRoundData(r){
+  /* RFIX is primary (populated by applyDataPatch from embedded JSON + API fetches) */
+  if(RFIX[r])return{games:RFIX[r].games,byes:RFIX[r].byes||[]};
+  if(S.season.rounds[r])return{games:S.season.rounds[r].fix,byes:S.season.rounds[r].byes||[]};
+  return null;
+}
+function mcClubFantasy(ci,r,isLive){
+  if(isLive)return PLAYERS.filter(p=>p.sq===ci).reduce((s,p)=>s+(LIVE.scores[p.id]??0),0);
+  return PLAYERS.filter(p=>p.sq===ci&&OFFS[p.id]&&OFFS[p.id][r-1]!=null)
+                .reduce((s,p)=>s+(OFFS[p.id][r-1]||0),0);
+}
+function mcPlayerRows(ci,r,isLive){
+  let rows;
+  if(isLive){
+    rows=PLAYERS.filter(p=>p.sq===ci&&LIVE.scores[p.id]!=null)
+                .map(p=>({p,pts:LIVE.scores[p.id]}));
+  }else{
+    /* Read directly from OFFS — avoids playedIn() dependency on S.season.rounds */
+    rows=PLAYERS.filter(p=>p.sq===ci&&OFFS[p.id]&&OFFS[p.id][r-1]!=null)
+                .map(p=>({p,pts:OFFS[p.id][r-1]}));
+  }
+  rows.sort((x,y)=>y.pts-x.pts);
+  if(!rows.length)return`<tr><td colspan="3" class="muted" style="padding:12px;text-align:center">No score data</td></tr>`;
+  const myIds=squadIds();
+  return rows.map(({p,pts})=>{
+    const avg=p.avg||0;
+    const g=avg>0?(pts/avg>=1.6?'A+':pts/avg>=1.2?'A':pts/avg>=0.85?'B':pts/avg>=0.5?'C':'D'):(pts>=50?'A+':pts>=30?'A':pts>=15?'B':'C');
+    const gc=g==='A+'?'grade-aplus':g==='A'?'grade-a':g==='B'?'grade-b':g==='C'?'grade-c':'grade-d';
+    const inMy=myIds.has(p.id);
+    const onclick=isLive?'':'onclick="showStatLine('+p.id+','+r+')" style="cursor:pointer"';
+    return`<tr ${onclick}${inMy?' class="mc-mine"':''}>
+      <td style="width:32px">${avatar(p,24)}</td>
+      <td><b>${esc(p.name)}</b>${inMy?'<span class="tag" style="font-size:9px;margin-left:4px">MY</span>':''}
+        <div class="muted" style="font-size:11px">${posStr(p)}</div></td>
+      <td style="text-align:right;white-space:nowrap">
+        <span class="grade ${gc}">${g}</span>
+        <b class="${pts>=60?'good':pts<20?'bad':''}" style="min-width:28px;display:inline-block;text-align:right">${pts}</b>
+      </td></tr>`;
+  }).join('');
+}
+
 function renderMatch(){
   const el=$('#pg-match');
-  const played=Object.keys(S.season.rounds).map(Number).sort((a,b)=>a-b);
-  /* include live round + current/upcoming round if fixture exists */
-  const liveR=LIVE.round>0?LIVE.round:null;
-  const extraR=new Set();
-  if(liveR)extraR.add(liveR);
-  /* always show current round (MAXR+1) if we have fixture data for it */
-  if(RFIX[S.round])extraR.add(S.round);
-  const allRounds=[...new Set([...played,...extraR])].sort((a,b)=>a-b);
-  if(!allRounds.length){
-    el.innerHTML=`<div class="card" style="text-align:center;padding:40px"><h3 style="justify-content:center">📺 Match Centre</h3>
-    <p class="muted" style="margin:10px 0">No rounds available yet.</p>
-    <p class="muted" style="margin-top:8px;font-size:12px">Scores update automatically when rounds begin.</p></div>`;
-    return;
+
+  /* ── Build round list: any round with OFFS data OR RFIX fixture ── */
+  const roundSet=new Set();
+  /* Rounds with score data in OFFS */
+  for(let r=1;r<=MAXR;r++){
+    if(PLAYERS.some(p=>OFFS[p.id]&&OFFS[p.id][r-1]!=null))roundSet.add(r);
   }
-  /* default to live round if active, else last completed round */
-  const defR=liveR||played[played.length-1]||S.round||1;
-  const r=S.ui.mcRound?Math.min(Math.max(1,S.ui.mcRound),allRounds[allRounds.length-1]):defR;
-  /* get fixture data: try season history first, then RFIX for upcoming/live */
-  /* isLive = round is actively IN PROGRESS; 'final' rounds use playerPts from OFFS */
+  /* Rounds with fixture from RFIX */
+  for(const r in RFIX)roundSet.add(+r);
+  /* Live round */
+  const liveR=LIVE.round>0?LIVE.round:null;
+  if(liveR)roundSet.add(liveR);
+  const allRounds=[...roundSet].sort((a,b)=>a-b);
+
+  if(!allRounds.length){
+    el.innerHTML=`<div class="card" style="text-align:center;padding:40px">
+      <h3 style="justify-content:center">📺 Match Centre</h3>
+      <p class="muted" style="margin:10px 0">Round data loading…</p>
+      <p class="muted" style="font-size:12px">Scores populate once GitHub Actions fetches the latest data.</p>
+    </div>`;return;
+  }
+
+  /* ── Select round ── */
+  const completedRounds=allRounds.filter(r=>r<=MAXR);
+  const defR=liveR||(completedRounds.length?completedRounds[completedRounds.length-1]:allRounds[0]);
+  const r=(S.ui.mcRound&&roundSet.has(S.ui.mcRound))?S.ui.mcRound:defR;
+
+  const rdData=mcGetRoundData(r);
+  if(!rdData){el.innerHTML=`<div class="card"><p class="muted" style="padding:20px">No fixture data for Round ${r}.</p></div>`;return;}
+
   const isLive=liveR===r&&LIVE.status==='live';
-  const rdFix=S.season.rounds[r]?S.season.rounds[r]:(RFIX[r]?{fix:RFIX[r].games,byes:RFIX[r].byes,real:false}:null);
-  if(!rdFix){S.ui.mcRound=defR;return renderMatch();}
-  const mi=Math.min(S.ui.mcMatch||0,rdFix.fix.length-1);
-  const [h,a]=rdFix.fix[mi];
-  const hp=mcClubPts(h,r),ap=mcClubPts(a,r);
-  const byes=rdFix.byes||[];
-  /* start/stop live poll */
-  if(isLive&&LIVE.status==='live')startMcPoll();else stopMcPoll();
-  const age=isLive&&LIVE.fetched?Math.round((Date.now()-LIVE.fetched)/60000):null;
-  const liveTag=isLive
-    ?(LIVE.status==='live'
-      ?`<span class="tag" style="background:rgba(255,60,60,.15);color:#ff6060;animation:pulse 1.5s infinite">🔴 LIVE${age!==null?' · '+age+'m ago':''}</span>`
-      :`<span class="tag" style="background:rgba(0,230,118,.1);color:var(--acc)">✅ Final</span>`)
-    :'';
-  const lister=ci=>{
-    /* for live round use LIVE scores + all players with data; for historical use played filter */
-    let rows;
-    if(isLive){
-      rows=PLAYERS.filter(p=>p.sq===ci&&livePts(p.id)!=null)
-        .map(p=>({p,pts:livePts(p.id)})).sort((x,y)=>y.pts-x.pts);
-    }else{
-      rows=PLAYERS.filter(p=>p.sq===ci&&playedIn(p.id,r))
-        .map(p=>({p,pts:playerPts(p.id,r)})).sort((x,y)=>y.pts-x.pts);
-    }
-    if(!rows.length)return '<tr><td colspan="3" class="muted" style="padding:10px">No data yet</td></tr>';
-    return rows.map(({p,pts})=>{
-      const g=pts!=null?(()=>{const avg=p.avg||0;if(avg<=0)return pts>=50?'A+':pts>=30?'A':pts>=15?'B':'C';const rt=pts/avg;return rt>=1.6?'A+':rt>=1.2?'A':rt>=0.85?'B':rt>=0.5?'C':'D';})():null;
-      const gc=g==='A+'?'grade-aplus':g==='A'?'grade-a':g==='B'?'grade-b':g==='C'?'grade-c':'grade-d';
-      const sq=squadIds();const inMy=sq.has(p.id);
-      return `<tr style="cursor:pointer${inMy?';background:rgba(132,204,22,.06)':''}" onclick="${isLive?'':('showStatLine('+p.id+','+r+')')}">
-        <td>${avatar(p,26)}</td>
-        <td><b>${esc(p.name)}</b>${inMy?'<span class="tag" style="font-size:9px;margin-left:4px;background:rgba(132,204,22,.12);color:var(--acc)">MY</span>':''}
-          <br><span class="muted" style="font-size:11px">${posStr(p)}</span></td>
-        <td style="text-align:right">
-          ${g?`<span class="grade ${gc}">${g}</span>`:''}
-          <b class="${pts>=60?'good':pts<20?'bad':''}">${pts??'—'}</b>
-        </td></tr>`;
-    }).join('');
-  };
+  const isFinal=(liveR===r&&LIVE.status==='final')||(r<=MAXR&&!isLive);
+  const mi=Math.min(S.ui.mcMatch||0,rdData.games.length-1);
+  const game=rdData.games[mi]||rdData.games[0];
+  const [h,a,hs,as]=game;
+  const hPts=mcClubFantasy(h,r,isLive),aPts=mcClubFantasy(a,r,isLive);
+
+  const badge=isLive
+    ?`<span class="tag" style="background:rgba(255,60,60,.15);color:#ff6060;animation:pulse 1.5s infinite">🔴 LIVE</span>`
+    :isFinal?`<span class="tag" style="background:rgba(0,230,118,.1);color:var(--acc)">✅ Final</span>`
+    :`<span class="tag">Upcoming</span>`;
+
   el.innerHTML=`
-  <div class="flex" style="margin-bottom:12px;flex-wrap:wrap;gap:8px">
-    <label style="display:flex;align-items:center;gap:6px">Round
+  <style>.mc-mine{background:rgba(132,204,22,.05)}</style>
+  <div class="flex" style="margin-bottom:12px;gap:8px;flex-wrap:wrap;align-items:center">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px">Round
       <select onchange="S.ui.mcRound=+this.value;S.ui.mcMatch=0;renderMatch()">
-        ${allRounds.map(x=>`<option value="${x}" ${x===r?'selected':''}>${x===liveR?'Round '+x+' 🔴':('Round '+x)}</option>`).join('')}
+        ${allRounds.map(x=>`<option value="${x}" ${x===r?'selected':''}>${x===liveR?'R'+x+' 🔴':'R'+x+(x<=MAXR?' ✓':'')}</option>`).join('')}
       </select>
     </label>
-    ${liveTag}
-
-    <span class="muted" style="font-size:12px">Bye: ${byes.length?byes.map(b=>CLUBS[b].s).join(', '):'—'}</span>
+    ${badge}
+    ${rdData.byes.length?`<span class="muted" style="font-size:12px">Bye: ${rdData.byes.map(b=>CLUBS[b]?CLUBS[b].s:b).join(', ')}</span>`:''}
     <span class="spacer"></span>
     ${myRoundSummary(r,isLive)}
-    ${isLive?`<span class="muted" style="font-size:11px">Auto-refreshes every 90s</span>`:''}
   </div>
   <div class="grid2">
-   <div class="card">
-    <h3>Round ${r} — ${isLive?'live NRL Fantasy':'real results'} <span class="tag">${isLive?'scores update each minute':'NRL score · fantasy = sum of player points'}</span></h3>
-    ${rdFix.fix.map(([x,y,xs,ys],i)=>{
-      const fx=mcClubPts(x,r),fy=mcClubPts(y,r);
-      const nrlH=isLive?'–':(xs!=null?xs:'–');
-      const nrlA=isLive?'–':(ys!=null?ys:'–');
-      return `<div class="match" style="${i===mi?'border-color:var(--acc)':''}" onclick="S.ui.mcMatch=${i};renderMatch()">
-        <div class="teams"><div class="t">${clubDot(x)} ${CLUBS[x].n}</div>
-        <div class="score">${nrlH} – ${nrlA}</div>
-        <div class="t away">${CLUBS[y].n} ${clubDot(y)}</div></div>
-        <div style="text-align:center;font-size:11px;color:var(--dim);margin-top:3px">fantasy: <b>${fx}</b> – <b>${fy}</b></div>
-      </div>`;
-    }).join('')}
-   </div>
-   <div class="card">
-    <h3>${CLUBS[h].n} <span style="color:var(--acc)">${hp}</span> — <span style="color:var(--acc)">${ap}</span> ${CLUBS[a].n}
-      <span class="tag">fantasy pts${isLive?'':' · tap for stat line'}</span></h3>
-    <div class="grid2">
-      <div><table><thead><tr><th colspan="2">${CLUBS[h].n}</th><th style="text-align:right">Pts</th></tr></thead><tbody>${lister(h)}</tbody></table></div>
-      <div><table><thead><tr><th colspan="2">${CLUBS[a].n}</th><th style="text-align:right">Pts</th></tr></thead><tbody>${lister(a)}</tbody></table></div>
+    <div class="card">
+      <h3>Round ${r} ${isFinal?'— Final':''}${isLive?'— Live':''} <span class="tag">NRL score / fantasy pts</span></h3>
+      ${rdData.games.map(([gh,ga,ghs,gas],i)=>{
+        const gfh=mcClubFantasy(gh,r,isLive),gfa=mcClubFantasy(ga,r,isLive);
+        const sel=i===mi;
+        return`<div class="match" style="${sel?'border-color:var(--acc);background:rgba(132,204,22,.03)':''}" onclick="S.ui.mcMatch=${i};renderMatch()">
+          <div class="teams">
+            <div class="t">${clubDot(gh)} <b>${CLUBS[gh].s}</b></div>
+            <div class="score">${ghs!=null?ghs:'–'}<span style="color:var(--dim)"> – </span>${gas!=null?gas:'–'}</div>
+            <div class="t away"><b>${CLUBS[ga].s}</b> ${clubDot(ga)}</div>
+          </div>
+          <div style="text-align:center;font-size:11px;color:var(--dim);margin-top:3px">
+            <span style="color:var(--text)">${gfh}</span> – <span style="color:var(--text)">${gfa}</span> fantasy
+          </div>
+        </div>`;
+      }).join('')}
     </div>
-   </div>
+    <div class="card">
+      <h3>${CLUBS[h].n} <span style="color:var(--acc)">${hPts}</span>
+        <span style="color:var(--dim)"> — </span>
+        <span style="color:var(--acc)">${aPts}</span> ${CLUBS[a].n}
+        <span class="tag" style="font-size:11px">${isLive?'live':'tap row for stat line'}</span>
+      </h3>
+      <div class="grid2" style="gap:8px">
+        <table><thead><tr>
+          <th colspan="2">${CLUBS[h].n}</th>
+          <th style="text-align:right">Pts</th>
+        </tr></thead><tbody>${mcPlayerRows(h,r,isLive)}</tbody></table>
+        <table><thead><tr>
+          <th colspan="2">${CLUBS[a].n}</th>
+          <th style="text-align:right">Pts</th>
+        </tr></thead><tbody>${mcPlayerRows(a,r,isLive)}</tbody></table>
+      </div>
+    </div>
   </div>`;
 }
 function myRoundSummary(r,isLive){
@@ -3957,9 +3993,21 @@ function renderAll(){
   }
 }
 
+/* ================= EMBEDDED DATA (injected by GitHub Actions) ================= */
+const __NRL_PATCH__=null;// [nrl-data]
+
 /* ================= INIT ================= */
 load();
 applyLayout();
+/* Merge embedded patch from GitHub Actions before applyDataPatch() */
+if(typeof __NRL_PATCH__!=='undefined'&&__NRL_PATCH__){
+  const _ep=__NRL_PATCH__,_P=S.dataPatch;
+  if(_ep.maxR)_P.maxR=Math.max(_ep.maxR,_P.maxR||0);
+  if(_ep.off)for(const _k in _ep.off){_P.off=_P.off||{};_P.off[_k]=_P.off[_k]||{};for(const _r in _ep.off[_k])_P.off[_k][_r]=_ep.off[_k][_r];}
+  if(_ep.price)for(const _k in _ep.price){_P.price=_P.price||{};_P.price[_k]=_P.price[_k]||{};for(const _r in _ep.price[_k])_P.price[_k][_r]=_ep.price[_k][_r];}
+  if(_ep.fix)for(const _r in _ep.fix){_P.fix=_P.fix||{};_P.fix[_r]=_ep.fix[_r];}
+  S.dataPatch=_P;
+}
 applyDataPatch();
 if(!isNaN(MAXR)){/* dataPatch applied — advance any rounds the load() pass missed */
   if(S.round<=MAXR)autoAdvanceRounds(S.round-1);

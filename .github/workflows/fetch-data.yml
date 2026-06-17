@@ -55,13 +55,85 @@ jobs:
             require('fs').writeFileSync('public/rounds.json', JSON.stringify(rounds));
 
             await browser.close();
-            console.log('Done.');
+            console.log('Done fetching.');
           })().catch(e => { console.error(e); process.exit(1); });
+          JSEOF
+
+      - name: Generate data patch and embed in index.html
+        run: |
+          node << 'JSEOF'
+          const fs = require('fs');
+
+          const players = JSON.parse(fs.readFileSync('public/players.json', 'utf8'));
+          const rounds  = JSON.parse(fs.readFileSync('public/rounds.json',  'utf8'));
+
+          // Extract FEEDIDS and SQUAD_FEED_IDS from index.html
+          const html = fs.readFileSync('index.html', 'utf8');
+
+          const feedMatch = html.match(/const FEEDIDS=\[([^\]]+)\]/);
+          const sqMatch   = html.match(/const SQUAD_FEED_IDS=\[([^\]]+)\]/);
+          if (!feedMatch || !sqMatch) { console.error('Could not find FEEDIDS or SQUAD_FEED_IDS'); process.exit(1); }
+
+          const FEEDIDS        = JSON.parse('[' + feedMatch[1] + ']');
+          const SQUAD_FEED_IDS = JSON.parse('[' + sqMatch[1]  + ']');
+
+          const idMap = {};
+          FEEDIDS.forEach((id, i) => idMap[id] = i);
+          const sqMap = {};
+          SQUAD_FEED_IDS.forEach((id, i) => sqMap[id] = i);
+
+          const doneRounds = rounds.filter(r => r.status === 'complete').map(r => r.id);
+          const maxR = doneRounds.length ? Math.max(...doneRounds) : 0;
+          console.log('maxR =', maxR, '| complete rounds:', doneRounds.sort((a,b)=>a-b).join(', '));
+
+          const patch = { maxR, off: {}, price: {}, fix: {} };
+
+          players.forEach(p => {
+            const i = idMap[p.id];
+            if (i == null) return;
+            for (let r = 1; r <= maxR; r++) {
+              if (p.stats && p.stats.scores && p.stats.scores[r] != null) {
+                (patch.off[i] = patch.off[i] || {})[r] = p.stats.scores[r];
+              }
+              if (p.stats && p.stats.prices && p.stats.prices[r] != null) {
+                (patch.price[i] = patch.price[i] || {})[r] = Math.round(p.stats.prices[r] / 1000);
+              }
+            }
+          });
+
+          rounds.forEach(rd => {
+            const byes  = (rd.bye_squads || []).map(x => sqMap[x]).filter(x => x != null);
+            const games = (rd.matches    || []).map(m => [
+              sqMap[m.home_squad_id],
+              sqMap[m.away_squad_id],
+              m.status === 'complete' ? m.home_score : null,
+              m.status === 'complete' ? m.away_score : null
+            ]).filter(([h, a]) => h != null && a != null);
+            patch.fix[rd.id] = { byes, games };
+          });
+
+          const playerCount = Object.keys(patch.off).length;
+          console.log('Patch: ' + playerCount + ' players with scores, ' + Object.keys(patch.fix).length + ' rounds of fixtures');
+
+          // Replace the embedded data line in index.html
+          const patchJson = JSON.stringify(patch);
+          const updated = html.replace(
+            /const __NRL_PATCH__=[^/]+\/\/ \[nrl-data\]/,
+            'const __NRL_PATCH__=' + patchJson + ';// [nrl-data]'
+          );
+
+          if (updated === html) {
+            console.error('ERROR: Replacement pattern not found in index.html');
+            process.exit(1);
+          }
+
+          fs.writeFileSync('index.html', updated);
+          console.log('index.html updated (patch size: ' + Math.round(patchJson.length / 1024) + ' KB)');
           JSEOF
 
       - name: Commit if changed
         run: |
           git config user.name "nrl-data-bot"
           git config user.email "bot@nrl-fantasy"
-          git add public/players.json public/rounds.json
-          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update NRL Fantasy scores" && git push)
+          git add public/players.json public/rounds.json index.html
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: embed NRL Fantasy scores Rd$(node -e "const r=require('./public/rounds.json');const d=r.filter(x=>x.status==='complete').map(x=>x.id);console.log(Math.max(...d))")" && git push)
