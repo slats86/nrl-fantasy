@@ -64,4 +64,4 @@ jobs:
           git config user.name "nrl-data-bot"
           git config user.email "bot@nrl-fantasy"
           git add public/players.json public/rounds.json
-          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update NRL Fantasy scores [skip ci]" && git push)
+          git diff --staged --quiet && echo "No changes" || (git commit -m "data: update NRL Fantasy scores" && git push)
