@@ -3838,7 +3838,7 @@ function sooLeagueTeamGameScore(picks,gameNum){
 
 async function sooCreateLeague(){
   const lname=document.getElementById('soo-lg-name').value.trim()||'SoO League';
-  const tname=document.getElementById('soo-team-name').value.trim()||S.user.name||'My Team';
+  const tname=document.getElementById('soo-team-name').value.trim()||(S.sooAuth&&S.sooAuth.name)||S.user.name||'My Team';
   try{
     const r=await fetch(SOO_API+'/create',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -3853,7 +3853,7 @@ async function sooCreateLeague(){
 
 async function sooJoinLeague(){
   const code=(document.getElementById('soo-join-code').value||'').trim().toUpperCase();
-  const tname=document.getElementById('soo-join-tname').value.trim()||S.user.name||'My Team';
+  const tname=document.getElementById('soo-join-tname').value.trim()||(S.sooAuth&&S.sooAuth.name)||S.user.name||'My Team';
   if(!code){alert('Enter a league code');return;}
   try{
     const r=await fetch(SOO_API+'/join',{
@@ -3969,14 +3969,14 @@ function renderSooLeague(){
       <div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px">
         <div style="font-weight:700;margin-bottom:12px">Create a league</div>
         <input id="soo-lg-name" placeholder="League name" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:8px">
-        <input id="soo-team-name" placeholder="Your team name" value="${esc(S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
+        <input id="soo-team-name" placeholder="Your team name" value="${esc((S.sooAuth&&S.sooAuth.name)||S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
         <button class="btn-primary" onclick="sooCreateLeague()" style="width:100%">Create League</button>
       </div>
 
       <div style="border:1px solid var(--line);border-radius:12px;padding:16px">
         <div style="font-weight:700;margin-bottom:12px">Join a league</div>
         <input id="soo-join-code" placeholder="League code (e.g. XY3K9P)" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;text-transform:uppercase;margin-bottom:8px">
-        <input id="soo-join-tname" placeholder="Your team name" value="${esc(S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
+        <input id="soo-join-tname" placeholder="Your team name" value="${esc((S.sooAuth&&S.sooAuth.name)||S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
         <button class="btn-primary" onclick="sooJoinLeague()" style="width:100%">Join League</button>
       </div>
     </div>`;
@@ -4002,8 +4002,8 @@ function renderSooLeague(){
   }
 
   const data=_sooLeagueCache;
-  /* owner = explicit ownerId match, or (legacy) first team in league */
-  const isOwner=!!(S.sooAuth&&data&&(data.ownerId?data.ownerId===S.sooAuth.userId:data.teams&&data.teams[0]&&data.teams[0].id===lg.teamId));
+  /* any logged-in member can manage (remove other teams, delete league) */
+  const isOwner=!!(S.sooAuth&&data&&data.teams&&data.teams.some(t=>t.id===lg.teamId));
   /* Build ranked rows */
   const rows=data.teams.map(t=>{
     const isMe=t.id===lg.teamId;
