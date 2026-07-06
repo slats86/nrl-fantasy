@@ -300,6 +300,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .soo-nsw{background:rgba(0,95,175,.18);color:#5ba3e0}
 .soo-qld{background:rgba(109,26,54,.2);color:#c07090}
 .soo-slot-locked{cursor:default!important;opacity:.8}
+.soo-slot-active{border-color:var(--acc)!important;background:rgba(132,204,22,.08)!important}
 .soo-slot-locked:hover{border-color:var(--line)!important}
 .soo-locked-tab{opacity:.7}
 .soo-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
@@ -3609,49 +3610,139 @@ function renderOrigin(){
 function renderSooPicks(g){
   const picks=S.origin.picks[g]||{};
   const locked=sooIsLocked(g);
-  const hasRound=!!SOO_ROUNDS[g];
-  const slots=SOO_POS.map(pos=>{
+  const slot=S.origin.sooSlotPick||null;
+
+  /* ── Score banner ── */
+  const total=sooTeamTotal(g);
+  const pickedCount=SOO_POS.filter(p=>picks[p.key]!=null).length;
+  const scoreBanner=total!=null?`
+    <div style="background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:13px;color:var(--dim)">Game 3 Total Score</div>
+      <div style="font-size:30px;font-weight:900;color:var(--acc)">${total}<span style="font-size:14px;font-weight:400;color:var(--dim);margin-left:4px">pts</span></div>
+    </div>`:pickedCount>0?`
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:13px;color:var(--dim)">${pickedCount} / ${SOO_POS.length} players selected</div>
+      <div style="font-size:12px;color:var(--dim)">Scores post after Game 3</div>
+    </div>`:'';
+
+  /* ── Field slots ── */
+  function mkSlot(pos){
     const pid=picks[pos.key];
     const p=pid!=null?PLAYERS[pid]:null;
     const score=sooRoundScore(pid,g);
-    return`<div class="soo-slot${locked?' soo-slot-locked':''}" ${locked?'':'onclick="sooPickPlayer(\''+pos.key+'\','+pos.posId+','+g+')";'}>
+    const isActive=slot&&slot.key===pos.key;
+    const clickAttr=locked?'':`onclick="S.origin.sooSlotPick=S.origin.sooSlotPick&&S.origin.sooSlotPick.key==='${pos.key}'?null:{key:'${pos.key}',posId:${pos.posId}};renderOrigin()"`;
+    return`<div class="soo-slot${locked?' soo-slot-locked':''}${isActive?' soo-slot-active':''}" ${clickAttr} style="cursor:${locked?'default':'pointer'}">
       <div class="soo-pos-badge">${pos.key}</div>
-      <div class="soo-pos-label">${pos.label}</div>
       ${p?`
         <div class="soo-player-info">
-          ${avatar(p,30)}
+          ${avatar(p,28)}
           <div style="min-width:0">
-            <b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</b>
-            <span class="muted" style="font-size:11px">${CLUBS[p.sq]?CLUBS[p.sq].n:''}</span>
+            <b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px">${esc(p.name)}</b>
+            <span class="muted" style="font-size:11px">${CLUBS[p.sq]?CLUBS[p.sq].s:''}</span>
           </div>
         </div>
-        <div class="soo-score">${score!=null?`<b class="${score>=60?'good':score<20?'bad':''}">${score}</b>`:'<span class="muted" style="font-size:12px">—</span>'}</div>
+        <div class="soo-score">${score!=null?`<b class="${score>=60?'good':score<20?'bad':''}">${score}</b>`:'<span class="muted">—</span>'}</div>
         ${locked?'':`<button class="soo-clear" onclick="event.stopPropagation();sooRemove('${pos.key}',${g})">✕</button>`}
-      `:`
-        <div class="soo-empty">${locked?'No player selected':'Tap to pick player'}</div>
-        ${locked?'':'<span style="color:var(--dim);font-size:18px">＋</span>'}
-      `}
+      `:`<div class="soo-empty">${locked?'Not picked':'Tap to pick'}</div>`}
     </div>`;
-  }).join('');
+  }
 
-  const total=sooTeamTotal(g);
-  return`<div class="card" style="padding:16px">
-    ${sooTeamTotal(g)!=null?`
-    <div style="background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:13px;color:var(--dim)">Game 3 Total Score</div>
-      <div style="font-size:30px;font-weight:900;color:var(--acc)">${sooTeamTotal(g)}<span style="font-size:14px;font-weight:400;color:var(--dim);margin-left:4px">pts</span></div>
-    </div>`
-    :SOO_POS.filter(p=>picks[p.key]!=null).length>0?`
-    <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:13px;color:var(--dim)">${SOO_POS.filter(p=>picks[p.key]!=null).length} / ${SOO_POS.length} players selected</div>
-      <div style="font-size:12px;color:var(--dim)">Scores after Game 3</div>
-    </div>`:''}
-    ${locked?`<div class="notice" style="margin-bottom:12px;font-size:12px">🔒 Game ${g} is finalised — picks are locked.</div>`
-    :!hasRound?`<div class="notice" style="margin-bottom:12px;font-size:12px">⏳ Make your picks now — scores appear automatically after Game 3.</div>`:''}
-    <div class="soo-slots soo-slots-grid">${slots}</div>
-    ${total!=null?`<div style="text-align:right;margin-top:14px;font-size:16px;font-weight:700">Total: <span class="good">${total} pts</span></div>`:''}
-  </div>`;
+  const groups=[
+    {label:'FULLBACK / WINGERS', keys:['FB','WG']},
+    {label:'CENTRES / HALVES',   keys:['CTR','HLF']},
+    {label:'FORWARDS',           keys:['HOK','MID','EDG']},
+  ];
+  const fieldHTML=groups.map(grp=>`
+    <div class="field-section">
+      <div class="field-label">${grp.label}</div>
+      <div class="field-row" style="justify-content:center;gap:8px">
+        ${grp.keys.map(k=>mkSlot(SOO_POS.find(p=>p.key===k))).join('')}
+      </div>
+    </div>`).join('');
+
+  /* ── Player pool ── */
+  const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const squad=SOO_SQUAD_NAMES[g];
+  const q=(S.origin.sooPoolQ||'').toLowerCase();
+
+  let pool=PLAYERS.filter(p=>squad&&squad.has(nm(p.name)));
+  if(slot){
+    const posMap=SOO_POS_MAP[g];
+    if((slot.key==='FB'||slot.key==='WG')&&posMap&&posMap[slot.key]){
+      const names=new Set(posMap[slot.key]);
+      pool=pool.filter(p=>names.has(nm(p.name)));
+    } else {
+      pool=pool.filter(p=>p.pos.includes(slot.posId));
+    }
+  }
+  if(q)pool=pool.filter(p=>p.name.toLowerCase().includes(q));
+  pool.sort((a,b)=>(b.avg||0)-(a.avg||0));
+
+  const poolHTML=`
+    <h3 style="margin:0 0 12px">${slot?`Pick: <b>${slot.key}</b> <span class="tag">${SOO_POS.find(p=>p.key===slot.key).label}</span>`:'Player Pool'}
+      ${slot?`<button class="btn sec" style="margin-left:auto;padding:4px 10px;font-size:12px" onclick="S.origin.sooSlotPick=null;renderOrigin()">✕ cancel</button>`:''}</h3>
+    <input placeholder="Search players…" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--fg);font-size:13px;margin-bottom:10px"
+      value="${esc(q)}" oninput="S.origin.sooPoolQ=this.value;document.getElementById('soo-pool-list').innerHTML=renderSooPoolRows(${g})">
+    <div style="max-height:520px;overflow-y:auto" id="soo-pool-list">
+      ${renderSooPoolRows(g)}
+    </div>`;
+
+  return`
+    ${scoreBanner}
+    ${locked?`<div class="notice" style="margin-bottom:12px;font-size:12px">🔒 Game ${g} is finalised — picks are locked.</div>`:''}
+    <div class="grid2">
+      <div class="field" style="background:var(--card2);border-radius:12px;padding:14px;border:1px solid var(--line)">${fieldHTML}</div>
+      <div class="card" id="soo-pool-card" style="padding:14px">${slot||!locked?poolHTML:`<div class="muted" style="text-align:center;padding:40px 0">🔒 Picks locked</div>`}</div>
+    </div>`;
 }
+
+function renderSooPoolRows(g){
+  const picks=S.origin.picks[g]||{};
+  const slot=S.origin.sooSlotPick||null;
+  const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const squad=SOO_SQUAD_NAMES[g];
+  const q=(S.origin.sooPoolQ||'').toLowerCase();
+  let pool=PLAYERS.filter(p=>squad&&squad.has(nm(p.name)));
+  if(slot){
+    const posMap=SOO_POS_MAP[g];
+    if((slot.key==='FB'||slot.key==='WG')&&posMap&&posMap[slot.key]){
+      const names=new Set(posMap[slot.key]);
+      pool=pool.filter(p=>names.has(nm(p.name)));
+    } else {
+      pool=pool.filter(p=>p.pos.includes(slot.posId));
+    }
+  }
+  if(q)pool=pool.filter(p=>p.name.toLowerCase().includes(q));
+  pool.sort((a,b)=>(b.avg||0)-(a.avg||0));
+  if(!pool.length)return`<div class="muted" style="text-align:center;padding:20px">No players found</div>`;
+  return`<table style="width:100%;border-collapse:collapse">
+    <thead><tr style="border-bottom:1px solid var(--line)">
+      <th></th><th style="text-align:left;font-size:11px;color:var(--dim);padding:4px 6px">Player</th>
+      <th style="font-size:11px;color:var(--dim);padding:4px 6px">Pos</th>
+      <th style="font-size:11px;color:var(--dim);padding:4px 6px">Avg</th>
+      <th style="font-size:11px;color:var(--dim);padding:4px 6px">L3</th>
+    </tr></thead><tbody>
+    ${pool.map(p=>{
+      const pid=picks[Object.keys(picks).find(k=>picks[k]===p.id)||''];
+      const isPicked=Object.values(picks).includes(p.id);
+      const posLabels=SOO_POS.filter(sp=>{
+        if(sp.key==='FB')return SOO_POS_MAP[g]&&SOO_POS_MAP[g].FB&&SOO_POS_MAP[g].FB.includes(nm(p.name));
+        if(sp.key==='WG')return SOO_POS_MAP[g]&&SOO_POS_MAP[g].WG&&SOO_POS_MAP[g].WG.includes(nm(p.name));
+        return p.pos.includes(sp.posId);
+      }).map(sp=>`<span class="posb">${sp.key}</span>`).join('');
+      return`<tr style="cursor:${slot&&!isPicked?'pointer':'default'};${isPicked?'opacity:.4':''};border-bottom:1px solid var(--line)"
+        onclick="${slot&&!isPicked?`sooSelect('${slot?slot.key:''}',${p.id},${g})`:''}">
+        <td style="padding:6px 4px">${avatar(p,26)}</td>
+        <td style="padding:6px"><b style="font-size:13px">${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${CLUBS[p.sq]?CLUBS[p.sq].s:''}</span></td>
+        <td style="padding:6px;text-align:center">${posLabels||'—'}</td>
+        <td style="padding:6px;text-align:center"><b>${p.avg||'–'}</b></td>
+        <td style="padding:6px;text-align:center">${p.l3||'–'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+}
+
 
 function renderSooStats(g){
   const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -4141,8 +4232,10 @@ function sooPickPlayer(posKey,posId,gameNum){
 function sooSelect(posKey,pid,gameNum){
   sooInitState();
   S.origin.picks[gameNum][posKey]=pid;
+  S.origin.sooSlotPick=null;
+  S.origin.sooPoolQ='';
   save();closeModal();renderOrigin();
-  sooSyncPicks(); /* background sync to league */
+  sooSyncPicks();
 }
 
 function sooRemove(posKey,gameNum){
