@@ -3643,8 +3643,29 @@ function renderSooLeaderboard(){
   </div>`;
 }
 
+function sooEligiblePlayers(gameNum,posId){
+  /* Build pool of SoO-eligible players at this position */
+  /* For a played game: players who scored in that round */
+  const rndId=SOO_ROUNDS[gameNum];
+  if(rndId){
+    const played=PLAYERS.filter(p=>p.pos.includes(posId)&&OFFS[p.id]&&OFFS[p.id][rndId-1]!=null);
+    if(played.length)return played.sort((a,b)=>b.avg-a.avg);
+  }
+  /* For upcoming/current game: union of players who appeared in any SoO round this series */
+  const sooIds=new Set();
+  [1,2,3].forEach(g=>{
+    const rId=SOO_ROUNDS[g];if(!rId)return;
+    PLAYERS.forEach(p=>{if(OFFS[p.id]&&OFFS[p.id][rId-1]!=null)sooIds.add(p.id);});
+  });
+  if(sooIds.size>0){
+    return PLAYERS.filter(p=>p.pos.includes(posId)&&sooIds.has(p.id)).sort((a,b)=>b.avg-a.avg);
+  }
+  /* Fallback: all players at position (no SoO data loaded yet) */
+  return PLAYERS.filter(p=>p.pos.includes(posId)).sort((a,b)=>b.avg-a.avg);
+}
+
 function sooPickPlayer(posKey,posId,gameNum){
-  const eligible=PLAYERS.filter(p=>p.pos.includes(posId)).sort((a,b)=>b.avg-a.avg);
+  const eligible=sooEligiblePlayers(gameNum,posId);
   const pos=SOO_POS.find(p=>p.key===posKey);
   const currentPid=(S.origin.picks[gameNum]||{})[posKey];
   const rndId=SOO_ROUNDS[gameNum];
