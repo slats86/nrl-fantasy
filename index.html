@@ -3587,25 +3587,31 @@ function renderOrigin(){
     </div>`;
   }).join('');
 
-  el.innerHTML=`
-  ${standaloneBanner}
-  <div class="soo-page-wrap">
-    <div class="soo-main-col">
-      <div class="soo-header">
-        <h2>🦁 State of Origin Fantasy</h2>
-        <div class="sub">Pick your best player at each position for Game 3</div>
-      </div>
-      <div class="soo-summary-grid" style="margin-bottom:14px">${summaryCards}</div>
-      <div class="soo-tabs" style="margin-bottom:12px">
-        <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
-        <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin()">👥 League</div>
-      </div>
-      ${tab==='picks'?renderSooPicks(g):tab==='league'?renderSooLeague():renderSooStats(g)}
+  const tabsHTML=`
+    <div class="soo-tabs" style="margin-bottom:12px">
+      <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
+      <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin()">👥 League</div>
+    </div>`;
+  const hdrHTML=`
+    <div class="soo-header">
+      <h2>🦁 State of Origin Fantasy</h2>
+      <div class="sub">Pick your best player at each position for Game 3</div>
     </div>
-    <div class="soo-side-col">
-      ${summaryCards ? `<div style="margin-bottom:12px"><b style="font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;font-size:11px">Game Summary</b></div><div class="soo-summary-grid" style="grid-template-columns:1fr;gap:10px;margin-bottom:0">${summaryCards}</div>` : ''}
-    </div>
-  </div>`;
+    <div class="soo-summary-grid" style="margin-bottom:14px">${summaryCards}</div>`;
+  if(tab==='league'){
+    el.innerHTML=`${standaloneBanner}${hdrHTML}${tabsHTML}${renderSooLeague()}`;
+  } else {
+    el.innerHTML=`${standaloneBanner}
+    <div class="soo-page-wrap">
+      <div class="soo-main-col">
+        ${hdrHTML}${tabsHTML}
+        ${renderSooPicks(g)}
+      </div>
+      <div class="soo-side-col">
+        ${summaryCards?`<div style="margin-bottom:12px"><b style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em">Game Summary</b></div><div class="soo-summary-grid" style="grid-template-columns:1fr;gap:10px;margin-bottom:0">${summaryCards}</div>`:''}
+      </div>
+    </div>`;
+  }
 }
 
 function renderSooPicks(g){
@@ -3669,9 +3675,15 @@ function renderSooPicks(g){
   if(q)pool=pool.filter(p=>p.name.toLowerCase().includes(q));
   pool.sort((a,b)=>(b.avg||0)-(a.avg||0));
 
+  const slotLabel=slot?SOO_POS.find(p=>p.key===slot.key):null;
   const poolHTML=`
-    <h3 style="margin:0 0 12px">${slot?`Pick: <b>${slot.key}</b> <span class="tag">${SOO_POS.find(p=>p.key===slot.key).label}</span>`:'Player Pool'}
-      ${slot?`<button class="btn sec" style="margin-left:auto;padding:4px 10px;font-size:12px" onclick="S.origin.sooSlotPick=null;renderOrigin()">✕ cancel</button>`:''}</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div>
+        <b style="font-size:14px">PLAYER POOL</b>
+        ${slot?`<span style="margin-left:8px;font-size:12px;color:var(--dim)">For <b style="color:var(--acc)">${slot.key}</b> · ${slotLabel?slotLabel.label:''}</span>`:'<span style="margin-left:8px;font-size:12px;color:var(--dim)">Click a slot to filter</span>'}
+      </div>
+      ${slot?`<button class="btn sec" style="padding:3px 10px;font-size:12px" onclick="S.origin.sooSlotPick=null;renderOrigin()">✕ clear</button>`:''}
+    </div>
     <input placeholder="Search players…" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--fg);font-size:13px;margin-bottom:10px"
       value="${esc(q)}" oninput="S.origin.sooPoolQ=this.value;document.getElementById('soo-pool-list').innerHTML=renderSooPoolRows(${g})">
     <div style="max-height:520px;overflow-y:auto" id="soo-pool-list">
