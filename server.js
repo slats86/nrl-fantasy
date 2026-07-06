@@ -147,7 +147,7 @@ http.createServer(function(req, res) {
       user.token = token;
       tokens[token] = email;
       saveUsers();
-      jsonRes(res, 200, { token, userId: user.userId, name: user.name, email: user.email });
+      jsonRes(res, 200, { token, userId: user.userId, name: user.name, email: user.email, leagueCode: user.leagueCode||null, teamId: user.teamId||null });
     });
     return;
   }
@@ -173,6 +173,8 @@ http.createServer(function(req, res) {
           picks: body.picks || {}
         }]
       };
+      /* store league association on user */
+      user.leagueCode = code; user.teamId = teamId; saveUsers();
       saveLeagues();
       jsonRes(res, 200, { code, teamId });
     });
@@ -198,9 +200,23 @@ http.createServer(function(req, res) {
         name: (body.teamName || user.name || 'New Team').slice(0, 30),
         picks: body.picks || {}
       });
+      /* store league association on user */
+      user.leagueCode = body.code; user.teamId = teamId; saveUsers();
       saveLeagues();
       jsonRes(res, 200, { teamId, league: { name: lg.name, code: body.code, teams: lg.teams, ownerId: lg.ownerId } });
     });
+    return;
+  }
+
+  /* GET /api/soo/my-league — returns the league the authed user belongs to */
+  if (url === '/api/soo/my-league' && req.method === 'GET') {
+    const tok = (req.headers['authorization']||'').replace(/^Bearer\s+/i,'');
+    const uEmail = tokens[tok];
+    const u = uEmail && users[uEmail];
+    if (!u || !u.leagueCode) return jsonRes(res, 404, {error: 'No league'});
+    const lg = leagues[u.leagueCode];
+    if (!lg) return jsonRes(res, 404, {error: 'League not found'});
+    jsonRes(res, 200, { leagueCode: u.leagueCode, teamId: u.teamId, league: { name: lg.name, code: u.leagueCode, teams: lg.teams, ownerId: lg.ownerId } });
     return;
   }
 

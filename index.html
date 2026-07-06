@@ -3539,6 +3539,7 @@ async function sooDoRegister(){
     S.sooAuth={token:d.token,userId:d.userId,name:d.name,email:d.email};
     if(prevId&&prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
+    if(d.leagueCode&&!S.origin.league.code){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.user.name||''};}
     save();showApp();setPage('origin');
   }catch(e){err.textContent='Network error — try again';}
 }
@@ -3557,6 +3558,7 @@ async function sooDoLogin(){
     S.sooAuth={token:d.token,userId:d.userId,name:d.name,email:d.email};
     if(prevId2&&prevId2!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
+    if(d.leagueCode&&(!S.origin.league||!S.origin.league.code)){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.sooAuth.name||''};}
     save();showApp();setPage('origin');
   }catch(e){err.textContent='Network error — try again';}
 }
@@ -3567,7 +3569,7 @@ function sooShowAuthTab(tab){
   document.getElementById('soo-panel-reg').style.display=tab==='reg'?'block':'none';
   document.getElementById('soo-auth-err').textContent='';
 }
-function sooSignOut(){
+function sooSignOut(){_sooMyLeagueFetched=false;
   S.sooAuth=null;S.user=null;save();
   document.getElementById('soo-login-page').style.display='flex';
   const shell=document.getElementById('app-shell');if(shell)shell.style.display='none';
@@ -3887,6 +3889,7 @@ let _sooLeagueCache=null;
 let _sooLeagueFetching=false;
 let _sooLeagueFetchFailed=false;
 let _sooExpandedTeam=null;
+let _sooMyLeagueFetched=false;
 
 async function sooFetchLeague(forceRefresh){
   const lg=S.origin.league;
@@ -3944,8 +3947,21 @@ function sooLeaveLeague(){
 function renderSooLeague(){
   const lg=S.origin.league;
 
-  /* Not in a league yet */
+  /* Not in a league yet — try auto-restore from server first */
   if(!lg||!lg.code){
+    if(S.sooAuth&&!_sooMyLeagueFetched){
+      _sooMyLeagueFetched=true;
+      fetch(SOO_API+'/my-league',{headers:{'Authorization':'Bearer '+(S.sooAuth.token||'')}})
+        .then(r=>r.ok?r.json():null)
+        .then(d=>{
+          if(d&&d.leagueCode){
+            S.origin.league={code:d.leagueCode,teamId:d.teamId,name:d.league.name,teamName:S.sooAuth.name||''};
+            _sooLeagueCache=d.league;
+            save();renderOrigin();
+          }
+        }).catch(()=>{});
+      return`<div class="card" style="text-align:center;padding:32px"><div class="muted">Looking up your league…</div></div>`;
+    }
     return`<div class="card" style="max-width:460px;margin:0 auto">
       <h3 style="margin:0 0 4px">👥 SoO League</h3>
       <p class="muted" style="margin:0 0 20px;font-size:13px">Create a league and share the code with your mates. Everyone picks their own SoO team and you compete on the leaderboard.</p>
