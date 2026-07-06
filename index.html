@@ -3945,6 +3945,7 @@ function renderSooLeague(){
   }
 
   const data=_sooLeagueCache;
+  const isOwner=!!(data&&data.ownerId&&S.sooAuth&&data.ownerId===S.sooAuth.userId);
   /* Build ranked rows */
   const rows=data.teams.map(t=>{
     const isMe=t.id===lg.teamId;
@@ -3993,6 +3994,7 @@ function renderSooLeague(){
         <span style="font-weight:${row.isMe?'800':'600'};font-size:14px">${esc(row.t.name)}</span>
         ${row.isMe?'<span class="pill" style="margin-left:6px;background:var(--acc);color:#000;font-size:10px;padding:2px 7px;border-radius:10px">You</span>':''}
         <span style="margin-left:6px;color:var(--dim);font-size:11px">${expanded?'▲':'▼'}</span>
+      ${isOwner&&!row.isMe?`<button onclick="event.stopPropagation();sooKickTeam('${data.code}','${row.t.id}')" style="float:right;background:var(--red);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:11px;cursor:pointer">✕</button>`:''}
       </td>
       <td style="text-align:center;padding:10px 8px;color:var(--dim);font-size:13px">${row.g1||'—'}</td>
       <td style="text-align:center;padding:10px 8px;color:var(--dim);font-size:13px">${row.g2||'—'}</td>
@@ -4038,6 +4040,20 @@ function renderSooLeague(){
       <button onclick="sooSyncPicks().then(()=>{sooFetchLeague(true).then(()=>renderOrigin())})" class="btn-primary" style="font-size:13px">⬆ Sync My Picks</button>
       <button onclick="sooLeaveLeague()" class="btn-sec" style="font-size:13px;color:var(--red)">Leave League</button>
     </div>
+    ${isOwner?`
+    <details style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px">
+      <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--dim);list-style:none">⚙️ Manage League <span style="font-size:11px;font-weight:400">(owner only)</span> ▸</summary>
+      <div style="padding:12px 0 0">
+        <p class="muted" style="font-size:12px;margin:0 0 12px">Remove duplicate or test teams from your league.</p>
+        ${data.teams.filter(t=>t.id!==lg.teamId).map(t=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)">
+            <span style="font-size:13px">${esc(t.name)}</span>
+            <button onclick="sooKickTeam('${data.code}','${t.id}')" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;flex-shrink:0">Remove</button>
+          </div>`).join('')}
+        ${data.teams.filter(t=>t.id!==lg.teamId).length===0?'<p class="muted" style="font-size:12px">No other teams to remove.</p>':''}
+        <button onclick="sooDeleteLeague()" style="margin-top:14px;background:none;border:1px solid var(--red);color:var(--red);border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;width:100%">🗑 Delete Entire League</button>
+      </div>
+    </details>`:''}
   </div>`;
 }
 
