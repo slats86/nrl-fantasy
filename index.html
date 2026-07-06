@@ -3421,6 +3421,19 @@ const SOO_SQUAD_NAMES={
     'hudsonyoung','liammartin','isaahyeo','cameronmurray','addinfonuablake',
     'haumoleolakauatu','blaykebrailey','ethanstrange','tolutaukoula','victorradley'])
 };
+/* Official position assignments per game — overrides generic posId filter */
+const SOO_POS_MAP={
+  3:{
+    FB: ['kalynponga','jamestedesco','reecewalsh','tolutaukoula','ethanstrange'],
+    WG: ['selwyncobbo','jojofifita','jackbostock','marknawaqanitawase','jeremiahnanai','murraytaulagi'],
+    CTR:['roberttoia','hamisotabuaifidow','bradmanbest','stephencrichton'],
+    HLF:['cameronmunster','samwalker','mitchellmoses','nathancleary'],
+    '2RF':['britonnikora','kurtcapewell','reubencotter','hudsonyoung','liammartin','isaahyeo',
+           'maxplath','trentloiero','cameronmurray','haumoleolakauatu','victorradley','coreyhorsburgh','patrickcarrigan'],
+    P:  ['tomflegler','tinofaasuamaleaui','paynehaas','mitchbarnett','patrickcarrigan','addinfonuablake','coreyhorsburgh'],
+    HKR:['harrygrant','reecerobson','maxplath','blaykebrailey','cameronmurray']
+  }
+};
 
 function sooIsLocked(g){
   /* locked if hardcoded finished OR has actual score data */
@@ -3726,6 +3739,7 @@ async function sooSyncPicks(){
 
 let _sooLeagueCache=null;
 let _sooLeagueFetching=false;
+let _sooLeagueFetchFailed=false;
 let _sooExpandedTeam=null;
 
 async function sooFetchLeague(forceRefresh){
@@ -3733,12 +3747,14 @@ async function sooFetchLeague(forceRefresh){
   if(!lg||!lg.code)return null;
   if(_sooLeagueCache&&!forceRefresh)return _sooLeagueCache;
   if(_sooLeagueFetching)return _sooLeagueCache;
+  if(_sooLeagueFetchFailed&&!forceRefresh)return null;
   _sooLeagueFetching=true;
+  _sooLeagueFetchFailed=false;
   try{
     const r=await fetch(SOO_API+'/league/'+lg.code);
     if(!r.ok)throw new Error('not found');
     _sooLeagueCache=await r.json();
-  }catch(e){_sooLeagueCache=null;}
+  }catch(e){_sooLeagueCache=null;_sooLeagueFetchFailed=true;}
   _sooLeagueFetching=false;
   return _sooLeagueCache;
 }
@@ -3777,7 +3793,18 @@ function renderSooLeague(){
 
   /* In a league — show leaderboard (async: kick off fetch, re-render when done) */
   if(!_sooLeagueCache){
-    sooFetchLeague(true).then(()=>renderOrigin());
+    if(_sooLeagueFetchFailed){
+      return`<div class="card" style="text-align:center;padding:32px">
+        <div style="font-size:28px;margin-bottom:8px">⚠️</div>
+        <div style="font-weight:700;margin-bottom:4px">League not found</div>
+        <div class="muted" style="font-size:13px;margin-bottom:20px">Code: <b>${lg.code}</b><br>The league may have expired or the server restarted.<br>Create a new league and share the new code.</div>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <button onclick="_sooLeagueFetchFailed=false;sooFetchLeague(true).then(()=>renderOrigin())" class="btn-sec">↻ Try Again</button>
+          <button onclick="sooLeaveLeague()" class="btn-sec" style="color:var(--red)">Leave & Start New</button>
+        </div>
+      </div>`;
+    }
+    sooFetchLeague(false).then(()=>renderOrigin());
     return`<div class="card" style="text-align:center;padding:40px">
       <div class="muted" style="font-size:14px">Loading league…</div>
     </div>`;
@@ -3880,15 +3907,21 @@ function renderSooLeague(){
   </div>`;
 }
 
-function sooEligiblePlayers(gameNum,posId){
-  /* Build pool of SoO-eligible players at this position */
-  /* For a played game: players who scored in that round */
+function sooEligiblePlayers(gameNum,posId,posKey){
+  const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  /* Use official position map if available for this game */
+  const posMap=SOO_POS_MAP[gameNum];
+  if(posMap&&posKey&&posMap[posKey]){
+    const names=new Set(posMap[posKey]);
+    return PLAYERS.filter(p=>names.has(nm(p.name))).sort((a,b)=>b.avg-a.avg);
+  }
+  /* For a played game: filter to players who scored in that round at this position */
   const rndId=SOO_ROUNDS[gameNum];
   if(rndId){
     const played=PLAYERS.filter(p=>p.pos.includes(posId)&&OFFS[p.id]&&OFFS[p.id][rndId-1]!=null);
     if(played.length)return played.sort((a,b)=>b.avg-a.avg);
   }
-  /* For upcoming/current game: union of players who appeared in any SoO round this series */
+  /* For upcoming game: union of all SoO players from played rounds at this position */
   const sooIds=new Set();
   [1,2,3].forEach(g=>{
     const rId=SOO_ROUNDS[g];if(!rId)return;
@@ -3897,18 +3930,16 @@ function sooEligiblePlayers(gameNum,posId){
   if(sooIds.size>0){
     return PLAYERS.filter(p=>p.pos.includes(posId)&&sooIds.has(p.id)).sort((a,b)=>b.avg-a.avg);
   }
-  /* Hardcoded official squad for this game */
-  const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  /* Fallback: hardcoded squad filtered by posId */
   const squad=SOO_SQUAD_NAMES[gameNum];
   if(squad){
     return PLAYERS.filter(p=>p.pos.includes(posId)&&squad.has(nm(p.name))).sort((a,b)=>b.avg-a.avg);
   }
-  /* Fallback: all players at position (no SoO data loaded yet) */
   return PLAYERS.filter(p=>p.pos.includes(posId)).sort((a,b)=>b.avg-a.avg);
 }
 
 function sooPickPlayer(posKey,posId,gameNum){
-  const eligible=sooEligiblePlayers(gameNum,posId);
+  const eligible=sooEligiblePlayers(gameNum,posId,posKey);
   const pos=SOO_POS.find(p=>p.key===posKey);
   const currentPid=(S.origin.picks[gameNum]||{})[posKey];
   const rndId=SOO_ROUNDS[gameNum];
