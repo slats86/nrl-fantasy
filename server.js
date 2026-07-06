@@ -1,23 +1,34 @@
 /* Static server + NRL Fantasy data proxy — Railway compatible */
-const http  = require('http');
-const https = require('https');
-const fs    = require('fs');
-const path  = require('path');
-const PORT  = process.env.PORT || 3000;
+const http   = require('http');
+const https  = require('https');
+const fs     = require('fs');
+const path   = require('path');
+const crypto = require('crypto');
+const PORT   = process.env.PORT || 3000;
 
-/* ── SoO League storage ───────────────────────────────────── */
-const LEAGUE_DIR  = path.join(__dirname, 'data');
-const LEAGUE_FILE = path.join(LEAGUE_DIR, 'soo-leagues.json');
+/* ── Data storage ─────────────────────────────────────────── */
+const DATA_DIR    = path.join(__dirname, 'data');
+const LEAGUE_FILE = path.join(DATA_DIR, 'soo-leagues.json');
+const USERS_FILE  = path.join(DATA_DIR, 'soo-users.json');
 let leagues = {};
+let users   = {};  /* keyed by email (lowercase) */
+let tokens  = {};  /* token → email */
 
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e) {}
+try { leagues = JSON.parse(fs.readFileSync(LEAGUE_FILE, 'utf8')); } catch(e) {}
 try {
-  fs.mkdirSync(LEAGUE_DIR, { recursive: true });
-  leagues = JSON.parse(fs.readFileSync(LEAGUE_FILE, 'utf8'));
-} catch(e) { leagues = {}; }
+  users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+  /* rebuild token index */
+  Object.values(users).forEach(u => { if(u.token) tokens[u.token] = u.email; });
+} catch(e) {}
 
-function saveLeagues() {
-  try { fs.writeFileSync(LEAGUE_FILE, JSON.stringify(leagues)); } catch(e) {}
+function saveLeagues() { try { fs.writeFileSync(LEAGUE_FILE, JSON.stringify(leagues)); } catch(e) {} }
+function saveUsers()   { try { fs.writeFileSync(USERS_FILE,  JSON.stringify(users));   } catch(e) {} }
+
+function hashPwd(password, salt) {
+  return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
 }
+function genToken() { return crypto.randomBytes(32).toString('hex'); }
 
 function genCode(len) {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -94,6 +105,51 @@ http.createServer(function(req, res) {
   if (url === '/api/players') return serveLocal(res, path.join(__dirname, 'public/players.json'));
   if (url === '/api/rounds')  return serveLocal(res, path.join(__dirname, 'public/rounds.json'));
 
+  /* ── SoO Auth API ── */
+
+  /* POST /api/soo/register  { name, email, password } → { token, userId, name, email } */
+  if (url === '/api/soo/register' && req.method === 'POST') {
+    readBody(req, (err, body) => {
+      if (err) return jsonRes(res, 400, {error: 'Bad request'});
+      const email = (body.email||'').trim().toLowerCase();
+      const name  = (body.name||'').trim().slice(0,40);
+      const pass  = body.password||'';
+      if (!email || !name || pass.length < 6)
+        return jsonRes(res, 400, {error: 'Name, email and password (min 6 chars) required'});
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        return jsonRes(res, 400, {error: 'Invalid email'});
+      if (users[email])
+        return jsonRes(res, 409, {error: 'Email already registered'});
+      const salt  = crypto.randomBytes(16).toString('hex');
+      const token = genToken();
+      const userId = genCode(10);
+      users[email] = { userId, name, email, salt, hash: hashPwd(pass, salt), token };
+      tokens[token] = email;
+      saveUsers();
+      jsonRes(res, 200, { token, userId, name, email });
+    });
+    return;
+  }
+
+  /* POST /api/soo/login  { email, password } → { token, userId, name, email } */
+  if (url === '/api/soo/login' && req.method === 'POST') {
+    readBody(req, (err, body) => {
+      if (err) return jsonRes(res, 400, {error: 'Bad request'});
+      const email = (body.email||'').trim().toLowerCase();
+      const pass  = body.password||'';
+      const user  = users[email];
+      if (!user || hashPwd(pass, user.salt) !== user.hash)
+        return jsonRes(res, 401, {error: 'Invalid email or password'});
+      const token = genToken();
+      if (user.token) delete tokens[user.token];
+      user.token = token;
+      tokens[token] = email;
+      saveUsers();
+      jsonRes(res, 200, { token, userId: user.userId, name: user.name, email: user.email });
+    });
+    return;
+  }
+
   /* ── SoO League API ── */
 
   /* POST /api/soo/create  { name, teamName, picks } → { code, teamId } */
@@ -159,6 +215,13 @@ http.createServer(function(req, res) {
       saveLeagues();
       jsonRes(res, 200, { ok: true });
     });
+    return;
+  }
+
+  /* /soo — standalone SoO game (redirects to /?soo=1) */
+  if (url === '/soo') {
+    res.writeHead(302, { 'Location': '/?soo=1' });
+    res.end();
     return;
   }
 
