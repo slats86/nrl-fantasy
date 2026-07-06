@@ -255,7 +255,7 @@ http.createServer(function(req, res) {
       if (!user) return jsonRes(res, 401, {error: 'Login required'});
       const lg = leagues[teamDel[1]];
       if (!lg) return jsonRes(res, 404, {error: 'League not found'});
-      if (lg.ownerId !== user.userId) return jsonRes(res, 403, {error: 'Only the league owner can remove teams'});
+      if (lg.ownerId && lg.ownerId !== user.userId) return jsonRes(res, 403, {error: 'Only the league owner can remove teams'});
       const before = lg.teams.length;
       lg.teams = lg.teams.filter(t => t.id !== teamDel[2]);
       if (lg.teams.length === before) return jsonRes(res, 404, {error: 'Team not found'});
@@ -274,11 +274,24 @@ http.createServer(function(req, res) {
       if (!user) return jsonRes(res, 401, {error: 'Login required'});
       const lg = leagues[leagueDel[1]];
       if (!lg) return jsonRes(res, 404, {error: 'League not found'});
-      if (lg.ownerId !== user.userId) return jsonRes(res, 403, {error: 'Only the league owner can delete this league'});
+      if (lg.ownerId && lg.ownerId !== user.userId) return jsonRes(res, 403, {error: 'Only the league owner can delete this league'});
       delete leagues[leagueDel[1]];
       saveLeagues();
       jsonRes(res, 200, { ok: true });
     });
+    return;
+  }
+
+  /* GET /api/soo/admin/wipe-leagues?secret=WIPEIT — one-time league reset */
+  if (url === '/api/soo/admin/wipe-leagues' && req.method === 'GET') {
+    const qs = req.url.split('?')[1] || '';
+    if (!qs.includes('secret=WIPEIT')) return jsonRes(res, 403, {error: 'Forbidden'});
+    leagues = {};
+    saveLeagues();
+    /* also clear leagueCode/teamId from all users */
+    Object.values(users).forEach(u => { delete u.leagueCode; delete u.teamId; });
+    saveUsers();
+    jsonRes(res, 200, {ok: true, message: 'All leagues wiped. Users unlinked from leagues.'});
     return;
   }
 
