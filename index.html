@@ -3410,6 +3410,17 @@ const SOO_GAMES=[
 const LOCKED_SOO_GAMES=new Set([1,2]);
 /* SOO_ROUNDS: {gameNum→roundId} — populated from rounds.json */
 let SOO_ROUNDS={};
+/* Official 2026 SoO squad names (normalised: lowercase, alphanumeric only) */
+const SOO_SQUAD_NAMES={
+  3:new Set(['kalynponga','selwyncobbo','roberttoia','hamisotabuaifidow','jojofifita',
+    'cameronmunster','samwalker','tomflegler','harrygrant','tinofaasuamaleaui',
+    'britonnikora','kurtcapewell','reubencotter','maxplath','patrickcarrigan',
+    'jeremiahnanai','trentloiero','reecewalsh','murraytaulagi','coreyhorsburgh',
+    'jamestedesco','jackbostock','bradmanbest','stephencrichton','marknawaqanitawase',
+    'mitchellmoses','nathancleary','paynehaas','reecerobson','mitchbarnett',
+    'hudsonyoung','liammartin','isaahyeo','cameronmurray','addinfonuablake',
+    'haumoleolakauatu','blaykebrailey','ethanstrange','tolutaukoula','victorradley'])
+};
 
 function sooIsLocked(g){
   /* locked if hardcoded finished OR has actual score data */
@@ -3659,6 +3670,12 @@ function sooEligiblePlayers(gameNum,posId){
   });
   if(sooIds.size>0){
     return PLAYERS.filter(p=>p.pos.includes(posId)&&sooIds.has(p.id)).sort((a,b)=>b.avg-a.avg);
+  }
+  /* Hardcoded official squad for this game */
+  const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const squad=SOO_SQUAD_NAMES[gameNum];
+  if(squad){
+    return PLAYERS.filter(p=>p.pos.includes(posId)&&squad.has(nm(p.name))).sort((a,b)=>b.avg-a.avg);
   }
   /* Fallback: all players at position (no SoO data loaded yet) */
   return PLAYERS.filter(p=>p.pos.includes(posId)).sort((a,b)=>b.avg-a.avg);
