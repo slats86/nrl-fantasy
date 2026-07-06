@@ -3590,12 +3590,7 @@ function renderOrigin(){
     </div>`:''
 
   /* Game tabs hidden — Game 3 only */
-  if(false && sg){ /* suppress unused var warning */
-      style="${sg.id===g?'background:'+(sg.id===1?'var(--nsw)':sg.id===2?'var(--qld)':'var(--soo-neutral)')+';border-color:transparent':''}"
-      onclick="S.origin.game=${sg.id};renderOrigin()">
-      ${locked?'🔒 ':''} ${sg.label}${total!=null?`<div style="font-size:11px;opacity:.85;font-weight:700">${total} pts</div>`:''}
-    </div>`;
-  }).join('');
+  const gameTabs='';
 
   /* summary cards at top */
   const summaryCards=SOO_GAMES.map(sg=>{
