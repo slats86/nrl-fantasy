@@ -3598,7 +3598,6 @@ function renderOrigin(){
       <div class="soo-summary-grid" style="margin-bottom:14px">${summaryCards}</div>
       <div class="soo-tabs" style="margin-bottom:12px">
         <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
-        <div class="soo-tab${tab==='stats'?' on':''}" onclick="S.origin.tab='stats';renderOrigin()">Stats</div>
         <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin()">👥 League</div>
       </div>
       ${tab==='picks'?renderSooPicks(g):tab==='league'?renderSooLeague():renderSooStats(g)}
@@ -3722,8 +3721,8 @@ function renderSooPoolRows(g){
         if(sp.key==='WG')return SOO_POS_MAP[g]&&SOO_POS_MAP[g].WG&&SOO_POS_MAP[g].WG.includes(nm(p.name));
         return p.pos.includes(sp.posId);
       }).map(sp=>`<span class="posb">${sp.key}</span>`).join('');
-      return`<tr style="cursor:${slot&&!isPicked?'pointer':'default'};${isPicked?'opacity:.4':''};border-bottom:1px solid var(--line)"
-        onclick="${slot&&!isPicked?`sooSelect('${slot?slot.key:''}',${p.id},${g})`:''}">
+      return`<tr style="cursor:${!isPicked?'pointer':'default'};${isPicked?'opacity:.4':''};border-bottom:1px solid var(--line)"
+        onclick="${!isPicked?`sooPoolClick(${p.id},${g})`:''}">
         <td style="padding:6px 4px">${avatar(p,26)}</td>
         <td style="padding:6px"><b style="font-size:13px">${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${CLUBS[p.sq]?CLUBS[p.sq].s:''}</span></td>
         <td style="padding:6px;text-align:center">${posLabels||'—'}</td>
@@ -4024,7 +4023,7 @@ function renderSooLeague(){
         }).catch(()=>{ renderOrigin(); });
       return`<div class="card" style="text-align:center;padding:32px"><div class="muted">Looking up your league…</div></div>`;
     }
-    return`<div class="card" style="max-width:460px;margin:0 auto">
+    return`<div class="card">
       <h3 style="margin:0 0 4px">👥 SoO League</h3>
       <p class="muted" style="margin:0 0 20px;font-size:13px">Create a league and share the code with your mates. Everyone picks their own SoO team and you compete on the leaderboard.</p>
 
@@ -4234,6 +4233,27 @@ function sooRemove(posKey,gameNum){
   if(S.origin.picks[gameNum])delete S.origin.picks[gameNum][posKey];
   save();renderOrigin();
   sooSyncPicks();
+}
+function sooPoolClick(pid,g){
+  /* If a slot is already active, use it */
+  const slot=S.origin.sooSlotPick;
+  if(slot){sooSelect(slot.key,pid,g);return;}
+  /* Otherwise auto-assign: find first empty slot matching this player's position */
+  const p=PLAYERS[pid];
+  const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const posMap=SOO_POS_MAP&&SOO_POS_MAP[g];
+  const picks=S.origin.picks[g]||{};
+  const matchSlot=SOO_POS.find(pos=>{
+    if(picks[pos.key]!=null)return false;
+    if((pos.key==='FB'||pos.key==='WG')&&posMap&&posMap[pos.key])
+      return posMap[pos.key].includes(nm(p.name));
+    return p.pos.includes(pos.posId);
+  });
+  if(matchSlot){sooSelect(matchSlot.key,pid,g);return;}
+  /* Fallback: activate the first empty slot and pick */
+  const anyEmpty=SOO_POS.find(pos=>picks[pos.key]==null);
+  if(anyEmpty){sooSelect(anyEmpty.key,pid,g);return;}
+  alert('All positions are filled. Remove a player first.');
 }
 
 /* ================= LEAGUES (CLASSIC) ================= */
