@@ -283,9 +283,9 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .soo-tab.on{background:var(--acc);color:var(--bg)}
 .soo-tab:hover:not(.on){color:var(--txt)}
 .soo-slots{display:flex;flex-direction:column;gap:8px}
-.soo-slot{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.soo-slot{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
 .soo-slot:hover{border-color:var(--acc)}
-.soo-pos-badge{background:var(--card2);border:1px solid var(--line);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:800;color:var(--dim);min-width:36px;text-align:center;flex-shrink:0}
+.soo-pos-badge{background:rgba(132,204,22,.18);border:1px solid rgba(132,204,22,.3);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:800;color:#a3d977;min-width:36px;text-align:center;flex-shrink:0}
 .soo-pos-label{font-size:12px;color:var(--dim);min-width:60px;flex-shrink:0}
 .soo-player-info{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .soo-player-info b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -300,6 +300,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .soo-nsw{background:rgba(0,95,175,.18);color:#5ba3e0}
 .soo-qld{background:rgba(109,26,54,.2);color:#c07090}
 .soo-slot-locked{cursor:default!important;opacity:.8}
+.field-section{margin-bottom:10px}.field-section>.field-label{text-align:center;color:#5e9b74;font-size:10px;letter-spacing:2px;font-weight:700;margin:8px 0 6px}.field-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 .soo-slot-active{border-color:var(--acc)!important;background:rgba(132,204,22,.08)!important}
 .soo-slot-locked:hover{border-color:var(--line)!important}
 .soo-locked-tab{opacity:.7}
@@ -2377,7 +2378,8 @@ function renderPool(){
     return `<tr style="cursor:pointer;${price(p.id)>afford?'opacity:.45':''}" onclick="poolClick(${p.id})">
       <td>${avatar(p,26)}</td><td><b>${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${CLUBS[p.sq].n}</span></td>
       <td>${p.pos.map(x=>`<span class="posb">${POSN[x]}</span>`).join('')}</td>
-      <td>${fmtK(price(p.id))}</td><td><b>${p.avg||'–'}</b></td><td>${p.l3||'–'}</td></tr>`;
+      <td>${fmtK(price(p.id))}</td><td><b>${p.avg||'–'}</b></td><td>${p.l3||'–'}</td>
+      <td><button class="btn sec" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();showPlayer(${p.id})">ℹ</button></td></tr>`;
   }).join('')}
   </tbody></table></div>`;
 }
@@ -3692,7 +3694,7 @@ function renderSooPicks(g){
     ${scoreBanner}
     ${locked?`<div class="notice" style="margin-bottom:12px;font-size:12px">🔒 Game ${g} is finalised — picks are locked.</div>`:''}
     <div class="grid2">
-      <div class="field" style="background:var(--card2);border-radius:12px;padding:14px;border:1px solid var(--line)">${fieldHTML}</div>
+      <div class="field">${fieldHTML}</div>
       <div class="card" id="soo-pool-card" style="padding:14px">${slot||!locked?poolHTML:`<div class="muted" style="text-align:center;padding:40px 0">🔒 Picks locked</div>`}</div>
     </div>`;
 }
@@ -3738,6 +3740,7 @@ function renderSooPoolRows(g){
         <td style="padding:6px;text-align:center">${posLabels||'—'}</td>
         <td style="padding:6px;text-align:center"><b>${p.avg||'–'}</b></td>
         <td style="padding:6px;text-align:center">${p.l3||'–'}</td>
+        <td style="padding:6px;text-align:center"><button class="btn sec" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();showPlayer(${p.id})">ℹ</button></td>
       </tr>`;
     }).join('')}
     </tbody></table>`;
