@@ -635,33 +635,22 @@ function completeLogin(method){
   }
   const initials=name.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';
   S.user={name,email,method,initials};
-  save();showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));
+  save();showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic')); /* page routing unchanged */
 }
 function showApp(){
   const shell=document.getElementById('app-shell');
-  /* SoO standalone: use sooAuth, show login screen if not authenticated */
-  if(SOO_STANDALONE){
-    const sooLoginEl=document.getElementById('soo-login-page');
-    if(!S.sooAuth||!S.sooAuth.token){
-      /* show SoO login */
-      document.getElementById('login-page').style.display='none';
-      if(shell)shell.style.display='none';
-      if(sooLoginEl)sooLoginEl.style.display='flex';
-      return;
-    }
-    /* authenticated */
-    if(sooLoginEl)sooLoginEl.style.display='none';
-    if(!S.user)S.user={name:S.sooAuth.name,email:S.sooAuth.email,method:'soo',initials:(S.sooAuth.name||'?').slice(0,1).toUpperCase()};
+  const sooLoginEl=document.getElementById('soo-login-page');
+  /* Single unified auth — one account for everything */
+  if(!S.sooAuth||!S.sooAuth.token){
     document.getElementById('login-page').style.display='none';
-    if(shell)shell.style.display='flex';
-    return;
-  }
-  if(!S.user){
-    document.getElementById('login-page').style.display='flex';
     if(shell)shell.style.display='none';
+    if(sooLoginEl)sooLoginEl.style.display='flex';
     return;
   }
+  /* Authenticated — populate user from sooAuth */
+  if(sooLoginEl)sooLoginEl.style.display='none';
   document.getElementById('login-page').style.display='none';
+  S.user={name:S.sooAuth.name,email:S.sooAuth.email,method:'soo',initials:(S.sooAuth.name||'?').slice(0,1).toUpperCase()};
   if(shell)shell.style.display='flex';
   const chip=document.getElementById('user-chip');
   if(chip){chip.style.display='flex';chip.innerHTML=`<div class="av">${S.user.initials}</div><span class="un">${esc(S.user.name)}</span>`;}
@@ -673,7 +662,7 @@ function showUserMenu(){
    <div style="width:56px;height:56px;border-radius:50%;background:var(--acc);color:#0b1220;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin:0 auto 12px">${S.user.initials}</div>
    <div style="font-weight:700;font-size:16px">${esc(S.user.name)}</div>
    <div style="color:var(--dim);font-size:13px;margin-bottom:20px">${esc(S.user.email)}</div>
-   <button class="btn danger" style="width:100%" onclick="S.user=null;save();closeModal();showApp()">Sign out</button>
+   <button class="btn danger" style="width:100%" onclick="closeModal();sooSignOut()">Sign out</button>
   </div>`);
 }
 /* ================= HELPERS ================= */
@@ -3564,10 +3553,11 @@ function sooShowAuthTab(tab){
   document.getElementById('soo-panel-reg').style.display=tab==='reg'?'block':'none';
   document.getElementById('soo-auth-err').textContent='';
 }
-function sooSignOut(){_sooMyLeagueFetched=false;
-  S.sooAuth=null;S.user=null;save();
-  document.getElementById('soo-login-page').style.display='flex';
-  const shell=document.getElementById('app-shell');if(shell)shell.style.display='none';
+function sooSignOut(){
+  _sooMyLeagueFetched=false;
+  S.sooAuth=null;S.user=null;
+  save();
+  showApp();
 }
 
 function renderOrigin(){
@@ -4551,8 +4541,8 @@ function byePlannerHTML(){
   <div style="width:100%;max-width:400px">
     <div style="text-align:center;margin-bottom:28px">
       <div style="font-size:40px;margin-bottom:8px">🏉</div>
-      <h2 style="font-size:22px;font-weight:900;margin-bottom:4px">State of Origin Fantasy</h2>
-      <p style="color:var(--dim);font-size:14px">Pick your team. Beat your mates.</p>
+      <h2 style="font-size:22px;font-weight:900;margin-bottom:4px">Fantasy Footy — NRL Edition</h2>
+      <p style="color:var(--dim);font-size:14px">Sign in to manage your team &amp; compete with mates.</p>
     </div>
     <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden">
       <!-- Tabs -->
