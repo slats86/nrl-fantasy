@@ -657,7 +657,8 @@ function showApp(){
     const sb=document.getElementById('sidebar');if(sb)sb.style.display='none';
     const tb=document.getElementById('topbar');if(tb)tb.style.display='none';
     const bt=document.getElementById('bottom-tabbar');if(bt)bt.style.display='none';
-    const mc=document.getElementById('main-content');if(mc){mc.style.padding='12px 16px';mc.style.maxWidth='640px';mc.style.margin='0 auto';}
+    const mw=document.getElementById('main-wrap');if(mw){mw.style.paddingTop='0';}
+    const am=document.getElementById('app-main');if(am){am.style.maxWidth='640px';am.style.margin='0 auto';am.style.padding='0 12px';}
     return;
   }
   if(!S.user){
@@ -3535,7 +3536,9 @@ async function sooDoRegister(){
       body:JSON.stringify({name,email,password:pass})});
     const d=await r.json();
     if(!r.ok){err.textContent=d.error||'Registration failed';return;}
+    const prevId=S.sooAuth&&S.sooAuth.userId;
     S.sooAuth={token:d.token,userId:d.userId,name:d.name,email:d.email};
+    if(prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     save();showApp();setPage('origin');
   }catch(e){err.textContent='Network error — try again';}
 }
@@ -3550,7 +3553,9 @@ async function sooDoLogin(){
       body:JSON.stringify({email,password:pass})});
     const d=await r.json();
     if(!r.ok){err.textContent=d.error||'Login failed';return;}
+    const prevId2=S.sooAuth&&S.sooAuth.userId;
     S.sooAuth={token:d.token,userId:d.userId,name:d.name,email:d.email};
+    if(prevId2!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     save();showApp();setPage('origin');
   }catch(e){err.textContent='Network error — try again';}
 }
