@@ -299,6 +299,9 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .soo-state-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0}
 .soo-nsw{background:rgba(0,95,175,.18);color:#5ba3e0}
 .soo-qld{background:rgba(109,26,54,.2);color:#c07090}
+.soo-slot-locked{cursor:default!important;opacity:.8}
+.soo-slot-locked:hover{border-color:var(--line)!important}
+.soo-locked-tab{opacity:.7}
 .soo-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .soo-game-card{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:14px;text-align:center}
 .soo-game-card.played{border-color:var(--acc)}
@@ -3403,8 +3406,16 @@ const SOO_GAMES=[
   {id:2,label:'Game II',  short:'G2'},
   {id:3,label:'Game III', short:'G3'},
 ];
+/* Games 1 and 2 are finished for 2026 — always locked */
+const LOCKED_SOO_GAMES=new Set([1,2]);
 /* SOO_ROUNDS: {gameNum→roundId} — populated from rounds.json */
 let SOO_ROUNDS={};
+
+function sooIsLocked(g){
+  /* locked if hardcoded finished OR has actual score data */
+  if(LOCKED_SOO_GAMES.has(g))return true;
+  return sooTeamTotal(g)!==null;
+}
 
 function detectSooRounds(rounds){
   SOO_ROUNDS={};
@@ -3436,7 +3447,9 @@ function sooTeamTotal(gameNum){
 }
 
 function sooInitState(){
-  if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:1,tab:'picks'};
+  if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks'};
+  /* If current game is locked, jump to game 3 */
+  if(sooIsLocked(S.origin.game||1)&&!sooIsLocked(3))S.origin.game=3;
   if(!S.origin.picks)S.origin.picks={1:{},2:{},3:{}};
   [1,2,3].forEach(g=>{if(!S.origin.picks[g])S.origin.picks[g]={};});
 }
@@ -3451,10 +3464,11 @@ function renderOrigin(){
   /* game tab headers */
   const gameTabs=SOO_GAMES.map(sg=>{
     const total=sooTeamTotal(sg.id);
-    return`<div class="soo-gtab${sg.id===g?' on':''}"
+    const locked=sooIsLocked(sg.id);
+    return`<div class="soo-gtab${sg.id===g?' on':''}${locked?' soo-locked-tab':''}"
       style="${sg.id===g?'background:'+(sg.id===1?'var(--nsw)':sg.id===2?'var(--qld)':'var(--soo-neutral)')+';border-color:transparent':''}"
       onclick="S.origin.game=${sg.id};renderOrigin()">
-      ${sg.label}${total!=null?`<div style="font-size:11px;opacity:.85;font-weight:700">${total} pts</div>`:''}
+      ${locked?'🔒 ':''} ${sg.label}${total!=null?`<div style="font-size:11px;opacity:.85;font-weight:700">${total} pts</div>`:''}
     </div>`;
   }).join('');
 
@@ -3480,18 +3494,20 @@ function renderOrigin(){
   <div class="soo-tabs" style="margin-bottom:14px">
     <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
     <div class="soo-tab${tab==='stats'?' on':''}" onclick="S.origin.tab='stats';renderOrigin()">Stats</div>
+    <div class="soo-tab${tab==='board'?' on':''}" onclick="S.origin.tab='board';renderOrigin()">🏆 Leaderboard</div>
   </div>
-  ${tab==='picks'?renderSooPicks(g):renderSooStats(g)}`;
+  ${tab==='picks'?renderSooPicks(g):tab==='board'?renderSooLeaderboard():renderSooStats(g)}`;
 }
 
 function renderSooPicks(g){
   const picks=S.origin.picks[g]||{};
+  const locked=sooIsLocked(g);
   const hasRound=!!SOO_ROUNDS[g];
   const slots=SOO_POS.map(pos=>{
     const pid=picks[pos.key];
     const p=pid!=null?PLAYERS[pid]:null;
     const score=sooRoundScore(pid,g);
-    return`<div class="soo-slot" onclick="sooPickPlayer('${pos.key}',${pos.posId},${g})">
+    return`<div class="soo-slot${locked?' soo-slot-locked':''}" ${locked?'':'onclick="sooPickPlayer(\''+pos.key+'\','+pos.posId+','+g+')";'}>
       <div class="soo-pos-badge">${pos.key}</div>
       <div class="soo-pos-label">${pos.label}</div>
       ${p?`
@@ -3503,17 +3519,18 @@ function renderSooPicks(g){
           </div>
         </div>
         <div class="soo-score">${score!=null?`<b class="${score>=60?'good':score<20?'bad':''}">${score}</b>`:'<span class="muted" style="font-size:12px">—</span>'}</div>
-        <button class="soo-clear" onclick="event.stopPropagation();sooRemove('${pos.key}',${g})">✕</button>
+        ${locked?'':`<button class="soo-clear" onclick="event.stopPropagation();sooRemove('${pos.key}',${g})">✕</button>`}
       `:`
-        <div class="soo-empty">Tap to pick player</div>
-        <span style="color:var(--dim);font-size:18px">＋</span>
+        <div class="soo-empty">${locked?'No player selected':'Tap to pick player'}</div>
+        ${locked?'':'<span style="color:var(--dim);font-size:18px">＋</span>'}
       `}
     </div>`;
   }).join('');
 
   const total=sooTeamTotal(g);
   return`
-    ${!hasRound?`<div class="notice" style="margin-bottom:12px;font-size:12px">⏳ Game ${g} hasn't been played yet — make your picks now and scores will appear automatically after the game.</div>`:''}
+    ${locked?`<div class="notice" style="margin-bottom:12px;font-size:12px">🔒 Game ${g} is finalised — picks are locked.</div>`
+    :!hasRound?`<div class="notice" style="margin-bottom:12px;font-size:12px">⏳ Game ${g} hasn't been played yet — make your picks now and scores will appear automatically after the game.</div>`:''}
     <div class="soo-slots">${slots}</div>
     ${total!=null?`<div style="text-align:right;margin-top:14px;font-size:16px;font-weight:700">Total: <span class="good">${total} pts</span></div>`:''}`;
 }
@@ -3557,6 +3574,72 @@ function renderSooStats(g){
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
+  </div>`;
+}
+
+function renderSooLeaderboard(){
+  /* Cross-game leaderboard: all 3 games side by side */
+  const gameScores=SOO_GAMES.map(sg=>({
+    id:sg.id,label:sg.label,
+    locked:sooIsLocked(sg.id),
+    total:sooTeamTotal(sg.id),
+    picks:S.origin.picks[sg.id]||{}
+  }));
+  const grandTotal=gameScores.reduce((s,g)=>s+(g.total||0),0);
+  const gamesWithData=gameScores.filter(g=>g.total!=null).length;
+
+  /* Per-position rows */
+  const posRows=SOO_POS.map(pos=>{
+    const cells=gameScores.map(g=>{
+      const pid=g.picks[pos.key];
+      const p=pid!=null?PLAYERS[pid]:null;
+      const sc=sooRoundScore(pid,g.id);
+      if(!p)return`<td class="muted" style="text-align:center;font-size:12px">—</td>`;
+      return`<td style="padding:6px 8px">
+        <div style="display:flex;align-items:center;gap:6px">
+          ${avatar(p,22)}
+          <div>
+            <div style="font-size:12px;font-weight:700;white-space:nowrap">${esc(p.name.split(' ').pop())}</div>
+            ${sc!=null?`<div class="${sc>=60?'good':sc<20?'bad':''}" style="font-size:13px;font-weight:800">${sc}</div>`
+              :`<div class="muted" style="font-size:11px">${p.avg||0} avg</div>`}
+          </div>
+        </div>
+      </td>`;
+    }).join('');
+    return`<tr>
+      <td style="font-size:12px;font-weight:700;color:var(--dim);padding:6px 8px;white-space:nowrap">${pos.label}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  /* Total row */
+  const totalCells=gameScores.map(g=>{
+    return`<td style="text-align:center;padding:8px">
+      ${g.total!=null?`<b class="good" style="font-size:16px">${g.total}</b><div class="muted" style="font-size:10px">pts</div>`
+        :`<span class="muted" style="font-size:12px">${g.locked?'no data':'upcoming'}</span>`}
+    </td>`;
+  }).join('');
+
+  return`<div class="card" style="overflow-x:auto">
+    <div class="flex" style="margin-bottom:14px;align-items:center">
+      <h3 style="margin:0">🏆 3-Game Leaderboard</h3>
+      ${gamesWithData>0?`<span class="spacer"></span><span class="pill" style="background:var(--card2);border:1px solid var(--acc);padding:6px 14px;border-radius:18px;font-weight:700">Total: <span class="good">${grandTotal} pts</span></span>`:''}
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;padding:6px 8px;font-size:12px;color:var(--dim)">Position</th>
+        ${gameScores.map(g=>`<th style="text-align:center;padding:6px 8px;font-size:12px">
+          ${g.locked?'🔒 ':''} ${g.label}
+          ${g.total!=null?`<div class="good" style="font-size:13px;font-weight:800">${g.total}</div>`:''}
+        </th>`).join('')}
+      </tr></thead>
+      <tbody>${posRows}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--line)">
+        <td style="font-size:12px;font-weight:700;padding:8px">Total</td>
+        ${totalCells}
+      </tr></tfoot>
+    </table>
+    ${gamesWithData===0?'<p class="muted" style="margin-top:12px;font-size:12px;text-align:center">Scores will appear here after each SoO game is played.</p>':''}
   </div>`;
 }
 
