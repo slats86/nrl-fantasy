@@ -658,7 +658,7 @@ function showApp(){
     const tb=document.getElementById('topbar');if(tb)tb.style.display='none';
     const bt=document.getElementById('bottom-tabbar');if(bt)bt.style.display='none';
     const mw=document.getElementById('main-wrap');if(mw){mw.style.paddingTop='0';}
-    const am=document.getElementById('app-main');if(am){am.style.maxWidth='1100px';am.style.margin='0 auto';am.style.padding='0 16px';}
+    const am=document.getElementById('app-main');if(am){am.style.maxWidth='1400px';am.style.margin='0 auto';am.style.padding='0 20px';}
     return;
   }
   if(!S.user){
@@ -3606,18 +3606,24 @@ function renderOrigin(){
 
   el.innerHTML=`
   ${standaloneBanner}
-  <div class="soo-header">
-    <h2>🦁 State of Origin Fantasy</h2>
-    <div class="sub">Pick your best player at each position for each SoO game</div>
-  </div>
-  <div class="soo-summary-grid">${summaryCards}</div>
-  <div class="soo-game-tabs">${gameTabs}</div>
-  <div class="soo-tabs" style="margin-bottom:14px">
-    <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
-    <div class="soo-tab${tab==='stats'?' on':''}" onclick="S.origin.tab='stats';renderOrigin()">Stats</div>
-    <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin()">👥 League</div>
-  </div>
-  ${tab==='picks'?renderSooPicks(g):tab==='league'?renderSooLeague():renderSooStats(g)}`;
+  <div class="soo-page-wrap">
+    <div class="soo-main-col">
+      <div class="soo-header">
+        <h2>🦁 State of Origin Fantasy</h2>
+        <div class="sub">Pick your best player at each position for Game 3</div>
+      </div>
+      <div class="soo-summary-grid" style="margin-bottom:14px">${summaryCards}</div>
+      <div class="soo-tabs" style="margin-bottom:12px">
+        <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
+        <div class="soo-tab${tab==='stats'?' on':''}" onclick="S.origin.tab='stats';renderOrigin()">Stats</div>
+        <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin()">👥 League</div>
+      </div>
+      ${tab==='picks'?renderSooPicks(g):tab==='league'?renderSooLeague():renderSooStats(g)}
+    </div>
+    <div class="soo-side-col">
+      ${summaryCards ? `<div style="margin-bottom:12px"><b style="font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;font-size:11px">Game Summary</b></div><div class="soo-summary-grid" style="grid-template-columns:1fr;gap:10px;margin-bottom:0">${summaryCards}</div>` : ''}
+    </div>
+  </div>`;
 }
 
 function renderSooPicks(g){
@@ -3649,7 +3655,7 @@ function renderSooPicks(g){
   }).join('');
 
   const total=sooTeamTotal(g);
-  return`
+  return`<div class="card" style="padding:16px">
     ${sooTeamTotal(g)!=null?`
     <div style="background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:13px;color:var(--dim)">Game 3 Total Score</div>
@@ -3663,7 +3669,8 @@ function renderSooPicks(g){
     ${locked?`<div class="notice" style="margin-bottom:12px;font-size:12px">🔒 Game ${g} is finalised — picks are locked.</div>`
     :!hasRound?`<div class="notice" style="margin-bottom:12px;font-size:12px">⏳ Make your picks now — scores appear automatically after Game 3.</div>`:''}
     <div class="soo-slots soo-slots-grid">${slots}</div>
-    ${total!=null?`<div style="text-align:right;margin-top:14px;font-size:16px;font-weight:700">Total: <span class="good">${total} pts</span></div>`:''}`;
+    ${total!=null?`<div style="text-align:right;margin-top:14px;font-size:16px;font-weight:700">Total: <span class="good">${total} pts</span></div>`:''}
+  </div>`;
 }
 
 function renderSooStats(g){
@@ -4551,16 +4558,19 @@ function byePlannerHTML(){
 #soo-tab-login.on,#soo-tab-reg.on{color:var(--acc);border-bottom-color:var(--acc)!important}
 
 /* ── SoO responsive desktop layout ── */
+/* Page layout: sidebar on desktop */
+.soo-page-wrap{display:block}
+.soo-side-col{display:none}
 @media(min-width:768px){
+  .soo-page-wrap{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+  .soo-side-col{display:block;position:sticky;top:16px}
+  .soo-summary-grid{display:none} /* moved to sidebar */
   .soo-slots-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .soo-slot{min-height:72px}
-  #pg-origin .card{max-width:100%}
-  .soo-tabs{gap:12px}
-  .soo-tab{padding:8px 20px;font-size:14px}
-  /* stats table full width on desktop */
+  .soo-slot{min-height:68px}
+  .soo-tabs{gap:10px}
+  .soo-tab{padding:8px 18px;font-size:14px}
   #pg-origin table{font-size:13px}
-  /* league table */
-  .soo-league-row td{padding:10px 14px}
+  #pg-origin .card{margin-bottom:12px}
 }
 @media(max-width:767px){
   .soo-slots-grid{display:flex;flex-direction:column}
