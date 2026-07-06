@@ -3437,39 +3437,20 @@ const SOO_SQUAD_NAMES={
     'hudsonyoung','liammartin','isaahyeo','cameronmurray','addinfonuablake',
     'haumoleolakauatu','blaykebrailey','ethanstrange','tolutaukoula','victorradley'])
 };
-/* Official position assignments per game (keys: FB WG CTR HLF EDG MID HOK) */
+/* FB/WG split only — both share posId 6 so need manual names.
+   All other positions use the player's actual posId from the PLAYERS array. */
 const SOO_POS_MAP={
   1:{
-    FB: ['jamestedesco','kalynponga','reecewalsh'],
-    WG: ['briantoo','tolutaukoula','jojofifita','selwyncobbo','caseymclean','gehamatshibasaki'],
-    CTR:['stephencrichton','kotonistaggs','roberttoia','hamisotabuaifidow','caseymclean','gehamatshibasaki'],
-    HLF:['nathancleary','ethanstrange','samwalker','cameronmunster','ezramam','mattburton'],
-    EDG:['hudsonyoung','haumoleolakauatu','isaahyeo','reubencotter','kurtcapewell',
-         'cameronmurray','victorradley','britonnikora','patrickcarrigan','trentloiero','lindsaycollins'],
-    MID:['addinfonuablake','mitchbarnett','jacobsaifiti','tomflegler','tinofaasuamaleaui',
-         'lindsaycollins','patrickcarrigan','victorradley','trentloiero'],
-    HOK:['reecerobson','harrygrant','maxplath','blaykebrailey','cameronmurray'],
+    FB:['jamestedesco','kalynponga','reecewalsh'],
+    WG:['briantoo','tolutaukoula','jojofifita','selwyncobbo','caseymclean','gehamatshibasaki'],
   },
   2:{
-    FB: ['jamestedesco','kalynponga','reecewalsh'],
-    WG: ['briantoo','marknawaqanitawase','jojofifita','selwyncobbo','jackbostock','murraytaulagi','tolutaukoula'],
-    CTR:['tolutaukoula','kotonistaggs','roberttoia','hamisotabuaifidow','jackbostock','murraytaulagi','kulikefufinefeuiaki'],
-    HLF:['nathancleary','mitchellmoses','samwalker','cameronmunster','ethanstrange','apisaikoroisau'],
-    EDG:['hudsonyoung','dylanlucas','isaahyeo','britonnikora','kurtcapewell','reubencotter',
-         'cameronmurray','victorradley','maxplath','trentloiero','kulikefufinefeuiaki','lindsaycollins'],
-    MID:['paynehaas','mitchbarnett','addinfonuablake','tomflegler','tinofaasuamaleaui',
-         'lindsaycollins','trentloiero','victorradley'],
-    HOK:['reecerobson','harrygrant','maxplath','apisaikoroisau','cameronmurray'],
+    FB:['jamestedesco','kalynponga','reecewalsh'],
+    WG:['briantoo','marknawaqanitawase','jojofifita','selwyncobbo','jackbostock','murraytaulagi'],
   },
   3:{
-    FB: ['kalynponga','jamestedesco','reecewalsh','tolutaukoula','ethanstrange'],
-    WG: ['selwyncobbo','jojofifita','jackbostock','marknawaqanitawase','jeremiahnanai','murraytaulagi'],
-    CTR:['roberttoia','hamisotabuaifidow','bradmanbest','stephencrichton'],
-    HLF:['cameronmunster','samwalker','mitchellmoses','nathancleary'],
-    EDG:['britonnikora','kurtcapewell','reubencotter','hudsonyoung','liammartin','isaahyeo',
-         'maxplath','trentloiero','cameronmurray','haumoleolakauatu','victorradley','coreyhorsburgh','patrickcarrigan'],
-    MID:['tomflegler','tinofaasuamaleaui','paynehaas','mitchbarnett','patrickcarrigan','addinfonuablake','coreyhorsburgh'],
-    HOK:['harrygrant','reecerobson','maxplath','blaykebrailey','cameronmurray'],
+    FB:['kalynponga','jamestedesco','reecewalsh','tolutaukoula'],
+    WG:['selwyncobbo','jojofifita','jackbostock','marknawaqanitawase','jeremiahnanai','murraytaulagi'],
   }
 };
 function sooIsLocked(g){
@@ -3946,32 +3927,22 @@ function renderSooLeague(){
 
 function sooEligiblePlayers(gameNum,posId,posKey){
   const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
-  /* Use official position map if available for this game */
+  const squad=SOO_SQUAD_NAMES[gameNum];
+  /* FB and WG both have posId 6 — use explicit name lists to separate them */
   const posMap=SOO_POS_MAP[gameNum];
-  if(posMap&&posKey&&posMap[posKey]){
+  if((posKey==='FB'||posKey==='WG')&&posMap&&posMap[posKey]){
     const names=new Set(posMap[posKey]);
+    if(squad){
+      /* intersect with official squad in case of stale map */
+      return PLAYERS.filter(p=>names.has(nm(p.name))&&squad.has(nm(p.name))).sort((a,b)=>b.avg-a.avg);
+    }
     return PLAYERS.filter(p=>names.has(nm(p.name))).sort((a,b)=>b.avg-a.avg);
   }
-  /* For a played game: filter to players who scored in that round at this position */
-  const rndId=SOO_ROUNDS[gameNum];
-  if(rndId){
-    const played=PLAYERS.filter(p=>p.pos.includes(posId)&&OFFS[p.id]&&OFFS[p.id][rndId-1]!=null);
-    if(played.length)return played.sort((a,b)=>b.avg-a.avg);
-  }
-  /* For upcoming game: union of all SoO players from played rounds at this position */
-  const sooIds=new Set();
-  [1,2,3].forEach(g=>{
-    const rId=SOO_ROUNDS[g];if(!rId)return;
-    PLAYERS.forEach(p=>{if(OFFS[p.id]&&OFFS[p.id][rId-1]!=null)sooIds.add(p.id);});
-  });
-  if(sooIds.size>0){
-    return PLAYERS.filter(p=>p.pos.includes(posId)&&sooIds.has(p.id)).sort((a,b)=>b.avg-a.avg);
-  }
-  /* Fallback: hardcoded squad filtered by posId */
-  const squad=SOO_SQUAD_NAMES[gameNum];
+  /* All other positions: filter official squad by the player's actual NRL Fantasy posId */
   if(squad){
     return PLAYERS.filter(p=>p.pos.includes(posId)&&squad.has(nm(p.name))).sort((a,b)=>b.avg-a.avg);
   }
+  /* Fallback if no squad data: use posId only */
   return PLAYERS.filter(p=>p.pos.includes(posId)).sort((a,b)=>b.avg-a.avg);
 }
 
