@@ -507,7 +507,7 @@ function defaultState(){
     priceHistory:{},   /* {round:{pid:price}} snapshot after each simulated round */
     plannedTrades:[],  /* [{out:pid,in:pid,note:''}] staged future trades */
     corrections:{},    /* {r:{pid:pts}} commissioner score overrides */
-    origin:{picks:{1:{},2:{},3:{}},game:1,tab:'picks'},
+    origin:{picks:{1:{},2:{},3:{}},game:1,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}},
     user:null,   /* {name,email,method,initials} */
     ui:{page:'classic',classicTab:'team',draftPostTab:'team',trPage:'classic',trTab:'centre',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',plSearch:'',slotPick:null,draftQ:'',draftPos:0}
   };
@@ -3505,9 +3505,10 @@ function renderOrigin(){
   <div class="soo-tabs" style="margin-bottom:14px">
     <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
     <div class="soo-tab${tab==='stats'?' on':''}" onclick="S.origin.tab='stats';renderOrigin()">Stats</div>
-    <div class="soo-tab${tab==='board'?' on':''}" onclick="S.origin.tab='board';renderOrigin()">🏆 Leaderboard</div>
+    <div class="soo-tab${tab==='board'?' on':''}" onclick="S.origin.tab='board';renderOrigin()">🏆 My Scores</div>
+    <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin()">👥 League</div>
   </div>
-  ${tab==='picks'?renderSooPicks(g):tab==='board'?renderSooLeaderboard():renderSooStats(g)}`;
+  ${tab==='picks'?renderSooPicks(g):tab==='board'?renderSooLeaderboard():tab==='league'?renderSooLeague():renderSooStats(g)}`;
 }
 
 function renderSooPicks(g){
@@ -3654,6 +3655,197 @@ function renderSooLeaderboard(){
   </div>`;
 }
 
+/* ── SoO League ──────────────────────────────────────────── */
+const SOO_API='/api/soo';
+
+function sooLeagueTeamScore(picks){
+  /* Calculate total score across all 3 games for a set of picks */
+  return SOO_GAMES.reduce((tot,sg)=>{
+    const gPicks=picks[sg.id]||{};
+    const gs=SOO_POS.reduce((s,pos)=>{
+      const pid=gPicks[pos.key];
+      const sc=sooRoundScore(pid,sg.id);
+      return s+(sc!=null?sc:0);
+    },0);
+    return tot+gs;
+  },0);
+}
+
+function sooLeagueTeamGameScore(picks,gameNum){
+  const gPicks=picks[gameNum]||{};
+  return SOO_POS.reduce((s,pos)=>{
+    const pid=gPicks[pos.key];
+    const sc=sooRoundScore(pid,gameNum);
+    return s+(sc!=null?sc:0);
+  },0);
+}
+
+async function sooCreateLeague(){
+  const lname=document.getElementById('soo-lg-name').value.trim()||'SoO League';
+  const tname=document.getElementById('soo-team-name').value.trim()||S.user.name||'My Team';
+  try{
+    const r=await fetch(SOO_API+'/create',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:lname,teamName:tname,picks:S.origin.picks})
+    });
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Failed');
+    S.origin.league={code:d.code,teamId:d.teamId,name:lname,teamName:tname};
+    save();renderOrigin();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function sooJoinLeague(){
+  const code=(document.getElementById('soo-join-code').value||'').trim().toUpperCase();
+  const tname=document.getElementById('soo-join-tname').value.trim()||S.user.name||'My Team';
+  if(!code){alert('Enter a league code');return;}
+  try{
+    const r=await fetch(SOO_API+'/join',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code,teamName:tname,picks:S.origin.picks})
+    });
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Not found');
+    S.origin.league={code,teamId:d.teamId,name:d.league.name,teamName:tname};
+    save();
+    _sooLeagueCache=d.league;
+    renderOrigin();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function sooSyncPicks(){
+  const lg=S.origin.league;
+  if(!lg||!lg.code||!lg.teamId)return;
+  try{
+    await fetch(SOO_API+'/league/'+lg.code+'/picks',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({teamId:lg.teamId,picks:S.origin.picks,teamName:lg.teamName})
+    });
+  }catch(e){}
+}
+
+let _sooLeagueCache=null;
+let _sooLeagueFetching=false;
+
+async function sooFetchLeague(forceRefresh){
+  const lg=S.origin.league;
+  if(!lg||!lg.code)return null;
+  if(_sooLeagueCache&&!forceRefresh)return _sooLeagueCache;
+  if(_sooLeagueFetching)return _sooLeagueCache;
+  _sooLeagueFetching=true;
+  try{
+    const r=await fetch(SOO_API+'/league/'+lg.code);
+    if(!r.ok)throw new Error('not found');
+    _sooLeagueCache=await r.json();
+  }catch(e){_sooLeagueCache=null;}
+  _sooLeagueFetching=false;
+  return _sooLeagueCache;
+}
+
+function sooLeaveLeague(){
+  if(!confirm('Leave this league? Your picks will stay on the server.'))return;
+  S.origin.league={code:null,teamId:null,name:null,teamName:null};
+  _sooLeagueCache=null;
+  save();renderOrigin();
+}
+
+function renderSooLeague(){
+  const lg=S.origin.league;
+
+  /* Not in a league yet */
+  if(!lg||!lg.code){
+    return`<div class="card" style="max-width:460px;margin:0 auto">
+      <h3 style="margin:0 0 4px">👥 SoO League</h3>
+      <p class="muted" style="margin:0 0 20px;font-size:13px">Create a league and share the code with your mates. Everyone picks their own SoO team and you compete on the leaderboard.</p>
+
+      <div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="font-weight:700;margin-bottom:12px">Create a league</div>
+        <input id="soo-lg-name" placeholder="League name" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:8px">
+        <input id="soo-team-name" placeholder="Your team name" value="${esc(S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
+        <button class="btn-primary" onclick="sooCreateLeague()" style="width:100%">Create League</button>
+      </div>
+
+      <div style="border:1px solid var(--line);border-radius:12px;padding:16px">
+        <div style="font-weight:700;margin-bottom:12px">Join a league</div>
+        <input id="soo-join-code" placeholder="League code (e.g. XY3K9P)" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;text-transform:uppercase;margin-bottom:8px">
+        <input id="soo-join-tname" placeholder="Your team name" value="${esc(S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
+        <button class="btn-primary" onclick="sooJoinLeague()" style="width:100%">Join League</button>
+      </div>
+    </div>`;
+  }
+
+  /* In a league — show leaderboard (async: kick off fetch, re-render when done) */
+  if(!_sooLeagueCache){
+    sooFetchLeague(true).then(()=>renderOrigin());
+    return`<div class="card" style="text-align:center;padding:40px">
+      <div class="muted" style="font-size:14px">Loading league…</div>
+    </div>`;
+  }
+
+  const data=_sooLeagueCache;
+  /* Build ranked rows */
+  const rows=data.teams.map(t=>{
+    const isMe=t.id===lg.teamId;
+    const g1=sooLeagueTeamGameScore(t.picks,1);
+    const g2=sooLeagueTeamGameScore(t.picks,2);
+    const g3=sooLeagueTeamGameScore(t.picks,3);
+    const tot=g1+g2+g3;
+    return{t,isMe,g1,g2,g3,tot};
+  }).sort((a,b)=>b.tot-a.tot);
+
+  const leaderRows=rows.map((row,i)=>`
+    <tr style="${row.isMe?'background:rgba(var(--acc-rgb),.08)':''}">
+      <td style="padding:10px 8px;font-weight:700;color:var(--dim);text-align:center">${i+1}</td>
+      <td style="padding:10px 8px">
+        <span style="font-weight:${row.isMe?'800':'600'};font-size:14px">${esc(row.t.name)}</span>
+        ${row.isMe?'<span class="pill" style="margin-left:6px;background:var(--acc);color:#000;font-size:10px;padding:2px 7px;border-radius:10px">You</span>':''}
+      </td>
+      <td style="text-align:center;padding:10px 8px;color:var(--dim);font-size:13px">${row.g1||'—'}</td>
+      <td style="text-align:center;padding:10px 8px;color:var(--dim);font-size:13px">${row.g2||'—'}</td>
+      <td style="text-align:center;padding:10px 8px;color:var(--dim);font-size:13px">${row.g3||'—'}</td>
+      <td style="text-align:center;padding:10px 8px;font-weight:800;font-size:16px;color:var(--acc)">${row.tot||'—'}</td>
+    </tr>`).join('');
+
+  const codeHtml=`<div style="display:inline-flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--acc);border-radius:10px;padding:8px 16px;margin-bottom:16px">
+    <span style="font-size:13px;color:var(--dim)">Code:</span>
+    <span style="font-weight:900;font-size:18px;letter-spacing:3px;color:var(--acc)">${data.code}</span>
+    <button onclick="navigator.clipboard.writeText('${data.code}').then(()=>alert('Copied!'))" style="background:none;border:none;cursor:pointer;font-size:16px;padding:0" title="Copy code">📋</button>
+  </div>`;
+
+  return`<div class="card">
+    <div class="flex" style="align-items:flex-start;margin-bottom:4px">
+      <div>
+        <h3 style="margin:0 0 2px">${esc(data.name)}</h3>
+        <div class="muted" style="font-size:12px">${data.teams.length} team${data.teams.length!==1?'s':''}</div>
+      </div>
+      <span class="spacer"></span>
+      <button onclick="sooFetchLeague(true).then(()=>renderOrigin())" class="btn-sec" style="font-size:12px;padding:5px 12px">↻ Refresh</button>
+    </div>
+
+    ${codeHtml}
+    <p class="muted" style="font-size:12px;margin:0 0 16px">Share this code with your mates so they can join.</p>
+
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;min-width:320px">
+        <thead><tr style="border-bottom:2px solid var(--line)">
+          <th style="padding:6px 8px;text-align:center;font-size:11px;color:var(--dim)">#</th>
+          <th style="padding:6px 8px;text-align:left;font-size:11px;color:var(--dim)">Team</th>
+          <th style="padding:6px 8px;text-align:center;font-size:11px;color:var(--dim)">G1</th>
+          <th style="padding:6px 8px;text-align:center;font-size:11px;color:var(--dim)">G2</th>
+          <th style="padding:6px 8px;text-align:center;font-size:11px;color:var(--dim)">G3</th>
+          <th style="padding:6px 8px;text-align:center;font-size:11px;color:var(--dim)">Total</th>
+        </tr></thead>
+        <tbody>${leaderRows}</tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="sooSyncPicks().then(()=>{sooFetchLeague(true).then(()=>renderOrigin())})" class="btn-primary" style="font-size:13px">⬆ Sync My Picks</button>
+      <button onclick="sooLeaveLeague()" class="btn-sec" style="font-size:13px;color:var(--red)">Leave League</button>
+    </div>
+  </div>`;
+}
+
 function sooEligiblePlayers(gameNum,posId){
   /* Build pool of SoO-eligible players at this position */
   /* For a played game: players who scored in that round */
@@ -3708,11 +3900,13 @@ function sooSelect(posKey,pid,gameNum){
   sooInitState();
   S.origin.picks[gameNum][posKey]=pid;
   save();closeModal();renderOrigin();
+  sooSyncPicks(); /* background sync to league */
 }
 
 function sooRemove(posKey,gameNum){
   if(S.origin.picks[gameNum])delete S.origin.picks[gameNum][posKey];
   save();renderOrigin();
+  sooSyncPicks();
 }
 
 /* ================= LEAGUES (CLASSIC) ================= */
