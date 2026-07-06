@@ -3952,7 +3952,8 @@ function renderSooLeague(){
   }
 
   const data=_sooLeagueCache;
-  const isOwner=!!(data&&data.ownerId&&S.sooAuth&&data.ownerId===S.sooAuth.userId);
+  /* owner = explicit ownerId match, or (legacy) first team in league */
+  const isOwner=!!(S.sooAuth&&data&&(data.ownerId?data.ownerId===S.sooAuth.userId:data.teams&&data.teams[0]&&data.teams[0].id===lg.teamId));
   /* Build ranked rows */
   const rows=data.teams.map(t=>{
     const isMe=t.id===lg.teamId;
