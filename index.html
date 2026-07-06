@@ -3840,7 +3840,7 @@ async function sooCreateLeague(){
   try{
     const r=await fetch(SOO_API+'/create',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:lname,teamName:tname,picks:S.origin.picks})
+      body:JSON.stringify({name:lname,teamName:tname,picks:S.origin.picks,token:S.sooAuth&&S.sooAuth.token})
     });
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Failed');
@@ -3856,7 +3856,7 @@ async function sooJoinLeague(){
   try{
     const r=await fetch(SOO_API+'/join',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({code,teamName:tname,picks:S.origin.picks})
+      body:JSON.stringify({code,teamName:tname,picks:S.origin.picks,token:S.sooAuth&&S.sooAuth.token})
     });
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Not found');
