@@ -1688,6 +1688,7 @@ async function autoRefresh(manual){
   scheduleNextRefresh();
   updateStatusChip();
   if(S.ui.page==='match')renderMatch();
+  else if(S.ui.page==='origin')renderOrigin();
   else renderAll();
 }
 
@@ -3467,8 +3468,11 @@ const SOO_POS_MAP={
   }
 };
 function sooIsLocked(g){
-  /* locked if hardcoded finished OR has actual score data */
+  /* locked if hardcoded finished */
   if(LOCKED_SOO_GAMES.has(g))return true;
+  /* lock if this round is complete (final scores available) */
+  const rId=SOO_ROUNDS[g];
+  if(rId&&LIVE.round===rId&&LIVE.status==='live')return false;/* still in progress */
   return sooTeamTotal(g)!==null;
 }
 
@@ -3486,6 +3490,8 @@ function detectSooRounds(rounds){
 function sooRoundScore(pid,gameNum){
   const rId=SOO_ROUNDS[gameNum];
   if(!rId||pid==null)return null;
+  /* Use live score if round is active */
+  if(LIVE.round===rId&&LIVE.scores[pid]!=null)return LIVE.scores[pid];
   return(OFFS[pid]&&OFFS[pid][rId-1]!=null)?OFFS[pid][rId-1]:null;
 }
 
@@ -3592,10 +3598,19 @@ function renderOrigin(){
       <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
       <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin()">👥 League</div>
     </div>`;
+  const sooLiveBadge=(()=>{
+    const rId=SOO_ROUNDS[3];
+    if(rId&&LIVE.round===rId&&LIVE.status==='live')return'<span style="background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(239,68,68,.4);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700">🔴 LIVE</span>';
+    if(rId&&LIVE.round===rId&&LIVE.status==='final')return'<span style="color:var(--dim);font-size:12px;font-weight:600">✓ Final</span>';
+    return'';
+  })();
   const hdrHTML=`
     <div class="soo-header">
-      <h2>🦁 State of Origin Fantasy</h2>
-      <div class="sub">Pick your best player at each position for Game 3</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+        <h2 style="margin:0">🦁 State of Origin Fantasy</h2>
+        ${sooLiveBadge}
+      </div>
+      <div class="sub" style="margin-top:4px">Pick your best player at each position for Game 3</div>
     </div>
     <div class="soo-summary-grid" style="margin-bottom:14px">${summaryCards}</div>`;
   if(tab==='league'){
