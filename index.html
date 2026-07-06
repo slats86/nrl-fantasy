@@ -269,6 +269,42 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .mode-hdr .msub{color:var(--dim);font-size:12px}
 .mstat b{display:block;font-size:17px;font-weight:800;color:var(--txt)}
 .mstat span{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+/* ── State of Origin ── */
+:root{--nsw:#005faf;--qld:#6d1a36;--soo-neutral:#2c7744}
+.soo-header{background:linear-gradient(135deg,var(--nsw) 0%,var(--qld) 100%);border-radius:14px;padding:20px;margin-bottom:16px;color:#fff}
+.soo-header h2{margin:0 0 4px;font-size:20px;font-weight:800}
+.soo-header .sub{font-size:12px;opacity:.75}
+.soo-game-tabs{display:flex;gap:8px;margin-bottom:14px}
+.soo-gtab{flex:1;text-align:center;padding:10px 6px;border-radius:10px;border:2px solid var(--line);cursor:pointer;font-weight:700;font-size:13px;color:var(--dim);transition:all .15s}
+.soo-gtab.on{color:#fff}
+.soo-gtab:hover:not(.on){background:var(--card2)}
+.soo-tabs{display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.soo-tab{padding:6px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--dim)}
+.soo-tab.on{background:var(--acc);color:var(--bg)}
+.soo-tab:hover:not(.on){color:var(--txt)}
+.soo-slots{display:flex;flex-direction:column;gap:8px}
+.soo-slot{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.soo-slot:hover{border-color:var(--acc)}
+.soo-pos-badge{background:var(--card2);border:1px solid var(--line);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:800;color:var(--dim);min-width:36px;text-align:center;flex-shrink:0}
+.soo-pos-label{font-size:12px;color:var(--dim);min-width:60px;flex-shrink:0}
+.soo-player-info{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.soo-player-info b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.soo-empty{flex:1;color:var(--dim);font-size:13px;font-style:italic}
+.soo-score{min-width:36px;text-align:right;font-size:15px}
+.soo-clear{background:none;border:none;color:var(--dim);cursor:pointer;padding:4px 6px;border-radius:6px;font-size:14px;line-height:1}
+.soo-clear:hover{color:var(--danger);background:rgba(255,80,80,.1)}
+.soo-pick-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;border:1px solid transparent;transition:background .12s}
+.soo-pick-row:hover{background:var(--card2)}
+.soo-pick-row.soo-picked{border-color:var(--acc);background:rgba(132,204,22,.06)}
+.soo-state-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;flex-shrink:0}
+.soo-nsw{background:rgba(0,95,175,.18);color:#5ba3e0}
+.soo-qld{background:rgba(109,26,54,.2);color:#c07090}
+.soo-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.soo-game-card{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+.soo-game-card.played{border-color:var(--acc)}
+.soo-game-card .gc-title{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.soo-game-card .gc-score{font-size:24px;font-weight:800;color:var(--acc)}
+.soo-game-card .gc-sub{font-size:11px;color:var(--dim)}
 </style>
 </head>
 <body>
@@ -322,6 +358,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
       <div class="navitem" data-pg="draft"><span class="ni">📋</span>Draft</div>
       <div class="navsep"></div>
       <div class="navitem" data-pg="match"><span class="ni">⚡</span>Match Centre</div>
+      <div class="navitem" data-pg="origin"><span class="ni">🦁</span>State of Origin</div>
       <div class="navitem" data-pg="leagues"><span class="ni">🏆</span>Leagues</div>
       <div class="navitem" data-pg="players"><span class="ni">📊</span>Players</div>
       <div class="navsep"></div>
@@ -349,6 +386,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
       <div class="page" id="pg-leagues"></div>
       <div class="page" id="pg-players"></div>
       <div class="page" id="pg-settings"></div>
+      <div class="page" id="pg-origin"></div>
     </main>
   </div>
   <!-- Bottom tab bar — mobile nav -->
@@ -357,6 +395,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
     <div class="btab on" data-pg="classic"><span class="bi">🏠</span>Classic</div>
     <div class="btab" data-pg="draft"><span class="bi">📋</span>Draft</div>
     <div class="btab" data-pg="custom"><span class="bi">⚙️</span>Custom</div>
+    <div class="btab" data-pg="origin"><span class="bi">🦁</span>Origin</div>
     <div class="btab" data-pg="players"><span class="bi">📊</span>More</div>
   </nav>
 </div>
@@ -465,6 +504,7 @@ function defaultState(){
     priceHistory:{},   /* {round:{pid:price}} snapshot after each simulated round */
     plannedTrades:[],  /* [{out:pid,in:pid,note:''}] staged future trades */
     corrections:{},    /* {r:{pid:pts}} commissioner score overrides */
+    origin:{picks:{1:{},2:{},3:{}},game:1,tab:'picks'},
     user:null,   /* {name,email,method,initials} */
     ui:{page:'classic',classicTab:'team',draftPostTab:'team',trPage:'classic',trTab:'centre',mcRound:1,mcMatch:0,plSort:'avg',plDir:-1,plPos:0,plClub:-1,plQ:'',plSearch:'',slotPick:null,draftQ:'',draftPos:0}
   };
@@ -528,6 +568,7 @@ function load(){
     if(!S.priceHistory)S.priceHistory={};
     if(!S.plannedTrades)S.plannedTrades=[];
     if(!S.corrections)S.corrections={};
+    if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:1,tab:'picks'};
     if(S.ui.plSearch===undefined)S.ui.plSearch='';
     if(S.customLeague&&S.customLeague.cap==null){
       S.customLeague.cap=S.settings.cap;
@@ -713,6 +754,7 @@ function buildPatchFromFeeds(players,rounds){
     P.fix[rd.id]={byes:(rd.bye_squads||[]).map(x=>sqMap[x]).filter(x=>x!=null),
       games:(rd.matches||[]).map(m=>[sqMap[m.home_squad_id],sqMap[m.away_squad_id],m.status==='complete'?m.home_score:null,m.status==='complete'?m.away_score:null])};
   });
+  detectSooRounds(rounds);
   S.dataPatch=P;applyDataPatch();const _adv=autoAdvanceRounds(oldMaxBefore);save();return _adv;
 }
 async function updateData(){
@@ -3346,6 +3388,212 @@ function showStatLine(pid,r){
    ${st&&off!=null?`<p class="tooltip">Official NRL Fantasy score: <b>${off}</b>. Per-stat points use your current rules${S.settings.scoreMode==='custom'?'':' (display only — official mode is on)'}.</p>`:''}`);
 }
 
+/* ================= STATE OF ORIGIN ================= */
+const SOO_POS=[
+  {key:'FB', label:'Fullback', posId:6},
+  {key:'WG', label:'Wing',     posId:6},
+  {key:'CTR',label:'Centre',   posId:5},
+  {key:'HLF',label:'Half',     posId:4},
+  {key:'2RF',label:'2nd Row',  posId:3},
+  {key:'P',  label:'Prop',     posId:2},
+  {key:'HKR',label:'Hooker',   posId:1},
+];
+const SOO_GAMES=[
+  {id:1,label:'Game I',   short:'G1'},
+  {id:2,label:'Game II',  short:'G2'},
+  {id:3,label:'Game III', short:'G3'},
+];
+/* SOO_ROUNDS: {gameNum→roundId} — populated from rounds.json */
+let SOO_ROUNDS={};
+
+function detectSooRounds(rounds){
+  SOO_ROUNDS={};
+  rounds.forEach(rd=>{
+    const nm=(rd.name||rd.title||'').toLowerCase();
+    if(!nm.includes('origin')&&!nm.includes('state of origin'))return;
+    const n=nm.includes('iii')||nm.includes(' 3')||nm.includes('game 3')?3:
+             nm.includes('ii') ||nm.includes(' 2')||nm.includes('game 2')?2:1;
+    SOO_ROUNDS[n]=rd.id;
+  });
+}
+
+function sooRoundScore(pid,gameNum){
+  const rId=SOO_ROUNDS[gameNum];
+  if(!rId||pid==null)return null;
+  return(OFFS[pid]&&OFFS[pid][rId-1]!=null)?OFFS[pid][rId-1]:null;
+}
+
+function sooTeamTotal(gameNum){
+  const picks=(S.origin.picks||{})[gameNum]||{};
+  const hasRound=!!SOO_ROUNDS[gameNum];
+  if(!hasRound)return null;
+  let total=0,hasAny=false;
+  SOO_POS.forEach(pos=>{
+    const sc=sooRoundScore(picks[pos.key],gameNum);
+    if(sc!=null){total+=sc;hasAny=true;}
+  });
+  return hasAny?total:null;
+}
+
+function sooInitState(){
+  if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:1,tab:'picks'};
+  if(!S.origin.picks)S.origin.picks={1:{},2:{},3:{}};
+  [1,2,3].forEach(g=>{if(!S.origin.picks[g])S.origin.picks[g]={};});
+}
+
+function renderOrigin(){
+  const el=$('#pg-origin');
+  sooInitState();
+  const g=S.origin.game||1;
+  const tab=S.origin.tab||'picks';
+  const picks=S.origin.picks[g]||{};
+
+  /* game tab headers */
+  const gameTabs=SOO_GAMES.map(sg=>{
+    const total=sooTeamTotal(sg.id);
+    return`<div class="soo-gtab${sg.id===g?' on':''}"
+      style="${sg.id===g?'background:'+(sg.id===1?'var(--nsw)':sg.id===2?'var(--qld)':'var(--soo-neutral)')+';border-color:transparent':''}"
+      onclick="S.origin.game=${sg.id};renderOrigin()">
+      ${sg.label}${total!=null?`<div style="font-size:11px;opacity:.85;font-weight:700">${total} pts</div>`:''}
+    </div>`;
+  }).join('');
+
+  /* summary cards at top */
+  const summaryCards=SOO_GAMES.map(sg=>{
+    const total=sooTeamTotal(sg.id);
+    const filled=SOO_POS.filter(p=>(S.origin.picks[sg.id]||{})[p.key]!=null).length;
+    return`<div class="soo-game-card${total!=null?' played':''}">
+      <div class="gc-title">${sg.label}</div>
+      ${total!=null
+        ?`<div class="gc-score">${total}</div><div class="gc-sub">pts</div>`
+        :`<div style="color:var(--dim);font-size:13px;margin:4px 0">${filled}/7 picks</div>`}
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+  <div class="soo-header">
+    <h2>🦁 State of Origin Fantasy</h2>
+    <div class="sub">Pick your best player at each position for each SoO game</div>
+  </div>
+  <div class="soo-summary-grid">${summaryCards}</div>
+  <div class="soo-game-tabs">${gameTabs}</div>
+  <div class="soo-tabs" style="margin-bottom:14px">
+    <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
+    <div class="soo-tab${tab==='stats'?' on':''}" onclick="S.origin.tab='stats';renderOrigin()">Stats</div>
+  </div>
+  ${tab==='picks'?renderSooPicks(g):renderSooStats(g)}`;
+}
+
+function renderSooPicks(g){
+  const picks=S.origin.picks[g]||{};
+  const hasRound=!!SOO_ROUNDS[g];
+  const slots=SOO_POS.map(pos=>{
+    const pid=picks[pos.key];
+    const p=pid!=null?PLAYERS[pid]:null;
+    const score=sooRoundScore(pid,g);
+    return`<div class="soo-slot" onclick="sooPickPlayer('${pos.key}',${pos.posId},${g})">
+      <div class="soo-pos-badge">${pos.key}</div>
+      <div class="soo-pos-label">${pos.label}</div>
+      ${p?`
+        <div class="soo-player-info">
+          ${avatar(p,30)}
+          <div style="min-width:0">
+            <b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</b>
+            <span class="muted" style="font-size:11px">${CLUBS[p.sq]?CLUBS[p.sq].n:''}</span>
+          </div>
+        </div>
+        <div class="soo-score">${score!=null?`<b class="${score>=60?'good':score<20?'bad':''}">${score}</b>`:'<span class="muted" style="font-size:12px">—</span>'}</div>
+        <button class="soo-clear" onclick="event.stopPropagation();sooRemove('${pos.key}',${g})">✕</button>
+      `:`
+        <div class="soo-empty">Tap to pick player</div>
+        <span style="color:var(--dim);font-size:18px">＋</span>
+      `}
+    </div>`;
+  }).join('');
+
+  const total=sooTeamTotal(g);
+  return`
+    ${!hasRound?`<div class="notice" style="margin-bottom:12px;font-size:12px">⏳ Game ${g} hasn't been played yet — make your picks now and scores will appear automatically after the game.</div>`:''}
+    <div class="soo-slots">${slots}</div>
+    ${total!=null?`<div style="text-align:right;margin-top:14px;font-size:16px;font-weight:700">Total: <span class="good">${total} pts</span></div>`:''}`;
+}
+
+function renderSooStats(g){
+  const picks=S.origin.picks[g]||{};
+  const hasRound=!!SOO_ROUNDS[g];
+  const rows=SOO_POS.map(pos=>{
+    const pid=picks[pos.key];
+    if(pid==null)return`<tr><td class="muted" colspan="5">${pos.label}: <em>not selected</em></td></tr>`;
+    const p=PLAYERS[pid];
+    const sc=sooRoundScore(pid,g);
+    const avg=p.avg||0;
+    const diff=sc!=null?sc-avg:null;
+    /* season scores: last 5 rounds */
+    const recent=[];
+    for(let r=MAXR;r>=Math.max(1,MAXR-4);r--){
+      const v=OFFS[p.id]?OFFS[p.id][r-1]:null;
+      recent.push(v!=null?`<span class="tag" style="font-size:11px;padding:2px 6px">${v}</span>`:'<span class="muted" style="font-size:11px">—</span>');
+    }
+    return`<tr>
+      <td style="width:34px">${avatar(p,28)}</td>
+      <td><b>${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${pos.label} · ${CLUBS[p.sq]?CLUBS[p.sq].s:''}</span></td>
+      <td style="text-align:center">${avg>0?avg.toFixed(1):'—'}</td>
+      <td style="text-align:center">${sc!=null?`<b class="${sc>=60?'good':sc<20?'bad':''}">${sc}</b>`:'—'}</td>
+      <td style="text-align:center">${diff!=null?`<span class="${diff>=0?'good':'bad'}">${diff>=0?'+':''}${Math.round(diff)}</span>`:'—'}</td>
+      <td style="text-align:center;padding:4px">${recent.join(' ')}</td>
+    </tr>`;
+  }).join('');
+
+  return`<div class="card" style="overflow-x:auto">
+    <h3>Game ${g} — Player Comparison</h3>
+    ${!hasRound?'<p class="muted" style="font-size:12px">SoO scores will appear here after Game '+g+' is played.</p>':''}
+    <table>
+      <thead><tr>
+        <th colspan="2">Player</th>
+        <th style="text-align:center">Season Avg</th>
+        <th style="text-align:center">SoO Pts</th>
+        <th style="text-align:center">vs Avg</th>
+        <th style="text-align:center">Last 5 rounds</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function sooPickPlayer(posKey,posId,gameNum){
+  const eligible=PLAYERS.filter(p=>p.pos.includes(posId)).sort((a,b)=>b.avg-a.avg);
+  const pos=SOO_POS.find(p=>p.key===posKey);
+  const currentPid=(S.origin.picks[gameNum]||{})[posKey];
+  const rndId=SOO_ROUNDS[gameNum];
+  const rows=eligible.map(p=>{
+    const sc=rndId&&OFFS[p.id]&&OFFS[p.id][rndId-1]!=null?OFFS[p.id][rndId-1]:null;
+    const isCur=p.id===currentPid;
+    return`<div class="soo-pick-row${isCur?' soo-picked':''}" onclick="sooSelect('${posKey}',${p.id},${gameNum})">
+      ${avatar(p,32)}
+      <div style="flex:1;min-width:0">
+        <b style="display:block">${esc(p.name)}</b>
+        <span class="muted" style="font-size:11px">${CLUBS[p.sq]?CLUBS[p.sq].n:''} · Avg ${p.avg||0}</span>
+      </div>
+      ${sc!=null?`<b class="${sc>=60?'good':sc<20?'bad':''}" style="min-width:36px;text-align:right">${sc}</b>`:`<span class="muted" style="min-width:36px;text-align:right">${p.avg||0}</span>`}
+      ${isCur?'<span style="color:var(--acc);margin-left:6px;font-size:16px">✓</span>':''}
+    </div>`;
+  }).join('');
+  openModal(`<h3>Pick ${pos?pos.label:posKey}</h3>
+    <p class="muted" style="margin:4px 0 12px;font-size:12px">${eligible.length} eligible · sorted by season avg${rndId?' · right col = SoO pts':' · right col = season avg'}</p>
+    <div style="max-height:60vh;overflow-y:auto;margin:0 -12px;padding:0 12px">${rows}</div>`);
+}
+
+function sooSelect(posKey,pid,gameNum){
+  sooInitState();
+  S.origin.picks[gameNum][posKey]=pid;
+  save();closeModal();renderOrigin();
+}
+
+function sooRemove(posKey,gameNum){
+  if(S.origin.picks[gameNum])delete S.origin.picks[gameNum][posKey];
+  save();renderOrigin();
+}
+
 /* ================= LEAGUES (CLASSIC) ================= */
 /* ── leagues hub helpers ── */
 function leagueRulesHTML(mode){
@@ -3980,6 +4228,7 @@ function renderAll(){
     else if(pg==='custom')renderCustom();
     else if(pg==='draft')renderDraft();
     else if(pg==='match')renderMatch();
+    else if(pg==='origin')renderOrigin();
     else if(pg==='leagues')renderLeagues();
     else if(pg==='players')renderPlayers();
     else if(pg==='settings')renderSettings();
@@ -4001,11 +4250,12 @@ load();
 applyLayout();
 /* Merge embedded patch from GitHub Actions before applyDataPatch() */
 if(typeof __NRL_PATCH__!=='undefined'&&__NRL_PATCH__){
-  const _ep=__NRL_PATCH__,_P=S.dataPatch||(S.dataPatch={});
+  const _ep=__NRL_PATCH__,_P=S.dataPatch;
   if(_ep.maxR)_P.maxR=Math.max(_ep.maxR,_P.maxR||0);
   if(_ep.off)for(const _k in _ep.off){_P.off=_P.off||{};_P.off[_k]=_P.off[_k]||{};for(const _r in _ep.off[_k])_P.off[_k][_r]=_ep.off[_k][_r];}
   if(_ep.price)for(const _k in _ep.price){_P.price=_P.price||{};_P.price[_k]=_P.price[_k]||{};for(const _r in _ep.price[_k])_P.price[_k][_r]=_ep.price[_k][_r];}
   if(_ep.fix)for(const _r in _ep.fix){_P.fix=_P.fix||{};_P.fix[_r]=_ep.fix[_r];}
+  S.dataPatch=_P;
 }
 applyDataPatch();
 if(!isNaN(MAXR)){/* dataPatch applied — advance any rounds the load() pass missed */
