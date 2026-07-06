@@ -4739,7 +4739,7 @@ if(!isNaN(MAXR)){/* dataPatch applied — advance any rounds the load() pass mis
 if(S.classic.bank==null)S.classic.bank=S.settings.cap-squadValue(); /* migrate: bank = cap - current value */
 /* LOGIN DISABLED — set a guest user so the app loads directly */
 if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};showApp();
-setPage(S.ui.page||'classic');
+setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));
 </script>
 
 <!-- SoO Standalone Login -->
