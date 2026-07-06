@@ -4250,7 +4250,7 @@ load();
 applyLayout();
 /* Merge embedded patch from GitHub Actions before applyDataPatch() */
 if(typeof __NRL_PATCH__!=='undefined'&&__NRL_PATCH__){
-  const _ep=__NRL_PATCH__,_P=S.dataPatch;
+  const _ep=__NRL_PATCH__,_P=S.dataPatch||(S.dataPatch={});
   if(_ep.maxR)_P.maxR=Math.max(_ep.maxR,_P.maxR||0);
   if(_ep.off)for(const _k in _ep.off){_P.off=_P.off||{};_P.off[_k]=_P.off[_k]||{};for(const _r in _ep.off[_k])_P.off[_k][_r]=_ep.off[_k][_r];}
   if(_ep.price)for(const _k in _ep.price){_P.price=_P.price||{};_P.price[_k]=_P.price[_k]||{};for(const _r in _ep.price[_k])_P.price[_k][_r]=_ep.price[_k][_r];}
