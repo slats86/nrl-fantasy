@@ -4453,6 +4453,57 @@ function byePlannerHTML(){
   </div>`;
 }
 </script>
+<!-- SoO Standalone Login -->
+<div id="soo-login-page" style="display:none;min-height:100vh;align-items:center;justify-content:center;background:var(--bg);padding:20px">
+  <div style="width:100%;max-width:400px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-size:40px;margin-bottom:8px">🏉</div>
+      <h2 style="font-size:22px;font-weight:900;margin-bottom:4px">State of Origin Fantasy</h2>
+      <p style="color:var(--dim);font-size:14px">Pick your team. Beat your mates.</p>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden">
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:1px solid var(--line)">
+        <button id="soo-tab-login" class="on" onclick="sooShowAuthTab('login')" style="flex:1;padding:14px;background:none;border:none;color:var(--fg);font-size:14px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent">Sign In</button>
+        <button id="soo-tab-reg"   onclick="sooShowAuthTab('reg')"   style="flex:1;padding:14px;background:none;border:none;color:var(--dim);font-size:14px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent">Register</button>
+      </div>
+      <div style="padding:24px">
+        <!-- Login panel -->
+        <div id="soo-panel-login">
+          <div style="margin-bottom:14px">
+            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email</label>
+            <input id="soo-login-email" type="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
+          </div>
+          <div style="margin-bottom:20px">
+            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
+            <input id="soo-login-pass" type="password" placeholder="••••••••" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoLogin()">
+          </div>
+          <button onclick="sooDoLogin()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Sign In</button>
+        </div>
+        <!-- Register panel -->
+        <div id="soo-panel-reg" style="display:none">
+          <div style="margin-bottom:14px">
+            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Your Name</label>
+            <input id="soo-reg-name" type="text" placeholder="e.g. Brent" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
+          </div>
+          <div style="margin-bottom:14px">
+            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email</label>
+            <input id="soo-reg-email" type="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
+          </div>
+          <div style="margin-bottom:20px">
+            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
+            <input id="soo-reg-pass" type="password" placeholder="Min 6 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoRegister()">
+          </div>
+          <button onclick="sooDoRegister()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Create Account</button>
+        </div>
+        <p id="soo-auth-err" style="color:var(--red);font-size:13px;margin-top:12px;text-align:center;min-height:18px"></p>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+#soo-tab-login.on,#soo-tab-reg.on{color:var(--acc);border-bottom-color:var(--acc)!important}
+</style>
 <script>
 /* ================= PLAYERS PAGE ================= */
 function renderPlayers(){
@@ -4742,56 +4793,5 @@ if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};showApp();
 setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));
 </script>
 
-<!-- SoO Standalone Login -->
-<div id="soo-login-page" style="display:none;min-height:100vh;align-items:center;justify-content:center;background:var(--bg);padding:20px">
-  <div style="width:100%;max-width:400px">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-size:40px;margin-bottom:8px">🏉</div>
-      <h2 style="font-size:22px;font-weight:900;margin-bottom:4px">State of Origin Fantasy</h2>
-      <p style="color:var(--dim);font-size:14px">Pick your team. Beat your mates.</p>
-    </div>
-    <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden">
-      <!-- Tabs -->
-      <div style="display:flex;border-bottom:1px solid var(--line)">
-        <button id="soo-tab-login" class="on" onclick="sooShowAuthTab('login')" style="flex:1;padding:14px;background:none;border:none;color:var(--fg);font-size:14px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent">Sign In</button>
-        <button id="soo-tab-reg"   onclick="sooShowAuthTab('reg')"   style="flex:1;padding:14px;background:none;border:none;color:var(--dim);font-size:14px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent">Register</button>
-      </div>
-      <div style="padding:24px">
-        <!-- Login panel -->
-        <div id="soo-panel-login">
-          <div style="margin-bottom:14px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email</label>
-            <input id="soo-login-email" type="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
-          </div>
-          <div style="margin-bottom:20px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
-            <input id="soo-login-pass" type="password" placeholder="••••••••" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoLogin()">
-          </div>
-          <button onclick="sooDoLogin()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Sign In</button>
-        </div>
-        <!-- Register panel -->
-        <div id="soo-panel-reg" style="display:none">
-          <div style="margin-bottom:14px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Your Name</label>
-            <input id="soo-reg-name" type="text" placeholder="e.g. Brent" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
-          </div>
-          <div style="margin-bottom:14px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email</label>
-            <input id="soo-reg-email" type="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
-          </div>
-          <div style="margin-bottom:20px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
-            <input id="soo-reg-pass" type="password" placeholder="Min 6 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoRegister()">
-          </div>
-          <button onclick="sooDoRegister()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Create Account</button>
-        </div>
-        <p id="soo-auth-err" style="color:var(--red);font-size:13px;margin-top:12px;text-align:center;min-height:18px"></p>
-      </div>
-    </div>
-  </div>
-</div>
-<style>
-#soo-tab-login.on,#soo-tab-reg.on{color:var(--acc);border-bottom-color:var(--acc)!important}
-</style>
 </body>
 </html>
