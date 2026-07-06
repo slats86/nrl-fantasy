@@ -78,7 +78,7 @@ input:focus,select:focus{border-color:var(--acc)}
 .stat.warn .v{color:var(--red)}
 /* field */
 .field{background:linear-gradient(180deg,#10301c,#0d2717 60%,#10301c);border:1px solid #1e4d2e;border-radius:14px;padding:16px 8px;position:relative;overflow:hidden}
-.field:before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(180deg,transparent 0 56px,rgba(255,255,255,.035) 56px 112px)}
+.field:before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(180deg,transparent 0 56px,rgba(255,255,255,.035) 56px 112px);pointer-events:none}
 .frow{display:flex;justify-content:center;gap:10px;margin:8px 0;position:relative;flex-wrap:wrap}
 .frow-label{text-align:center;color:#5e9b74;font-size:10px;letter-spacing:2px;font-weight:700;margin-top:6px}
 .pcard{width:108px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center;cursor:pointer;position:relative;transition:transform .08s}
@@ -283,7 +283,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .soo-tab.on{background:var(--acc);color:var(--bg)}
 .soo-tab:hover:not(.on){color:var(--txt)}
 .soo-slots{display:flex;flex-direction:column;gap:8px}
-.soo-slot{display:flex;align-items:center;gap:10px;background:#0d1f12;border:1px solid #1e3d22;border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s}
+.soo-slot{display:flex;align-items:center;gap:10px;background:#0d1f12;border:1px solid #1e3d22;border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;position:relative;z-index:1}
 .soo-slot:hover{border-color:var(--acc)}
 .soo-pos-badge{background:rgba(132,204,22,.18);border:1px solid rgba(132,204,22,.3);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:800;color:#a3d977;min-width:36px;text-align:center;flex-shrink:0}
 .soo-pos-label{font-size:12px;color:var(--dim);min-width:60px;flex-shrink:0}
@@ -3638,7 +3638,7 @@ function renderSooPicks(g){
     const p=pid!=null?PLAYERS[pid]:null;
     const score=sooRoundScore(pid,g);
     const isActive=slot&&slot.key===pos.key;
-    const clickAttr=locked?'':`onclick="S.origin.sooSlotPick=S.origin.sooSlotPick&&S.origin.sooSlotPick.key==='${pos.key}'?null:{key:'${pos.key}',posId:${pos.posId}};renderOrigin()"`;
+    const clickAttr=locked?'':`onclick="sooSetSlot('${pos.key}',${pos.posId})"`;
     return`<div class="soo-slot${locked?' soo-slot-locked':''}${isActive?' soo-slot-active':''}" ${clickAttr} style="cursor:${locked?'default':'pointer'}">
       <div class="soo-pos-badge">${pos.key}</div>
       ${p?`
@@ -4241,6 +4241,14 @@ function sooSelect(posKey,pid,gameNum){
   sooSyncPicks();
 }
 
+function sooSetSlot(key,posId){
+  if(S.origin.sooSlotPick&&S.origin.sooSlotPick.key===key){
+    S.origin.sooSlotPick=null;
+  }else{
+    S.origin.sooSlotPick={key:key,posId:posId};
+  }
+  renderOrigin();
+}
 function sooRemove(posKey,gameNum){
   if(S.origin.picks[gameNum])delete S.origin.picks[gameNum][posKey];
   save();renderOrigin();
