@@ -283,7 +283,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .soo-tab.on{background:var(--acc);color:var(--bg)}
 .soo-tab:hover:not(.on){color:var(--txt)}
 .soo-slots{display:flex;flex-direction:column;gap:8px}
-.soo-slot{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.soo-slot{display:flex;align-items:center;gap:10px;background:#0d1f12;border:1px solid #1e3d22;border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s}
 .soo-slot:hover{border-color:var(--acc)}
 .soo-pos-badge{background:rgba(132,204,22,.18);border:1px solid rgba(132,204,22,.3);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:800;color:#a3d977;min-width:36px;text-align:center;flex-shrink:0}
 .soo-pos-label{font-size:12px;color:var(--dim);min-width:60px;flex-shrink:0}
@@ -3650,18 +3650,7 @@ function renderSooPicks(g){
     </div>`;
   }
 
-  const groups=[
-    {label:'FULLBACK / WINGERS', keys:['FB','WG']},
-    {label:'CENTRES / HALVES',   keys:['CTR','HLF']},
-    {label:'FORWARDS',           keys:['HOK','MID','EDG']},
-  ];
-  const fieldHTML=groups.map(grp=>`
-    <div class="field-section">
-      <div class="field-label">${grp.label}</div>
-      <div class="field-row" style="justify-content:center;gap:8px">
-        ${grp.keys.map(k=>mkSlot(SOO_POS.find(p=>p.key===k))).join('')}
-      </div>
-    </div>`).join('');
+  const fieldHTML=`<div style="display:flex;flex-direction:column;gap:8px">${SOO_POS.map(pos=>mkSlot(pos)).join('')}</div>`;
 
   /* ── Player pool ── */
   const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
