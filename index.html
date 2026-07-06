@@ -658,7 +658,7 @@ function showApp(){
     const tb=document.getElementById('topbar');if(tb)tb.style.display='none';
     const bt=document.getElementById('bottom-tabbar');if(bt)bt.style.display='none';
     const mw=document.getElementById('main-wrap');if(mw){mw.style.paddingTop='0';}
-    const am=document.getElementById('app-main');if(am){am.style.maxWidth='640px';am.style.margin='0 auto';am.style.padding='0 12px';}
+    const am=document.getElementById('app-main');if(am){am.style.maxWidth='1100px';am.style.margin='0 auto';am.style.padding='0 16px';}
     return;
   }
   if(!S.user){
@@ -3667,61 +3667,70 @@ function renderSooPicks(g){
 function renderSooStats(g){
   const nm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
   const squad=SOO_SQUAD_NAMES[g];
-  /* Build list of all SoO players for this game, sorted by position then avg */
-  const squadPlayers=PLAYERS.filter(p=>squad&&squad.has(nm(p.name))).sort((a,b)=>b.avg-a.avg);
-  if(!squadPlayers.length)return`<div class="card"><p class="muted">No squad data for Game ${g}.</p></div>`;
-
-  /* Sort control */
   const sortKey=S.origin.statSort||'avg';
-  const sorted=[...squadPlayers].sort((a,b)=>{
-    if(sortKey==='name')return a.name.localeCompare(b.name);
-    if(sortKey==='last')return((OFFS[b.id]?OFFS[b.id][MAXR-1]:null)||0)-((OFFS[a.id]?OFFS[a.id][MAXR-1]:null)||0);
-    return b.avg-a.avg; /* default: avg */
+  const sortDir=S.origin.statDir||-1;
+
+  let list=PLAYERS.filter(p=>squad&&squad.has(nm(p.name)));
+  list.sort((a,b)=>{
+    if(sortKey==='name')return sortDir*a.name.localeCompare(b.name);
+    if(sortKey==='l3')return sortDir*((b.l3||0)-(a.l3||0));
+    if(sortKey==='hi')return sortDir*((b.hi||0)-(a.hi||0));
+    if(sortKey==='last'){
+      const va=OFFS[a.id]?OFFS[a.id][MAXR-1]:null;
+      const vb=OFFS[b.id]?OFFS[b.id][MAXR-1]:null;
+      return sortDir*((vb||0)-(va||0));
+    }
+    return sortDir*((b.avg||0)-(a.avg||0));
   });
 
-  const rows=sorted.map(p=>{
-    const avg=p.avg||0;
-    /* last 5 NRL rounds */
-    const recent=[];
-    for(let r=MAXR;r>=Math.max(1,MAXR-4);r--){
-      const v=OFFS[p.id]?OFFS[p.id][r-1]:null;
-      recent.push(v!=null?`<span class="tag" style="font-size:11px;padding:2px 6px;background:${v>=60?'rgba(0,230,118,.18)':v<20?'rgba(255,77,77,.15)':'var(--line)'}">${v}</span>`:'<span class="muted" style="font-size:11px">—</span>');
-    }
-    /* What position(s) do they cover? */
+  const sortTh=(k,label)=>{
+    const on=sortKey===k;
+    const arr=on?(sortDir<0?' ▼':' ▲'):'';
+    return`<th style="cursor:pointer;white-space:nowrap;text-align:center${on?';color:var(--acc)':''}" onclick="S.origin.statSort='${k}';S.origin.statDir=${on?-sortDir:-1};renderOrigin()">${label}${arr}</th>`;
+  };
+
+  const rows=list.map(p=>{
     const posLabels=SOO_POS.filter(sp=>{
       if(sp.key==='FB')return SOO_POS_MAP[g]&&SOO_POS_MAP[g].FB&&SOO_POS_MAP[g].FB.includes(nm(p.name));
       if(sp.key==='WG')return SOO_POS_MAP[g]&&SOO_POS_MAP[g].WG&&SOO_POS_MAP[g].WG.includes(nm(p.name));
       return p.pos.includes(sp.posId);
-    }).map(sp=>sp.key).join('/');
+    }).map(sp=>`<span class="posb">${sp.key}</span>`).join('');
+    const last5=[];
+    for(let r=MAXR;r>=Math.max(1,MAXR-4);r--){
+      const v=OFFS[p.id]?OFFS[p.id][r-1]:null;
+      last5.push(v!=null
+        ?`<span class="tag" style="padding:2px 6px;font-size:11px;background:${v>=60?'rgba(0,230,118,.18)':v<20?'rgba(255,77,77,.15)':'var(--line)'};color:${v>=60?'var(--acc)':v<20?'var(--red)':'var(--txt)'}">${v}</span>`
+        :'<span class="muted" style="font-size:11px">—</span>');
+    }
     return`<tr>
-      <td style="width:34px">${avatar(p,28)}</td>
-      <td>
-        <b style="font-size:13px">${esc(p.name)}</b>
-        <br><span class="muted" style="font-size:11px">${CLUBS[p.sq]?CLUBS[p.sq].s:''} · <span style="color:var(--acc);font-weight:700">${posLabels||'—'}</span></span>
-      </td>
-      <td style="text-align:center;font-weight:700">${avg>0?avg.toFixed(1):'—'}</td>
-      <td style="text-align:center;padding:4px 2px">${recent.join(' ')}</td>
+      <td style="width:32px;padding:6px 4px">${avatar(p,28)}</td>
+      <td style="min-width:130px"><b style="font-size:13px">${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${CLUBS[p.sq]?CLUBS[p.sq].s:''}</span></td>
+      <td style="text-align:center">${posLabels||'—'}</td>
+      <td style="text-align:center"><b>${p.avg||'–'}</b></td>
+      <td style="text-align:center">${p.l3||'–'}</td>
+      <td style="text-align:center">${p.hi||'–'}</td>
+      <td style="text-align:center">${p.gp||'–'}</td>
+      <td style="padding-right:4px">${last5.join(' ')}</td>
     </tr>`;
   }).join('');
 
-  const sortBtn=(k,label)=>`<button onclick="S.origin.statSort='${k}';renderOrigin()" style="padding:5px 12px;border-radius:8px;border:1px solid var(--line);background:${sortKey===k?'var(--acc)':'var(--card2)'};color:${sortKey===k?'#000':'var(--txt)'};font-size:12px;font-weight:600;cursor:pointer">${label}</button>`;
-
   return`<div class="card" style="overflow-x:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-      <div>
-        <b style="font-size:15px">Game ${g} Squad</b>
-        <span class="muted" style="font-size:12px;margin-left:8px">${squadPlayers.length} players</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div><b style="font-size:15px">Game ${g} — Full Squad Stats</b>
+        <span class="muted" style="font-size:12px;margin-left:8px">${list.length} players</span></div>
+      <div class="pos-filter" style="margin:0">
+        ${['avg','l3','hi','last','name'].map(k=>`<button class="${sortKey===k?'on':''}" onclick="S.origin.statSort='${k}';S.origin.statDir=-1;renderOrigin()">${k==='avg'?'Avg':k==='l3'?'L3':k==='hi'?'High':k==='last'?'Last Rd':'Name'}</button>`).join('')}
       </div>
-      <div style="display:flex;gap:6px">${sortBtn('avg','Avg')}&nbsp;${sortBtn('last','Last Rd')}&nbsp;${sortBtn('name','Name')}</div>
     </div>
     <table>
       <thead><tr>
-        <th colspan="2">Player</th>
-        <th style="text-align:center">Season Avg</th>
-        <th style="text-align:center">Last 5 NRL Rounds</th>
+        <th></th><th>Player</th><th style="text-align:center">Pos</th>
+        ${sortTh('avg','Avg')}${sortTh('l3','L3')}${sortTh('hi','High')}${sortTh('last','Last Rd')}
+        <th>Last 5 NRL Rounds</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    <p class="tooltip" style="margin-top:8px">Avg = season avg · L3 = last 3 avg · High = season best · click column headers to sort</p>
   </div>`;
 }
 
