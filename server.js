@@ -10,12 +10,16 @@ const PORT   = process.env.PORT || 3000;
 const DATA_DIR    = path.join(__dirname, 'data');
 const LEAGUE_FILE = path.join(DATA_DIR, 'soo-leagues.json');
 const USERS_FILE  = path.join(DATA_DIR, 'soo-users.json');
+const SCORES_FILE = path.join(DATA_DIR, 'soo-scores.json');
 let leagues = {};
 let users   = {};  /* keyed by email (lowercase) */
 let tokens  = {};  /* token → email */
+/* sooScores: { "gameNum:playerId": points }  e.g. { "3:1234": 87 } */
+let sooScores = {};
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e) {}
 try { leagues = JSON.parse(fs.readFileSync(LEAGUE_FILE, 'utf8')); } catch(e) {}
+try { sooScores = JSON.parse(fs.readFileSync(SCORES_FILE, 'utf8')); } catch(e) {}
 try {
   users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
   Object.values(users).forEach(u => { if(u.token) tokens[u.token] = u.email; });
@@ -23,6 +27,7 @@ try {
 
 function saveLeagues() { try { fs.writeFileSync(LEAGUE_FILE, JSON.stringify(leagues)); } catch(e) {} }
 function saveUsers()   { try { fs.writeFileSync(USERS_FILE,  JSON.stringify(users));   } catch(e) {} }
+function saveScores()  { try { fs.writeFileSync(SCORES_FILE, JSON.stringify(sooScores)); } catch(e) {} }
 
 function hashPwd(password, salt) {
   return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
@@ -279,6 +284,48 @@ http.createServer(function(req, res) {
       saveLeagues();
       jsonRes(res, 200, { ok: true });
     });
+    return;
+  }
+
+  /* ── SoO Scores API ── */
+
+  /* GET /api/soo/scores — returns all stored scores { "gameNum:playerId": pts } */
+  if (url === '/api/soo/scores' && req.method === 'GET') {
+    jsonRes(res, 200, sooScores);
+    return;
+  }
+
+  /* POST /api/soo/scores  { secret, game, scores: { playerId: pts, ... } }
+     Admin-only: enter scores after each game */
+  if (url === '/api/soo/scores' && req.method === 'POST') {
+    readBody(req, (err, body) => {
+      if (err) return jsonRes(res, 400, {error: 'bad json'});
+      if (body.secret !== 'SCORESECRET2026') return jsonRes(res, 403, {error: 'Forbidden'});
+      const game = parseInt(body.game);
+      if (!game || !body.scores) return jsonRes(res, 400, {error: 'game and scores required'});
+      /* Merge scores: { playerId: pts } → store as "game:playerId" */
+      Object.entries(body.scores).forEach(([pid, pts]) => {
+        sooScores[`${game}:${pid}`] = Number(pts);
+      });
+      saveScores();
+      jsonRes(res, 200, {ok: true, stored: Object.keys(body.scores).length});
+    });
+    return;
+  }
+
+  /* DELETE /api/soo/scores?secret=SCORESECRET2026&game=3 — clear scores for a game */
+  if (url.startsWith('/api/soo/scores') && req.method === 'DELETE') {
+    const qs = req.url.split('?')[1] || '';
+    if (!qs.includes('secret=SCORESECRET2026')) return jsonRes(res, 403, {error: 'Forbidden'});
+    const gameMatch = qs.match(/game=(\d)/);
+    if (gameMatch) {
+      const g = gameMatch[1];
+      Object.keys(sooScores).forEach(k => { if(k.startsWith(g+':')) delete sooScores[k]; });
+    } else {
+      sooScores = {};
+    }
+    saveScores();
+    jsonRes(res, 200, {ok: true});
     return;
   }
 

@@ -3421,7 +3421,7 @@ const SOO_GAMES=[
   {id:3,label:'Game III', short:'G3'},
 ];
 /* Games 1 and 2 are finished for 2026 — always locked */
-const LOCKED_SOO_GAMES=new Set([1,2]);
+const LOCKED_SOO_GAMES=new Set([1,2,3]);
 /* SOO_ROUNDS: {gameNum→roundId} — populated from rounds.json */
 let SOO_ROUNDS={};
 /* Official 2026 SoO squad names (normalised: lowercase, alphanumeric only) */
@@ -3488,13 +3488,27 @@ function detectSooRounds(rounds){
 }
 
 function sooRoundScore(pid,gameNum){
+  /* Check admin-entered server scores first */
+  const serverKey=String(gameNum)+':'+String(pid);
+  if(_sooServerScores[serverKey]!=null)return _sooServerScores[serverKey];
+  /* Fall back to NRL Fantasy API scores (only works if SoO appears in rounds.json) */
   const rId=SOO_ROUNDS[gameNum];
   if(!rId||pid==null)return null;
-  /* Use live score if round is active */
   if(LIVE.round===rId&&LIVE.scores[pid]!=null)return LIVE.scores[pid];
   return(OFFS[pid]&&OFFS[pid][rId-1]!=null)?OFFS[pid][rId-1]:null;
 }
 
+/* Fetch SoO scores from server (admin-entered after each game) */
+let _sooServerScores={};
+async function sooFetchServerScores(){
+  try{
+    const r=await fetch(SOO_API+'/scores');
+    if(r.ok){
+      _sooServerScores=await r.json();
+      renderOrigin();
+    }
+  }catch(e){}
+}
 function sooTeamTotal(gameNum){
   const picks=(S.origin.picks||{})[gameNum]||{};
   const hasRound=!!SOO_ROUNDS[gameNum];
@@ -3507,6 +3521,7 @@ function sooTeamTotal(gameNum){
   return hasAny?total:null;
 }
 
+let _sooScoresFetched=false;
 function sooInitState(){
   if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks'};
   S.origin.game=3;
@@ -3572,6 +3587,7 @@ function sooSignOut(){
 function renderOrigin(){
   const el=$('#pg-origin');
   sooInitState();
+  if(!_sooScoresFetched){_sooScoresFetched=true;sooFetchServerScores();}
   const g=S.origin.game||1;
   const tab=S.origin.tab||'picks';
   const picks=S.origin.picks[g]||{};
