@@ -4010,12 +4010,27 @@ async function sooFetchLeague(forceRefresh){
     if(_sooLeagueCache&&lg.teamId){
       const myTeam=_sooLeagueCache.teams&&_sooLeagueCache.teams.find(t=>t.id===lg.teamId);
       if(myTeam&&myTeam.picks){
+        /* Server has picks → sync down to client */
         sooInitState();
         [1,2,3].forEach(g=>{
           const gPicks=myTeam.picks[g]||myTeam.picks[String(g)]||{};
           if(Object.keys(gPicks).length>0)S.origin.picks[g]=gPicks;
         });
         save();
+      } else if(myTeam){
+        /* Server has no picks for this user → push local picks up */
+        const localPicks=S.origin.picks||{};
+        const hasLocal=[1,2,3].some(g=>Object.keys(localPicks[g]||{}).length>0);
+        if(hasLocal){
+          try{
+            await fetch(SOO_API+'/league/'+lg.code+'/picks',{
+              method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({teamId:lg.teamId,picks:localPicks,teamName:lg.teamName})
+            });
+            const r2=await fetch(SOO_API+'/league/'+lg.code);
+            if(r2.ok)_sooLeagueCache=await r2.json();
+          }catch(e){}
+        }
       }
     }
   }catch(e){_sooLeagueCache=null;_sooLeagueFetchFailed=true;}
