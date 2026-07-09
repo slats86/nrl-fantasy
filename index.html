@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Fantasy Footy — NRL Edition (Unofficial)</title>
 <style>
 :root{
@@ -317,6 +317,29 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 #soo-fw-canvas{position:fixed;inset:0;pointer-events:none;z-index:199;display:none}
 @keyframes soo-fadein{from{opacity:0}to{opacity:1}}
 @keyframes soo-slideup{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* ── Mobile: stats table ── */
+.pl-main-table-wrap{overflow-x:auto}
+@media(max-width:600px){
+.pl-main-table-wrap{overflow-x:visible!important}
+.pl-main-table th:nth-child(3),.pl-main-table td:nth-child(3),
+.pl-main-table th:nth-child(8),.pl-main-table td:nth-child(8),
+.pl-main-table th:nth-child(9),.pl-main-table td:nth-child(9),
+.pl-main-table th:nth-child(10),.pl-main-table td:nth-child(10),
+.pl-main-table th:nth-child(11),.pl-main-table td:nth-child(11),
+.pl-main-table th:nth-child(12),.pl-main-table td:nth-child(12),
+.pl-main-table th:nth-child(13),.pl-main-table td:nth-child(13){display:none}
+}
+/* ── Format tabs (Leagues + C.Games) ── */
+.format-tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:16px}
+.format-tabs>div{flex:1;text-align:center;padding:10px 0;font-size:13px;font-weight:600;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;margin-bottom:-1px}
+.format-tabs>div.on{color:var(--acc);border-bottom-color:var(--acc)}
+/* ── C.Games sub-tab pills (mobile only) ── */
+.cgames-pills{display:none}
+@media(max-width:600px){
+.cgames-pills{display:flex;border-bottom:1px solid var(--line);margin-bottom:16px}
+.cgames-pills>div{flex:1;text-align:center;padding:9px 0;font-size:12px;font-weight:600;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;margin-bottom:-1px}
+.cgames-pills>div.on{color:var(--acc);border-bottom-color:var(--acc)}
+}
 </style>
 <body>
 <div id="login-page" style="display:none">
@@ -404,10 +427,10 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
   <nav id="bottom-tabbar">
     <div class="btab" data-pg="home"><span class="bi">📈</span>Home</div>
     <div class="btab on" data-pg="classic"><span class="bi">🏠</span>Classic</div>
-    <div class="btab" data-pg="draft"><span class="bi">📋</span>Draft</div>
-    <div class="btab" data-pg="custom"><span class="bi">⚙️</span>Custom</div>
-    <div class="btab" data-pg="origin"><span class="bi">🦁</span>Origin</div>
-    <div class="btab" data-pg="players"><span class="bi">📊</span>More</div>
+    <div class="btab" data-pg="match"><span class="bi">⚡</span>Match</div>
+    <div class="btab" data-pg="leagues"><span class="bi">🏆</span>Leagues</div>
+    <div class="btab" data-pg="cgames"><span class="bi">🎮</span>C.Games</div>
+    <div class="btab" data-pg="players"><span class="bi">📊</span>Stats</div>
   </nav>
 </div>
 <div id="modal-bg"><div id="modal"></div></div>
@@ -648,6 +671,15 @@ function completeLogin(method){
   save();showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic')); /* page routing unchanged */
 }
 function showApp(){
+  /* Check for password reset token in URL */
+  const _resetTok=new URLSearchParams(window.location.search).get('resetToken');
+  if(_resetTok&&!S.sooAuth){
+    const lp=document.getElementById('login-page');const sh=document.getElementById('app-shell');
+    const sl=document.getElementById('soo-login-page');
+    if(lp)lp.style.display='none';if(sh)sh.style.display='none';
+    if(sl){sl.style.display='flex';setTimeout(()=>{sooShowAuthTab('reset');},50);}
+    return;
+  }
   const shell=document.getElementById('app-shell');
   const sooLoginEl=document.getElementById('soo-login-page');
   /* Single unified auth — one account for everything */
@@ -3584,8 +3616,67 @@ function sooShowAuthTab(tab){
   document.getElementById('soo-tab-reg').classList.toggle('on',tab==='reg');
   document.getElementById('soo-panel-login').style.display=tab==='login'?'block':'none';
   document.getElementById('soo-panel-reg').style.display=tab==='reg'?'block':'none';
+  document.getElementById('soo-panel-forgot').style.display=tab==='forgot'?'block':'none';
+  document.getElementById('soo-panel-reset').style.display=tab==='reset'?'block':'none';
   document.getElementById('soo-auth-err').textContent='';
+  /* Tab button highlight — only login/reg have tab buttons */
+  const tl=document.getElementById('soo-tab-login');
+  const tr=document.getElementById('soo-tab-reg');
+  if(tl)tl.className=tab==='login'?'on':'';
+  if(tr)tr.className=tab==='reg'?'on':'';
 }
+
+async function sooDoForgot(){
+  const email=document.getElementById('soo-forgot-email').value.trim();
+  const err=document.getElementById('soo-auth-err');
+  err.textContent='';
+  if(!email){err.textContent='Please enter your email.';return;}
+  const btn=document.querySelector('#soo-panel-forgot .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Sending…';}
+  try{
+    await fetch('/api/soo/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    /* Always show success — don't reveal if email exists */
+    if(btn){btn.disabled=false;btn.textContent='Send Reset Link';}
+    err.style.color='var(--acc)';
+    err.textContent='If that email is registered, a reset link is on its way. Check your inbox (and spam).';
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Send Reset Link';}
+    err.style.color='var(--red)';
+    err.textContent='Something went wrong. Try again.';
+  }
+}
+
+async function sooDoReset(){
+  const pass=document.getElementById('soo-reset-pass').value;
+  const pass2=document.getElementById('soo-reset-pass2').value;
+  const err=document.getElementById('soo-auth-err');
+  err.style.color='var(--red)';err.textContent='';
+  if(pass.length<6){err.textContent='Password must be at least 6 characters.';return;}
+  if(pass!==pass2){err.textContent='Passwords do not match.';return;}
+  const tok=new URLSearchParams(window.location.search).get('resetToken');
+  if(!tok){err.textContent='Missing reset token.';return;}
+  const btn=document.querySelector('#soo-panel-reset .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const r=await fetch('/api/soo/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:tok,password:pass})});
+    const d=await r.json();
+    if(!r.ok){if(btn){btn.disabled=false;btn.textContent='Set New Password';}err.textContent=d.error||'Failed';return;}
+    /* Log in automatically */
+    const prevId=S.sooAuth&&S.sooAuth.userId;
+    S.sooAuth={token:d.token,userId:d.userId,name:d.name,email:d.email};
+    if(prevId&&prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
+    if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
+    if(d.leagueCode&&(!S.origin.league||!S.origin.league.code)){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.sooAuth.name||''};}
+    save();
+    /* Remove token from URL */
+    window.history.replaceState({},'',window.location.pathname);
+    showApp();setPage('origin');
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Set New Password';}
+    err.textContent='Something went wrong. Try again.';
+  }
+}
+
 function sooSignOut(){
   _sooMyLeagueFetched=false;
   S.sooAuth=null;S.user=null;
@@ -3621,7 +3712,7 @@ function renderOrigin(){
   const tabsHTML=`
     <div class="soo-tabs" style="margin-bottom:12px">
       <div class="soo-tab${tab==='picks'?' on':''}" onclick="S.origin.tab='picks';renderOrigin()">My Team</div>
-      <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin()">👥 League</div>
+      <div class="soo-tab${tab==='league'?' on':''}" onclick="S.origin.tab='league';renderOrigin();_sooResultNotifShown=false;setTimeout(sooMaybeShowResult,250)">👥 League</div>
     </div>`;
   const sooLiveBadge=(()=>{
     const rId=SOO_ROUNDS[3];
@@ -4001,6 +4092,7 @@ let _sooLeagueCache=null;
 let _sooLeagueFetching=false;
 let _sooLeagueFetchFailed=false;
 let _sooResultNotifShown=false;
+let _cgamesLastTab='custom';
 let _sooExpandedTeam=null;
 let _sooMyLeagueFetched=false;
 
@@ -4096,12 +4188,7 @@ function sooShowResult(){
   );
   if(!gamesWithScores.length)return;
 
-  const notifiedKey='sooNotifiedGames_'+(lg.code||'x');
-  const notified=new Set(JSON.parse(localStorage.getItem(notifiedKey)||'[]'));
-  const newGames=gamesWithScores.filter(sg=>!notified.has(sg.id));
-  if(!newGames.length)return;
-
-  const sg=newGames[newGames.length-1];
+  const sg=gamesWithScores[gamesWithScores.length-1];
 
   const rows=data.teams.map(t=>{
     const tot=[1,2,3].reduce((s,g)=>s+sooLeagueTeamGameScore(t.picks,g),0);
@@ -4171,8 +4258,6 @@ function sooShowResult(){
 
   document.getElementById('soo-result-overlay').classList.add('on');
   _sooResultNotifShown=true;
-  notified.add(sg.id);
-  localStorage.setItem(notifiedKey,JSON.stringify([...notified]));
   if(isWinner)sooFireworks();
 }
 
@@ -4625,6 +4710,26 @@ function leagueRulesHTML(mode){
   }
   return '';
 }
+function cgamesPills(active){
+  window._cgamesLastTab=active;
+  return '<div class="cgames-pills">'
+    +'<div class="'+(active==='custom'?'on':'')+'" onclick="setPage('custom')">⚙️ Custom</div>'
+    +'<div class="'+(active==='draft'?'on':'')+'" onclick="setPage('draft')">📋 Draft</div>'
+    +'<div class="'+(active==='origin'?'on':'')+'" onclick="setPage('origin')">🦁 Origin</div>'
+    +'</div>';
+}
+function injectCGamesPills(pg){
+  const el=document.getElementById('pg-'+pg);
+  if(!el)return;
+  const ex=el.querySelector('.cgames-pills');
+  if(ex)ex.remove();
+  const d=document.createElement('div');
+  d.className='cgames-pills';
+  d.innerHTML='<div class="'+(pg==='custom'?'on':'')+'" onclick="setPage('custom')">⚙️ Custom</div>'
+    +'<div class="'+(pg==='draft'?'on':'')+'" onclick="setPage('draft')">📋 Draft</div>'
+    +'<div class="'+(pg==='origin'?'on':'')+'" onclick="setPage('origin')">🦁 Origin</div>';
+  el.insertBefore(d,el.firstChild);
+}
 function lgModeCard(mode,icon,title,league,createBtn){
   const status=league?'active':'open';
   const id='lgexpand-'+mode;
@@ -4651,58 +4756,101 @@ function lgModeCard(mode,icon,title,league,createBtn){
 }
 function renderLeagues(){
   const el=$('#pg-leagues');
-  const classicLg=S.league?{name:S.league.name}:null;
-  const customLg=S.customLeague||null;
-  const draftLg=(S.draft&&S.draft.league)?S.draft.league:null;
-  /* ── If classic league is active, also show ladder below hub ── */
-  let ladderHTML='';
-  if(S.league){
-    const lg=S.league;
-    const ladder=leagueLadder(lg,false);
-    const nextR=Math.min(S.round,24);
-    const fx=leagueFixtures(lg.teams.length,nextR);
-    const myFx=fx.find(([a,b])=>a===0||b===0);
-    const oppI=myFx?(myFx[0]===0?myFx[1]:myFx[0]):null;
-    let lastHTML='';
-    const r=S.round-1;
-    if(r>=1&&lg.history&&lg.history[r]){
-      const fxl=leagueFixtures(lg.teams.length,r);
-      const mf=fxl.find(([a,b])=>a===0||b===0);
-      if(mf){
-        const op=mf[0]===0?mf[1]:mf[0];
-        const myS=lineupScore(lg.history[r][0],r).total,opS=lineupScore(lg.history[r][op],r).total;
-        lastHTML=`<div class="notice">Round ${r}: <b>${esc(lg.teams[0].name)} ${myS}</b> ${myS>opS?'<span class="good">def.</span>':myS<opS?'<span class="bad">lost to</span>':'drew with'} <b>${esc(lg.teams[op].name)} ${opS}</b></div>`;
-      }
-    }
-    ladderHTML=`
-    <h3 style="font-size:16px;margin:20px 0 12px">Classic League — ${esc(lg.name)}</h3>
-    ${lastHTML}
-    <div class="grid2">
-     <div class="card"><h3>Ladder</h3>
-      <table><thead><tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>D</th><th>PF</th><th>PA</th><th>Pts</th></tr></thead><tbody>
-      ${ladder.map((t,i)=>`<tr style="${t.i===0?'background:rgba(0,230,118,.07)':''}"><td class="ladder-pos">${i+1}</td><td><b>${esc(t.name)}</b>${t.i===0?' <span class="good">(you)</span>':''}</td><td>${t.w}</td><td>${t.l}</td><td>${t.d}</td><td>${t.pf}</td><td>${t.pa}</td><td><b>${t.pts}</b></td></tr>`).join('')}
-      </tbody></table>
-      ${finalsHTML(lg,false)}
-     </div>
-     <div>
-      <div class="card"><h3>Round ${nextR} fixtures</h3>
-       ${fx.map(([a,b])=>`<div class="match"><div class="teams"><div class="t">${esc(lg.teams[a].name)}${a===0?' <span class="good">(you)</span>':''}</div><div class="score muted">vs</div><div class="t away">${b===0?'<span class="good">(you)</span> ':''}${esc(lg.teams[b].name)}</div></div></div>`).join('')}
+  const tab=S.ui.leaguesTab||'classic';
+  const tabsHTML='<div class="format-tabs">'
+    +'<div class="'+(tab==='classic'?'on':'')+'" onclick="S.ui.leaguesTab='classic';renderLeagues()">🏠 Classic</div>'
+    +'<div class="'+(tab==='draft'?'on':'')+'" onclick="S.ui.leaguesTab='draft';renderLeagues()">📋 Draft</div>'
+    +'<div class="'+(tab==='custom'?'on':'')+'" onclick="S.ui.leaguesTab='custom';renderLeagues()">⚙️ Custom</div>'
+    +'</div>';
+  let content='';
+  if(tab==='classic'){
+    if(S.league){
+      const ladder=leagueLadder(S.league,false);
+      const myPos=ladder.findIndex(t=>t.i===0)+1;
+      const myData=ladder.find(t=>t.i===0)||{};
+      const pos=myPos===1?'1st':myPos===2?'2nd':myPos===3?'3rd':myPos+'th';
+      const nextR=Math.min(S.round,24);
+      const fx=leagueFixtures(S.league.teams.length,nextR);
+      const myFx=fx.find(([a,b])=>a===0||b===0);
+      const oppI=myFx?(myFx[0]===0?myFx[1]:myFx[0]):null;
+      content=`<div class="card" style="margin-bottom:10px">
+        <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(S.league.name)}</div>
+        <div class="muted" style="font-size:12px">${S.league.teams.length} teams · Round ${S.round}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;background:rgba(0,230,118,.07);border-radius:8px;cursor:pointer;border:1px solid rgba(0,230,118,.15)" onclick="setPage('classic')">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0">${esc(S.league.teams[0].name||'M').charAt(0)}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">${esc(S.league.teams[0].name)}</div>
+            <div class="muted" style="font-size:12px">${pos} place · ${myData.pf||0} pts scored</div>
+          </div>
+          <span style="color:var(--acc);font-size:20px">›</span>
+        </div>
       </div>
-      ${oppI!=null?`<div class="card"><h3>Scout: ${esc(lg.teams[oppI].name)}</h3>
-       <p class="muted" style="margin-bottom:8px">Projected score: <b>${Math.round(projLineup(lg.teams[oppI].line))}</b> · Your projection: <b>${Math.round(projLineup(S.classic.line))}</b></p>
-       ${lineSlots(lg.teams[oppI].line).filter(s=>s.kind!=='res'&&s.pid!=null).map(s=>{const p=PLAYERS[s.pid];return `<div class="flex" style="padding:3px 0;border-bottom:1px solid var(--line)">${avatar(p,24)} ${esc(p.name)} <span class="muted">${posStr(p)}</span><span class="spacer"></span>avg ${p.avg||'–'}</div>`}).join('')}
-      </div>`:''}
-     </div>
-    </div>`;
+      <div class="card"><h3>Ladder</h3>
+        <table><thead><tr><th>#</th><th>Team</th><th>W</th><th>L</th><th>PF</th><th>Pts</th></tr></thead><tbody>
+        ${ladder.map((t,i)=>`<tr style="${t.i===0?'background:rgba(0,230,118,.07)':''}"><td class="ladder-pos">${i+1}</td><td><b>${esc(t.name)}</b>${t.i===0?' <span class="good">(you)</span>':''}</td><td>${t.w}</td><td>${t.l}</td><td>${t.pf}</td><td><b>${t.pts}</b></td></tr>`).join('')}
+        </tbody></table>
+        ${finalsHTML(S.league,false)}
+      </div>
+      ${oppI!=null?`<div class="card"><h3>Scout: ${esc(S.league.teams[oppI].name)}</h3>
+        <p class="muted" style="margin-bottom:8px">Projected: <b>${Math.round(projLineup(S.league.teams[oppI].line))}</b> · Your projection: <b>${Math.round(projLineup(S.classic.line))}</b></p>
+        ${lineSlots(S.league.teams[oppI].line).filter(s=>s.kind!=='res'&&s.pid!=null).map(s=>{const p=PLAYERS[s.pid];return `<div class="flex" style="padding:3px 0;border-bottom:1px solid var(--line)">${avatar(p,24)} ${esc(p.name)} <span class="muted">${posStr(p)}</span><span class="spacer"></span>avg ${p.avg||'–'}</div>`}).join('')}
+      </div>`:''}`;
+    } else {
+      content=`<div class="card notice" style="text-align:center;padding:24px">
+        <div style="font-size:28px;margin-bottom:8px">🏆</div>
+        <div style="font-weight:600;margin-bottom:12px">No Classic league yet</div>
+        <button class="btn" onclick="showCreateClassicLeagueModal()">Create Classic League →</button>
+      </div>`;
+    }
+  } else if(tab==='draft'){
+    const draftLg=S.draft&&S.draft.league;
+    if(draftLg){
+      content=`<div class="card">
+        <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(draftLg.name||'Draft League')}</div>
+        <div class="muted" style="font-size:12px">${draftLg.size||''} teams · Round ${S.round}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;background:rgba(0,230,118,.07);border-radius:8px;cursor:pointer;border:1px solid rgba(0,230,118,.15)" onclick="setPage('draft')">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0">D</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">My Draft Team</div>
+            <div class="muted" style="font-size:12px">Tap to manage your team</div>
+          </div>
+          <span style="color:var(--acc);font-size:20px">›</span>
+        </div>
+      </div>`;
+    } else {
+      content=`<div class="card notice" style="text-align:center;padding:24px">
+        <div style="font-size:28px;margin-bottom:8px">📋</div>
+        <div style="font-weight:600;margin-bottom:12px">No Draft league yet</div>
+        <button class="btn" onclick="setPage('cgames')">Go to Custom Games →</button>
+      </div>`;
+    }
+  } else {
+    const cl=S.customLeague;
+    if(cl){
+      content=`<div class="card">
+        <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(cl.n||cl.name||'Custom League')}</div>
+        <div class="muted" style="font-size:12px">Round ${S.round}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;background:rgba(0,230,118,.07);border-radius:8px;cursor:pointer;border:1px solid rgba(0,230,118,.15)" onclick="setPage('custom')">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0">${esc(cl.n||cl.name||'C').charAt(0)}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:14px">My Custom Team</div>
+            <div class="muted" style="font-size:12px">Tap to manage your team</div>
+          </div>
+          <span style="color:var(--acc);font-size:20px">›</span>
+        </div>
+      </div>`;
+    } else {
+      content=`<div class="card notice" style="text-align:center;padding:24px">
+        <div style="font-size:28px;margin-bottom:8px">⚙️</div>
+        <div style="font-weight:600;margin-bottom:12px">No Custom league yet</div>
+        <button class="btn" onclick="setPage('cgames')">Go to Custom Games →</button>
+      </div>`;
+    }
   }
-  el.innerHTML=`
-  <h3 style="font-size:18px;margin-bottom:4px">🏆 Leagues</h3>
-  <p class="muted" style="font-size:13px;margin-bottom:16px">Click any league to see its scoring rules and settings. Create leagues from each game mode tab.</p>
-  ${lgModeCard('classic','🏆','Classic',classicLg,'showCreateClassicLeagueModal()')}
-  ${lgModeCard('custom','⚙️','Custom',customLg,'setPage(\'custom\')')}
-  ${lgModeCard('draft','📋','Draft',draftLg?{name:draftLg.name||('Draft · '+draftLg.size+' teams')}:null,'setPage(\'draft\')')}
-  ${ladderHTML}`;
+  el.innerHTML=`<h3 style="font-size:18px;margin-bottom:12px">🏆 My Leagues</h3>${tabsHTML}${content}`;
 }
+
+
 function projLineup(line){
   let t=0;
   for(const s of lineSlots(line)){if(s.kind==='res'||s.pid==null)continue;t+=targetAvg(PLAYERS[s.pid])}
@@ -4992,6 +5140,34 @@ function byePlannerHTML(){
             <input id="soo-login-pass" type="password" placeholder="••••••••" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoLogin()">
           </div>
           <button onclick="sooDoLogin()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Sign In</button>
+          <div style="text-align:center;margin-top:14px">
+            <button onclick="sooShowAuthTab('forgot')" style="background:none;border:none;color:var(--dim);font-size:13px;cursor:pointer;text-decoration:underline">Forgot password?</button>
+          </div>
+        </div>
+        <!-- Forgot password panel -->
+        <div id="soo-panel-forgot" style="display:none">
+          <p style="font-size:13px;color:var(--dim);margin-bottom:16px">Enter your email and we'll send you a link to reset your password.</p>
+          <div style="margin-bottom:16px">
+            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email address</label>
+            <input id="soo-forgot-email" type="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoForgot()">
+          </div>
+          <button onclick="sooDoForgot()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Send Reset Link</button>
+          <div style="text-align:center;margin-top:14px">
+            <button onclick="sooShowAuthTab('login')" style="background:none;border:none;color:var(--dim);font-size:13px;cursor:pointer;text-decoration:underline">Back to sign in</button>
+          </div>
+        </div>
+        <!-- Reset password panel (shown when ?resetToken= is in URL) -->
+        <div id="soo-panel-reset" style="display:none">
+          <p style="font-size:13px;color:var(--dim);margin-bottom:16px">Choose a new password for your account.</p>
+          <div style="margin-bottom:16px">
+            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">New password</label>
+            <input id="soo-reset-pass" type="password" placeholder="Min 6 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoReset()">
+          </div>
+          <div style="margin-bottom:20px">
+            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Confirm password</label>
+            <input id="soo-reset-pass2" type="password" placeholder="Repeat password" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoReset()">
+          </div>
+          <button onclick="sooDoReset()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Set New Password</button>
         </div>
         <!-- Register panel -->
         <div id="soo-panel-reg" style="display:none">
@@ -5075,7 +5251,7 @@ function renderPlayers(){
      <select onchange="S.ui.plClub=+this.value;renderPlayers()"><option value="-1">All clubs</option>${CLUBS.map((c,i)=>`<option value="${i}" ${S.ui.plClub===i?'selected':''}>${c.n}</option>`).join('')}</select>
    </div>
    <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.plPos||0)===pi?'on':''}" onclick="S.ui.plPos=${pi};renderPlayers()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
-   <div style="overflow-x:auto"><table>
+   <div class="pl-main-table-wrap"><table class="pl-main-table">
    <thead><tr><th></th>${sortTh('name','Player')}<th>Club</th><th>Pos</th>${sortTh('price','Price')}${sortTh('avg','Avg')}${sortTh('l3','Last 3')}${sortTh('ppm','PPM')}${sortTh('trend','Form')}${sortTh('gp','Gms')}${sortTh('hi','High')}${sortTh('own','Own%')}<th>⇔</th></tr></thead>
    <tbody>
    ${list.slice(0,200).map(p=>{
@@ -5264,10 +5440,16 @@ function closeModal(){$('#modal-bg').classList.remove('on')}
 $('#modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')closeModal()});
 
 function setPage(pg){
+  if(pg==='cgames')pg=window._cgamesLastTab||'custom';
+  if(['custom','draft','origin'].includes(pg))window._cgamesLastTab=pg;
   if(pg!=='match')stopMcPoll();
   S.ui.page=pg;
   $$('#sidebar-nav .navitem').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
-  $$('#bottom-tabbar .btab').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
+  const _cgPgs=['custom','draft','origin'];
+  $$('#bottom-tabbar .btab').forEach(b=>{
+    const bpg=b.dataset.pg;
+    b.classList.toggle('on',bpg===pg||(bpg==='cgames'&&_cgPgs.includes(pg)));
+  });
   $$('.page').forEach(p=>p.classList.toggle('on',p.id==='pg-'+pg));
   renderAll();save();
 }
@@ -5282,10 +5464,10 @@ function renderAll(){
     if(pg==='home')renderHome();
     else if(pg==='trades'){S.ui.page='classic';S.ui.classicTab='trades';renderClassic();}
     else if(pg==='classic')renderClassic();
-    else if(pg==='custom')renderCustom();
-    else if(pg==='draft')renderDraft();
+    else if(pg==='custom'){renderCustom();injectCGamesPills('custom');}
+    else if(pg==='draft'){renderDraft();injectCGamesPills('draft');}
     else if(pg==='match')renderMatch();
-    else if(pg==='origin')renderOrigin();
+    else if(pg==='origin'){renderOrigin();injectCGamesPills('origin');}
     else if(pg==='leagues')renderLeagues();
     else if(pg==='players')renderPlayers();
     else if(pg==='settings')renderSettings();
