@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fantasy Footy — NRL Edition (Unofficial)</title>
 <style>
 :root{
@@ -328,6 +328,10 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .pl-main-table th:nth-child(11),.pl-main-table td:nth-child(11),
 .pl-main-table th:nth-child(12),.pl-main-table td:nth-child(12),
 .pl-main-table th:nth-child(13),.pl-main-table td:nth-child(13){display:none}
+}
+/* ── iOS input zoom fix: font-size>=16px prevents zoom without user-scalable=no ── */
+@media(max-width:600px){
+input,select,textarea{font-size:16px!important}
 }
 /* ── Format tabs (Leagues + C.Games) ── */
 .format-tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:16px}
@@ -4710,14 +4714,6 @@ function leagueRulesHTML(mode){
   }
   return '';
 }
-function cgamesPills(active){
-  window._cgamesLastTab=active;
-  return '<div class="cgames-pills">'
-    +'<div class="'+(active==='custom'?'on':'')+'" onclick="setPage('custom')">⚙️ Custom</div>'
-    +'<div class="'+(active==='draft'?'on':'')+'" onclick="setPage('draft')">📋 Draft</div>'
-    +'<div class="'+(active==='origin'?'on':'')+'" onclick="setPage('origin')">🦁 Origin</div>'
-    +'</div>';
-}
 function injectCGamesPills(pg){
   const el=document.getElementById('pg-'+pg);
   if(!el)return;
@@ -4725,9 +4721,13 @@ function injectCGamesPills(pg){
   if(ex)ex.remove();
   const d=document.createElement('div');
   d.className='cgames-pills';
-  d.innerHTML='<div class="'+(pg==='custom'?'on':'')+'" onclick="setPage('custom')">⚙️ Custom</div>'
-    +'<div class="'+(pg==='draft'?'on':'')+'" onclick="setPage('draft')">📋 Draft</div>'
-    +'<div class="'+(pg==='origin'?'on':'')+'" onclick="setPage('origin')">🦁 Origin</div>';
+  [['custom','⚙️ Custom'],['draft','📋 Draft'],['origin','🦁 Origin']].forEach(([id,label])=>{
+    const btn=document.createElement('div');
+    btn.textContent=label;
+    if(pg===id)btn.classList.add('on');
+    btn.addEventListener('click',function(){setPage(id);});
+    d.appendChild(btn);
+  });
   el.insertBefore(d,el.firstChild);
 }
 function lgModeCard(mode,icon,title,league,createBtn){
@@ -4757,11 +4757,7 @@ function lgModeCard(mode,icon,title,league,createBtn){
 function renderLeagues(){
   const el=$('#pg-leagues');
   const tab=S.ui.leaguesTab||'classic';
-  const tabsHTML='<div class="format-tabs">'
-    +'<div class="'+(tab==='classic'?'on':'')+'" onclick="S.ui.leaguesTab='classic';renderLeagues()">🏠 Classic</div>'
-    +'<div class="'+(tab==='draft'?'on':'')+'" onclick="S.ui.leaguesTab='draft';renderLeagues()">📋 Draft</div>'
-    +'<div class="'+(tab==='custom'?'on':'')+'" onclick="S.ui.leaguesTab='custom';renderLeagues()">⚙️ Custom</div>'
-    +'</div>';
+  const tabsHTML=`<div class="format-tabs"><div class="${tab==='classic'?'on':''}" onclick="S.ui.leaguesTab='classic';renderLeagues()">🏠 Classic</div><div class="${tab==='draft'?'on':''}" onclick="S.ui.leaguesTab='draft';renderLeagues()">📋 Draft</div><div class="${tab==='custom'?'on':''}" onclick="S.ui.leaguesTab='custom';renderLeagues()">⚙️ Custom</div></div>`;
   let content='';
   if(tab==='classic'){
     if(S.league){
