@@ -310,8 +310,14 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 .soo-game-card .gc-title{font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
 .soo-game-card .gc-score{font-size:24px;font-weight:800;color:var(--acc)}
 .soo-game-card .gc-sub{font-size:11px;color:var(--dim)}
+/* SoO result notification popup */
+#soo-result-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(4,8,16,.88);animation:none}
+#soo-result-overlay.on{display:flex;animation:soo-fadein .25s ease forwards}
+#soo-result-card{background:var(--card);border:1px solid rgba(74,222,128,.25);border-radius:18px;max-width:460px;width:100%;max-height:90vh;overflow-y:auto;position:relative;animation:soo-slideup .4s cubic-bezier(.22,.61,.36,1) forwards}
+#soo-fw-canvas{position:fixed;inset:0;pointer-events:none;z-index:199;display:none}
+@keyframes soo-fadein{from{opacity:0}to{opacity:1}}
+@keyframes soo-slideup{from{transform:translateY(50px);opacity:0}to{transform:translateY(0);opacity:1}}
 </style>
-</head>
 <body>
 <div id="login-page" style="display:none">
   <div class="login-card">
@@ -405,6 +411,8 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
   </nav>
 </div>
 <div id="modal-bg"><div id="modal"></div></div>
+<canvas id="soo-fw-canvas"></canvas>
+<div id="soo-result-overlay"><div id="soo-result-card"></div></div>
 <script>
 /* ================= DATA ================= */
 /* Player rows: name|club|price($k)|positions|avg|gp|high|low|own%|last3avg  (real season data) */
@@ -3506,6 +3514,7 @@ async function sooFetchServerScores(){
     if(r.ok){
       _sooServerScores=await r.json();
       renderOrigin();
+      setTimeout(sooMaybeShowResult,300);
     }
   }catch(e){}
 }
@@ -3991,6 +4000,7 @@ async function sooSyncPicks(){
 let _sooLeagueCache=null;
 let _sooLeagueFetching=false;
 let _sooLeagueFetchFailed=false;
+let _sooResultNotifShown=false;
 let _sooExpandedTeam=null;
 let _sooMyLeagueFetched=false;
 
@@ -4062,6 +4072,181 @@ async function sooSubmitScores(game){
     setTimeout(()=>{sooFetchServerScores();},500);
   }catch(e){btn.disabled=false;btn.textContent='Save Scores';alert('Error: '+e.message);}
 }
+
+function sooMaybeShowResult(){
+  if(!_sooLeagueCache||!Object.keys(_sooServerScores).length)return;
+  sooShowResult();
+}
+
+function sooShowResult(){
+  if(_sooResultNotifShown)return;
+  const lg=S.origin&&S.origin.league;
+  if(!lg||!lg.teamId)return;
+  const data=_sooLeagueCache;
+  if(!data||!data.teams||data.teams.length<2)return;
+
+  const gamesWithScores=SOO_GAMES.filter(sg=>
+    data.teams.some(t=>{
+      const gPicks=(t.picks&&(t.picks[sg.id]||t.picks[String(sg.id)]))||{};
+      return SOO_POS.some(pos=>{
+        const pid=gPicks[pos.key];
+        return pid!=null&&sooRoundScore(pid,sg.id)!=null;
+      });
+    })
+  );
+  if(!gamesWithScores.length)return;
+
+  const notifiedKey='sooNotifiedGames_'+(lg.code||'x');
+  const notified=new Set(JSON.parse(localStorage.getItem(notifiedKey)||'[]'));
+  const newGames=gamesWithScores.filter(sg=>!notified.has(sg.id));
+  if(!newGames.length)return;
+
+  const sg=newGames[newGames.length-1];
+
+  const rows=data.teams.map(t=>{
+    const tot=[1,2,3].reduce((s,g)=>s+sooLeagueTeamGameScore(t.picks,g),0);
+    return{t,tot};
+  }).sort((a,b)=>b.tot-a.tot);
+
+  const myIdx=rows.findIndex(r=>r.t.id===lg.teamId);
+  if(myIdx<0)return;
+  const pos=myIdx+1;
+  const myRow=rows[myIdx];
+  const total=rows.length;
+
+  const myPicks=(myRow.t.picks&&(myRow.t.picks[sg.id]||myRow.t.picks[String(sg.id)]))||{};
+  let bestPid=null,bestSc=0;
+  SOO_POS.forEach(p=>{
+    const pid=myPicks[p.key];
+    const sc=sooRoundScore(pid,sg.id);
+    if(sc!=null&&sc>bestSc){bestSc=sc;bestPid=pid;}
+  });
+  const bestPlayer=bestPid!=null?PLAYERS[bestPid]:null;
+
+  const medals=['\u{1F947}','\u{1F948}','\u{1F949}'];
+  const ordinals=['','1st','2nd','3rd'];
+  const posLabel=ordinals[pos]||(pos+'th');
+  const medal=pos<=3?medals[pos-1]:'';
+  const isWinner=pos===1;
+
+  const gameRows=SOO_GAMES.map(g=>{
+    const sc=sooLeagueTeamGameScore(myRow.t.picks,g.id);
+    const hasScore=gamesWithScores.some(gs=>gs.id===g.id);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)">
+      <span style="font-size:13px;color:var(--dim)">${g.label}</span>
+      ${hasScore?`<span style="font-size:14px;font-weight:700;color:${g.id===sg.id?'var(--acc)':'var(--fg)'}">${sc} pts</span>`:'<span style="font-size:12px;color:var(--dim)">Pending</span>'}
+    </div>`;
+  }).join('');
+
+  const lbRows=rows.map((r,i)=>{
+    const isMe=r.t.id===lg.teamId;
+    return`<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;background:${isMe?'rgba(74,222,128,.12)':'transparent'}">
+      <span style="font-size:13px;width:22px;text-align:center;flex-shrink:0">${i<3?medals[i]:i+1}</span>
+      <span style="font-size:13px;flex:1;font-weight:${isMe?700:400};color:${isMe?'var(--acc)':'var(--fg)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.t.name)}</span>
+      <span style="font-size:13px;font-weight:700;flex-shrink:0">${r.tot}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('soo-result-card').innerHTML=`
+    <div style="background:linear-gradient(135deg,#071d10 0%,#0d1a2e 100%);padding:22px 20px 16px;text-align:center;border-radius:18px 18px 0 0">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:10px">${sg.label} · Final Results</div>
+      <div style="font-size:64px;line-height:1;filter:drop-shadow(0 0 14px rgba(74,222,128,.5))">${medal||posLabel}</div>
+      <div style="font-size:24px;font-weight:800;margin-top:8px;letter-spacing:-.5px">${medal?posLabel:''} of ${total} teams</div>
+      <div style="font-size:14px;color:var(--dim);margin-top:4px">Total: <strong style="color:var(--acc);font-size:16px">${myRow.tot} pts</strong></div>
+      ${isWinner?'<div style="font-size:14px;color:#fbbf24;font-weight:700;margin-top:8px;text-shadow:0 0 10px rgba(251,191,36,.5)">🔥 You topped the league!</div>':''}
+    </div>
+    <div style="padding:14px 16px 0">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:4px">Score Breakdown</div>
+      ${gameRows}
+      ${bestPlayer?`<div style="margin-top:10px;padding:8px 10px;background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.15);border-radius:8px;font-size:12px;color:var(--dim)">Best pick: <strong style="color:var(--fg)">${esc(bestPlayer.name)}</strong> · <strong style="color:var(--acc)">${bestSc} pts</strong></div>`:''}
+    </div>
+    <div style="padding:12px 16px 0">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:4px">League Standings</div>
+      ${lbRows}
+    </div>
+    <div style="padding:14px 16px 16px;display:flex;gap:8px">
+      <button class="btn" style="flex:1" onclick="sooCloseResult();document.querySelector('[data-pg=origin]')&&document.querySelector('[data-pg=origin]').click()">See League</button>
+      <button class="btn sec" style="flex:1;padding:10px" onclick="sooCloseResult()">Dismiss</button>
+    </div>`;
+
+  document.getElementById('soo-result-overlay').classList.add('on');
+  _sooResultNotifShown=true;
+  notified.add(sg.id);
+  localStorage.setItem(notifiedKey,JSON.stringify([...notified]));
+  if(isWinner)sooFireworks();
+}
+
+function sooCloseResult(){
+  document.getElementById('soo-result-overlay').classList.remove('on');
+  const c=document.getElementById('soo-fw-canvas');
+  if(c)c.style.display='none';
+  if(window._sooFwAnim){cancelAnimationFrame(window._sooFwAnim);window._sooFwAnim=null;}
+}
+
+function sooFireworks(){
+  const canvas=document.getElementById('soo-fw-canvas');
+  if(!canvas)return;
+  canvas.style.display='block';
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+  const ctx=canvas.getContext('2d');
+  const particles=[];
+  const rockets=[];
+  const COLORS=['#4ade80','#fbbf24','#f472b6','#60a5fa','#a78bfa','#fb923c','#ffffff','#34d399'];
+
+  function mkBurst(x,y,count){
+    for(let i=0;i<(count||90);i++){
+      const angle=Math.random()*Math.PI*2;
+      const speed=2.5+Math.random()*7;
+      particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-2,
+        color:COLORS[Math.floor(Math.random()*COLORS.length)],
+        life:1,decay:.009+Math.random()*.008,radius:2+Math.random()*3.5,gravity:.13});
+    }
+  }
+
+  function mkRocket(){
+    rockets.push({
+      x:canvas.width*.1+Math.random()*canvas.width*.8,
+      y:canvas.height,
+      vy:-(9+Math.random()*6),vx:(Math.random()-.5)*2,
+      targetY:canvas.height*.08+Math.random()*canvas.height*.38,
+      color:COLORS[Math.floor(Math.random()*COLORS.length)]
+    });
+  }
+  mkRocket();mkRocket();mkRocket();
+
+  let tick=0;
+  function frame(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    tick++;
+    if(tick%50===0&&tick<600)mkRocket();
+
+    for(let i=rockets.length-1;i>=0;i--){
+      const r=rockets[i];
+      r.x+=r.vx;r.y+=r.vy;
+      ctx.globalAlpha=.7;ctx.fillStyle=r.color;
+      ctx.beginPath();ctx.arc(r.x,r.y,2.5,0,Math.PI*2);ctx.fill();
+      if(r.y<=r.targetY){mkBurst(r.x,r.y,110+Math.random()*60);rockets.splice(i,1);}
+    }
+
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.x+=p.vx;p.y+=p.vy;p.vy+=p.gravity;p.vx*=.97;p.life-=p.decay;
+      if(p.life<=0){particles.splice(i,1);continue;}
+      ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.color;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.radius*Math.max(.2,p.life),0,Math.PI*2);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    if(rockets.length>0||particles.length>0){
+      window._sooFwAnim=requestAnimationFrame(frame);
+    }else{
+      setTimeout(()=>{canvas.style.display='none';},200);
+    }
+  }
+  window._sooFwAnim=requestAnimationFrame(frame);
+}
+
 async function sooKickTeam(code,teamId){
   if(!confirm('Remove this team from the league?'))return;
   try{
@@ -4159,7 +4344,7 @@ function renderSooLeague(){
         </div>
       </div>`;
     }
-    sooFetchLeague(false).then(()=>renderOrigin());
+    sooFetchLeague(false).then(()=>{renderOrigin();setTimeout(sooMaybeShowResult,400);});
     return`<div class="card" style="text-align:center;padding:40px">
       <div class="muted" style="font-size:14px">Loading league…</div>
     </div>`;
