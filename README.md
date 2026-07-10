@@ -36,9 +36,19 @@ Railway uses these environment variables:
 - `APP_URL=https://nrl.the-squad.com.au`
 - `FROM_EMAIL=NRL Fantasy <noreply@the-squad.com.au>`
 - `RESEND_API_KEY`
-- `ADMIN_KEY`
+- `ADMIN_EMAILS` — comma-separated accounts allowed to update official scores
+- `DATA_DIR` — mounted Railway volume path (JSON fallback only)
 
 Do not commit secret values to the repository.
+
+Production uses secure, expiring HttpOnly session cookies. Existing bearer-token sessions are migrated on first load.
+
+## Production readiness
+
+- Railway health checks and restart behavior are defined in `railway.json`.
+- `npm run check` validates the server, all inline JavaScript blocks, and the API regression suite.
+- Attach the Railway volume at the same path configured in `DATA_DIR` and maintain off-platform backups until the PostgreSQL cutover is complete.
+- Set `ADMIN_EMAILS` before an administrator needs to enter official State of Origin scores. Administrative secrets are never sent to browsers.
 
 ## Deployment
 

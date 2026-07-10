@@ -1,6 +1,8 @@
 # NRL Fantasy App — Claude Handoff Document
 *Last updated: July 11, 2026*
 
+> Production-hardening work is in progress on `agent/production-readiness`. See `PRODUCTION_READINESS.md` before continuing or deploying.
+
 ---
 
 ## Project Overview

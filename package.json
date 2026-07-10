@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node --check server.js && node scripts/check-html.js && node --test",
+    "test": "node --test"
   },
-  "engines": { "node": ">=18" }
+  "engines": { "node": ">=20" }
 }

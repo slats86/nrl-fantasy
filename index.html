@@ -3,19 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fantasy Footy — NRL Edition (Unofficial)</title>
+<meta name="theme-color" content="#07070c">
+<meta name="description" content="The Squad — an unofficial NRL fantasy game for mates.">
+<meta name="color-scheme" content="dark">
+<title>The Squad — NRL Fantasy</title>
 <style>
 :root{
   --bg:#07070c; --bg2:#13131f; --card:#1a1a28; --card2:#161622; --line:#252535;
   --txt:#e8f0e8; --dim:#a8a8bc; --acc:#00e676; --acc2:#00b050; --red:#ff4d4d; --amber:#ffb700;
-  --blue:#00b7ff; --violet:#8a3df0; --pink:#f472b6;
+  --blue:#00b7ff; --violet:#8a3df0; --pink:#f472b6; --fg:var(--txt); --green:var(--acc); --danger:var(--red); --acc-rgb:0,230,118;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;font-size:14px}
+button,[role="button"],a{touch-action:manipulation}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;min-height:100dvh;font-size:14px}
 /* ---- app shell layout ---- */
-#app-shell{display:flex;min-height:100vh}
+#app-shell{display:flex;min-height:100vh;min-height:100dvh}
 /* ---- sidebar (desktop) ---- */
-#sidebar{width:218px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
+#sidebar{width:218px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto}
 .brand-row{display:flex;align-items:center;gap:11px;padding:0 4px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
 .brand-ball{font-size:28px;line-height:1}
 .brand-name{font-size:15px;font-weight:800;letter-spacing:.2px}
@@ -42,8 +46,8 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
 .rd-pill .pill{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-weight:700;font-size:14px}
 main{padding:18px;max-width:1280px;margin:0 auto;width:100%;box-sizing:border-box}
 /* ---- bottom tab bar (mobile) ---- */
-#bottom-tabbar{display:none;position:fixed;bottom:0;left:0;right:0;background:#0d0d15;border-top:1px solid var(--line);z-index:50;justify-content:space-around;padding:6px 0 10px}
-.btab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 8px;color:var(--dim);font-size:10px;font-weight:600;cursor:pointer;border-radius:8px;min-width:52px;letter-spacing:.2px;user-select:none}
+#bottom-tabbar{display:none;position:fixed;bottom:0;left:0;right:0;background:#0d0d15;border-top:1px solid var(--line);z-index:50;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
+.btab{display:flex;flex:1;min-width:0;min-height:44px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;color:var(--dim);font-size:10px;font-weight:600;cursor:pointer;border-radius:8px;letter-spacing:.2px;user-select:none}
 .btab .bi{font-size:18px;line-height:1.3}
 .btab.on{color:var(--acc)}
 .btab:hover{color:var(--txt)}
@@ -53,6 +57,17 @@ main{padding:18px;max-width:1280px;margin:0 auto;width:100%;box-sizing:border-bo
   .topbar-brand{display:block}
   #bottom-tabbar{display:flex}
   #app-main{padding-bottom:80px}
+}
+@media(max-width:480px){
+  #topbar{height:54px;padding:0 10px;gap:8px}
+  .topbar-brand{font-size:14px}
+  .rd-pill{gap:5px}
+  .rd-pill .pill{padding:4px 9px;font-size:12px}
+  .user-chip{padding-right:5px}
+  .user-chip .un{display:none}
+  main{padding:12px 10px}
+  .card{padding:12px}
+  .row>.card{min-width:0}
 }
 .page{display:none}
 .page.on{display:block}
@@ -69,6 +84,7 @@ button.btn.sec{background:var(--card2);color:var(--txt);border:1px solid var(--l
 button.btn.sec:hover{border-color:var(--acc)}
 button.btn.danger{background:#7f1d1d;color:#fecaca}
 button.btn:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 input,select{background:var(--bg2);border:1px solid var(--line);color:var(--txt);padding:8px 10px;border-radius:8px;font-size:13px;outline:none}
 input:focus,select:focus{border-color:var(--acc)}
 .statbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
@@ -95,6 +111,7 @@ input:focus,select:focus{border-color:var(--acc)}
 .bench-row{display:flex;gap:10px;flex-wrap:wrap}
 /* tables */
 table{width:100%;border-collapse:collapse;font-size:13px}
+[style*="overflow-x:auto"],.pl-main-table-wrap{scrollbar-gutter:stable;-webkit-overflow-scrolling:touch}
 th{color:var(--dim);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;white-space:nowrap}
 th:hover{color:var(--txt)}
 td{padding:7px 8px;border-bottom:1px solid #1b2740;white-space:nowrap}
@@ -250,6 +267,7 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
 
 /* ---- MOBILE FIELD IMPROVEMENTS ---- */
 @media(max-width:600px){
+  button.btn,.pos-filter button,.tabs2 button{min-height:44px}
   .frow{gap:4px;flex-wrap:wrap;justify-content:center}
   .pcard{min-width:72px;max-width:84px;padding:7px 4px}
   .pcard .nm{font-size:11px}
@@ -261,6 +279,8 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
   /* pos-filter pills scroll horizontally instead of wrapping */
   .pos-filter{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
 }
+
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
 
 /* ── MODE TABS ── */
@@ -350,42 +370,7 @@ input,select,textarea{font-size:16px!important}
 }
 </style>
 <body>
-<div id="login-page" style="display:none">
-  <div class="login-card">
-    <div class="login-logo">
-      <span class="ball">🏉</span>
-      <h2>Fantasy Footy</h2>
-      <p>NRL Edition &middot; Sign in to continue</p>
-    </div>
-    <button class="login-btn google" onclick="loginExpand('google')">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.9 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 6 1.1 8.2 3l6.4-6.4C34.8 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.5 20-21 0-1.4-.1-2.7-.5-4z"/><path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 16 19.2 13 24 13c3.1 0 6 1.1 8.2 3l6.4-6.4C34.8 5.1 29.6 3 24 3 16 3 9.1 7.9 6.3 14.7z"/><path fill="#FBBC05" d="M24 45c5.8 0 10.9-1.9 14.9-5.2l-6.9-5.7C29.8 36 27 37 24 37c-5.8 0-10.8-3.9-11.8-9.2l-7 5.4C8.7 40.7 15.8 45 24 45z"/><path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.6 2.5-2 4.7-4.1 6.3l6.9 5.7C42.6 37.5 45 31 45 24c0-1.4-.2-2.7-.5-4z"/></svg>
-      Sign in with Google
-    </button>
-    <div id="login-sub-google" class="login-sub" style="display:none">
-      <label>Gmail address</label>
-      <input id="li-gmail" type="email" placeholder="you@gmail.com">
-      <button class="btn" onclick="completeLogin('google')">Continue</button>
-    </div>
-    <div class="login-divider">or</div>
-    <button class="login-btn alt" onclick="loginExpand('phone')">📱 Use phone number</button>
-    <div id="login-sub-phone" class="login-sub" style="display:none">
-      <label>Phone number</label>
-      <input id="li-phone" type="tel" placeholder="+61 4xx xxx xxx">
-      <label style="margin-top:4px">Display name</label>
-      <input id="li-phone-name" type="text" placeholder="Your name">
-      <button class="btn" onclick="completeLogin('phone')">Continue</button>
-    </div>
-    <button class="login-btn alt" onclick="loginExpand('email')">✉️ Use email address</button>
-    <div id="login-sub-email" class="login-sub" style="display:none">
-      <label>Email address</label>
-      <input id="li-email" type="email" placeholder="you@example.com">
-      <label style="margin-top:4px">Password</label>
-      <input id="li-pw" type="password" placeholder="••••••••">
-      <button class="btn" onclick="completeLogin('email')">Continue</button>
-    </div>
-    <p style="color:var(--dim);font-size:11px;text-align:center;margin-top:18px">Unofficial fan-made game &middot; No data leaves your device</p>
-  </div>
-</div>
+<div id="login-page" hidden></div>
 <div id="app-shell" style="display:none">
   <!-- Sidebar — desktop nav -->
   <aside id="sidebar">
@@ -441,7 +426,7 @@ input,select,textarea{font-size:16px!important}
     <div class="btab" data-pg="players"><span class="bi">📊</span>Stats</div>
   </nav>
 </div>
-<div id="modal-bg"><div id="modal"></div></div>
+<div id="modal-bg" aria-hidden="true"><div id="modal" role="dialog" aria-modal="true" aria-label="Dialog" tabindex="-1"></div></div>
 <canvas id="soo-fw-canvas"></canvas>
 <div id="soo-result-overlay"><div id="soo-result-card"></div></div>
 <script>
@@ -650,38 +635,13 @@ function load(){
   save();
 }
 
-/* ================= LOGIN ================= */
-function loginExpand(method){
-  ['google','phone','email'].forEach(m=>{
-    const el=document.getElementById('login-sub-'+m);
-    if(el)el.style.display=(m===method&&el.style.display==='none')?'block':'none';
-  });
-}
-function completeLogin(method){
-  let name='',email='';
-  if(method==='google'){
-    email=(document.getElementById('li-gmail').value||'').trim();
-    if(!email){alert('Please enter your Gmail address.');return}
-    name=email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-  } else if(method==='phone'){
-    const phone=(document.getElementById('li-phone').value||'').trim();
-    name=(document.getElementById('li-phone-name').value||'').trim();
-    if(!phone){alert('Please enter your phone number.');return}
-    if(!name)name='Player';
-    email=phone;
-  } else {
-    email=(document.getElementById('li-email').value||'').trim();
-    if(!email){alert('Please enter your email address.');return}
-    name=email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
-  }
-  const initials=name.split(' ').map(w=>w[0]||'').join('').toUpperCase().slice(0,2)||'?';
-  S.user={name,email,method,initials};
-  save();showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic')); /* page routing unchanged */
-}
+/* ================= AUTH ================= */
 function showApp(){
   /* Check for password reset token in URL */
   const _resetTok=new URLSearchParams(window.location.search).get('resetToken');
   if(_resetTok&&!S.sooAuth){
+    sessionStorage.setItem('resetToken',_resetTok);
+    window.history.replaceState({},'',window.location.pathname);
     const lp=document.getElementById('login-page');const sh=document.getElementById('app-shell');
     const sl=document.getElementById('soo-login-page');
     if(lp)lp.style.display='none';if(sh)sh.style.display='none';
@@ -691,7 +651,7 @@ function showApp(){
   const shell=document.getElementById('app-shell');
   const sooLoginEl=document.getElementById('soo-login-page');
   /* Single unified auth — one account for everything */
-  if(!S.sooAuth||!S.sooAuth.token){
+  if(!S.sooAuth||(!S.sooAuth.authenticated&&!S.sooAuth.token)){
     document.getElementById('login-page').style.display='none';
     if(shell)shell.style.display='none';
     if(sooLoginEl)sooLoginEl.style.display='flex';
@@ -720,7 +680,7 @@ const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
 const fmtK=n=>'$'+Math.round(n/1000)+'k';
 const fmtM=n=>'$'+(n/1e6).toFixed(2)+'M';
-const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function poisson(rng,lam){if(lam<=0)return 0;let L=Math.exp(-lam),k=0,p=1;do{k++;p*=rng()}while(p>L);return k-1}
 function gauss(rng){let u=0,v=0;while(u===0)u=rng();while(v===0)v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
@@ -3586,14 +3546,14 @@ async function sooDoRegister(){
   const pass =document.getElementById('soo-reg-pass').value;
   const err  =document.getElementById('soo-auth-err');
   err.textContent='';
-  if(!name||!email||pass.length<6){err.textContent='Fill in all fields (password min 6 chars)';return;}
+  if(!name||!email||pass.length<12){err.textContent='Fill in all fields (password min 12 chars)';return;}
   try{
     const r=await fetch('/api/soo/register',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({name,email,password:pass})});
     const d=await r.json();
     if(!r.ok){err.textContent=d.error||'Registration failed';return;}
     const prevId=S.sooAuth&&S.sooAuth.userId;
-    S.sooAuth={token:d.token,userId:d.userId,name:d.name,email:d.email};
+    S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};
     if(prevId&&prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&!S.origin.league.code){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.user.name||''};}
@@ -3612,7 +3572,7 @@ async function sooDoLogin(){
     const d=await r.json();
     if(!r.ok){err.textContent=d.error||'Login failed';return;}
     const prevId2=S.sooAuth&&S.sooAuth.userId;
-    S.sooAuth={token:d.token,userId:d.userId,name:d.name,email:d.email};
+    S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};
     if(prevId2&&prevId2!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&(!S.origin.league||!S.origin.league.code)){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.sooAuth.name||''};}
@@ -3659,9 +3619,9 @@ async function sooDoReset(){
   const pass2=document.getElementById('soo-reset-pass2').value;
   const err=document.getElementById('soo-auth-err');
   err.style.color='var(--red)';err.textContent='';
-  if(pass.length<6){err.textContent='Password must be at least 6 characters.';return;}
+  if(pass.length<12){err.textContent='Password must be at least 12 characters.';return;}
   if(pass!==pass2){err.textContent='Passwords do not match.';return;}
-  const tok=new URLSearchParams(window.location.search).get('resetToken');
+  const tok=sessionStorage.getItem('resetToken')||new URLSearchParams(window.location.search).get('resetToken');
   if(!tok){err.textContent='Missing reset token.';return;}
   const btn=document.querySelector('#soo-panel-reset .btn-primary');
   if(btn){btn.disabled=true;btn.textContent='Saving…';}
@@ -3671,13 +3631,14 @@ async function sooDoReset(){
     if(!r.ok){if(btn){btn.disabled=false;btn.textContent='Set New Password';}err.textContent=d.error||'Failed';return;}
     /* Log in automatically */
     const prevId=S.sooAuth&&S.sooAuth.userId;
-    S.sooAuth={token:d.token,userId:d.userId,name:d.name,email:d.email};
+    S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};
     if(prevId&&prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&(!S.origin.league||!S.origin.league.code)){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.sooAuth.name||''};}
     save();
     /* Remove token from URL */
     window.history.replaceState({},'',window.location.pathname);
+    sessionStorage.removeItem('resetToken');
     showApp();setPage('origin');
   }catch(e){
     if(btn){btn.disabled=false;btn.textContent='Set New Password';}
@@ -3685,7 +3646,8 @@ async function sooDoReset(){
   }
 }
 
-function sooSignOut(){
+async function sooSignOut(){
+  try{await fetch('/api/soo/logout',{method:'POST'});}catch(e){}
   _sooMyLeagueFetched=false;
   S.sooAuth=null;S.user=null;
   save();
@@ -4164,7 +4126,7 @@ async function sooSubmitScores(game){
     const r=await fetch(SOO_API+'/scores',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({secret:'SCORESECRET2026',game,scores})
+      body:JSON.stringify({game,scores})
     });
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Failed');
@@ -4450,8 +4412,8 @@ function renderSooLeague(){
   }
 
   const data=_sooLeagueCache;
-  /* any logged-in member can manage (remove other teams, delete league) */
-  const isOwner=!!(S.sooAuth&&data&&data.teams&&data.teams.some(t=>t.id===lg.teamId));
+  const isOwner=!!(S.sooAuth&&data&&data.ownerId===S.sooAuth.userId);
+  const canScore=!!(S.sooAuth&&S.sooAuth.isAdmin);
   /* Build ranked rows */
   const rows=data.teams.map(t=>{
     const isMe=t.id===lg.teamId;
@@ -4550,7 +4512,7 @@ function renderSooLeague(){
     <details style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px">
       <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--dim);list-style:none">⚙️ Manage League <span style="font-size:11px;font-weight:400">(owner only)</span> ▸</summary>
       <div style="padding:12px 0 0">
-        <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)">
+        ${canScore?`<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)">
           <div style="font-weight:700;font-size:13px;margin-bottom:4px">📊 Enter Game 3 Scores</div>
           <p class="muted" style="font-size:12px;margin:0 0 10px">Enter each player's NRL Fantasy score from Game 3. Find scores at <a href="https://nrlfantasystats.com/origin-fantasy" target="_blank" style="color:var(--acc)">nrlfantasystats.com</a> or the NRL Fantasy app.</p>
           <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
@@ -4572,7 +4534,7 @@ function renderSooLeague(){
             })()}
           </div>
           <button id="soo-scores-submit" onclick="sooSubmitScores(3)" class="btn" style="width:100%">Save Scores</button>
-        </div>
+        </div>`:''}
         <p class="muted" style="font-size:12px;margin:0 0 12px">Remove duplicate or test teams from your league.</p>
         ${data.teams.filter(t=>t.id!==lg.teamId).map(t=>`
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)">
@@ -5132,12 +5094,12 @@ function byePlannerHTML(){
         <!-- Login panel -->
         <div id="soo-panel-login">
           <div style="margin-bottom:14px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email</label>
-            <input id="soo-login-email" type="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
+            <label for="soo-login-email" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email</label>
+            <input id="soo-login-email" type="email" autocomplete="username" inputmode="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
           </div>
           <div style="margin-bottom:20px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
-            <input id="soo-login-pass" type="password" placeholder="••••••••" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoLogin()">
+            <label for="soo-login-pass" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
+            <input id="soo-login-pass" type="password" autocomplete="current-password" placeholder="••••••••••••" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoLogin()">
           </div>
           <button onclick="sooDoLogin()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Sign In</button>
           <div style="text-align:center;margin-top:14px">
@@ -5148,8 +5110,8 @@ function byePlannerHTML(){
         <div id="soo-panel-forgot" style="display:none">
           <p style="font-size:13px;color:var(--dim);margin-bottom:16px">Enter your email and we'll send you a link to reset your password.</p>
           <div style="margin-bottom:16px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email address</label>
-            <input id="soo-forgot-email" type="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoForgot()">
+            <label for="soo-forgot-email" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email address</label>
+            <input id="soo-forgot-email" type="email" autocomplete="username" inputmode="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoForgot()">
           </div>
           <button onclick="sooDoForgot()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Send Reset Link</button>
           <div style="text-align:center;margin-top:14px">
@@ -5160,28 +5122,28 @@ function byePlannerHTML(){
         <div id="soo-panel-reset" style="display:none">
           <p style="font-size:13px;color:var(--dim);margin-bottom:16px">Choose a new password for your account.</p>
           <div style="margin-bottom:16px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">New password</label>
-            <input id="soo-reset-pass" type="password" placeholder="Min 6 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoReset()">
+            <label for="soo-reset-pass" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">New password</label>
+            <input id="soo-reset-pass" type="password" autocomplete="new-password" minlength="12" placeholder="Minimum 12 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoReset()">
           </div>
           <div style="margin-bottom:20px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Confirm password</label>
-            <input id="soo-reset-pass2" type="password" placeholder="Repeat password" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoReset()">
+            <label for="soo-reset-pass2" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Confirm password</label>
+            <input id="soo-reset-pass2" type="password" autocomplete="new-password" minlength="12" placeholder="Repeat password" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoReset()">
           </div>
           <button onclick="sooDoReset()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Set New Password</button>
         </div>
         <!-- Register panel -->
         <div id="soo-panel-reg" style="display:none">
           <div style="margin-bottom:14px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Your Name</label>
-            <input id="soo-reg-name" type="text" placeholder="e.g. Brent" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
+            <label for="soo-reg-name" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Your name</label>
+            <input id="soo-reg-name" type="text" autocomplete="name" maxlength="40" placeholder="e.g. Brent" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
           </div>
           <div style="margin-bottom:14px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email</label>
-            <input id="soo-reg-email" type="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
+            <label for="soo-reg-email" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Email</label>
+            <input id="soo-reg-email" type="email" autocomplete="username" inputmode="email" placeholder="you@email.com" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px">
           </div>
           <div style="margin-bottom:20px">
-            <label style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
-            <input id="soo-reg-pass" type="password" placeholder="Min 6 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoRegister()">
+            <label for="soo-reg-pass" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
+            <input id="soo-reg-pass" type="password" autocomplete="new-password" minlength="12" placeholder="Minimum 12 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoRegister()">
           </div>
           <button onclick="sooDoRegister()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Create Account</button>
         </div>
@@ -5435,9 +5397,21 @@ function setLayout(k,v){
 }
 
 /* ================= MODAL & NAV ================= */
-function openModal(html){$('#modal').innerHTML='<button class="x" onclick="closeModal()">✕</button>'+html;$('#modal-bg').classList.add('on')}
-function closeModal(){$('#modal-bg').classList.remove('on')}
+let _modalReturnFocus=null;
+function openModal(html){_modalReturnFocus=document.activeElement;$('#modal').innerHTML='<button class="x" aria-label="Close dialog" onclick="closeModal()">✕</button>'+html;$('#modal-bg').classList.add('on');$('#modal-bg').setAttribute('aria-hidden','false');setTimeout(()=>$('#modal').focus(),0)}
+function closeModal(){$('#modal-bg').classList.remove('on');$('#modal-bg').setAttribute('aria-hidden','true');if(_modalReturnFocus&&_modalReturnFocus.focus)_modalReturnFocus.focus()}
 $('#modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')closeModal()});
+document.addEventListener('keydown',e=>{
+  if(!$('#modal-bg').classList.contains('on'))return;
+  if(e.key==='Escape'){closeModal();return;}
+  if(e.key==='Tab'){
+    const focusable=$$('#modal button:not([disabled]),#modal input:not([disabled]),#modal select:not([disabled]),#modal [tabindex]:not([tabindex="-1"])');
+    if(!focusable.length){e.preventDefault();$('#modal').focus();return;}
+    const first=focusable[0],last=focusable[focusable.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+});
 
 function setPage(pg){
   if(pg==='cgames')pg=window._cgamesLastTab||'custom';
@@ -5449,11 +5423,12 @@ function setPage(pg){
   $$('#bottom-tabbar .btab').forEach(b=>{
     const bpg=b.dataset.pg;
     b.classList.toggle('on',bpg===pg||(bpg==='cgames'&&_cgPgs.includes(pg)));
+    b.setAttribute('aria-current',b.classList.contains('on')?'page':'false');
   });
   $$('.page').forEach(p=>p.classList.toggle('on',p.id==='pg-'+pg));
   renderAll();save();
 }
-$$('#sidebar-nav .navitem, #bottom-tabbar .btab').forEach(b=>b.addEventListener('click',()=>setPage(b.dataset.pg)));
+$$('#sidebar-nav .navitem, #bottom-tabbar .btab').forEach(b=>{b.tabIndex=0;b.setAttribute('role','button');b.addEventListener('click',()=>setPage(b.dataset.pg));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setPage(b.dataset.pg)}})});
 
 function renderAll(){
   const over=S.round>S.settings.totalRounds;
@@ -5503,8 +5478,17 @@ if(!isNaN(MAXR)){/* dataPatch applied — advance any rounds the load() pass mis
 }
 if(S.classic.bank==null)S.classic.bank=S.settings.cap-squadValue(); /* migrate: bank = cap - current value */
 /* LOGIN DISABLED — set a guest user so the app loads directly */
-if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};showApp();
-setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));
+if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};
+async function bootstrapAuth(){
+  const legacy=S.sooAuth&&S.sooAuth.token;
+  try{
+    const r=await fetch('/api/soo/me',{headers:legacy?{'Authorization':'Bearer '+legacy}:{}});
+    if(r.ok){const d=await r.json();S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};save();}
+    else if(S.sooAuth){S.sooAuth=null;save();}
+  }catch(e){console.warn('Session check failed',e);}
+  showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));
+}
+bootstrapAuth();
 </script>
 
 </body>

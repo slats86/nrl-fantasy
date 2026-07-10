@@ -9,9 +9,14 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: nrl-data-refresh
+  cancel-in-progress: false
+
 jobs:
   fetch:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -21,7 +26,7 @@ jobs:
 
       - name: Install Playwright
         run: |
-          npm install playwright@latest
+          npm install --no-save --save-exact playwright@1.55.0
           npx playwright install chromium --with-deps
 
       - name: Fetch NRL Fantasy data via browser
@@ -40,16 +45,20 @@ jobs:
             console.log('Fetching players.json...');
             const pRes = await page.goto('https://fantasy.nrl.com/data/nrl/players.json', { waitUntil: 'networkidle' });
             console.log('Status:', pRes.status());
+            if (!pRes.ok()) throw new Error('players.json returned HTTP ' + pRes.status());
             const playersText = await page.evaluate(() => document.body.innerText);
             const players = JSON.parse(playersText);
+            if (!Array.isArray(players) || players.length < 100) throw new Error('players.json failed schema/size validation');
             console.log('Players:', players.length);
             require('fs').writeFileSync('public/players.json', JSON.stringify(players));
 
             console.log('Fetching rounds.json...');
             const rRes = await page.goto('https://fantasy.nrl.com/data/nrl/rounds.json', { waitUntil: 'networkidle' });
+            if (!rRes.ok()) throw new Error('rounds.json returned HTTP ' + rRes.status());
             console.log('Status:', rRes.status());
             const roundsText = await page.evaluate(() => document.body.innerText);
             const rounds = JSON.parse(roundsText);
+            if (!Array.isArray(rounds) || rounds.length < 20) throw new Error('rounds.json failed schema/size validation');
             const done = rounds.filter(r => r.status === 'complete').map(r => r.id);
             console.log('Complete rounds:', done.join(', '));
             require('fs').writeFileSync('public/rounds.json', JSON.stringify(rounds));
