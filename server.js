@@ -5,8 +5,8 @@ const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 const PORT     = process.env.PORT || 3000;
-const APP_URL  = (process.env.APP_URL || 'https://nrl-fantasy-production.up.railway.app').replace(/\/$/, '');
-const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@nrl-fantasy.app>';
+const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
+const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@the-squad.com.au>';
 const RESEND_KEY = process.env.RESEND_API_KEY || '';
 
 /* ── Email via Resend API ─────────────────────────────────── */

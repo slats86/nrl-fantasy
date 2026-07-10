@@ -1,25 +1,57 @@
-# Fantasy Footy — NRL Edition (Unofficial)
+# The Squad — NRL Fantasy
 
-A single-file fantasy NRL game built on real season results.
+An unofficial NRL fantasy game for mates, hosted at [nrl.the-squad.com.au](https://nrl.the-squad.com.au).
 
-- **Classic mode** — salary cap, trades, captains, official round-by-round scores
-- **Draft mode** — snake draft vs AI, head-to-head fixtures, ladder, finals
-- **Match Centre** — real fixtures, real scores, official player stat lines
-- **Trades** — detailed stats, bye planner, projected future teams
-- **Players** — game logs, prior seasons by position, form trends, starter-value picks
-- **Rules & Settings** — adjustable scoring, salary cap, squad layout
+## Features
 
-Everything runs in your browser from one HTML file. Progress saves locally (each player gets their own save).
+- Classic salary-cap fantasy, trades, captains, and round scoring
+- Draft leagues with fixtures, ladder, and finals
+- Custom games, including State of Origin competitions
+- Match Centre with fixtures, results, and player statistics
+- Authentication, leagues, welcome emails, and password resets
 
-## Play it
+## Architecture
 
-Open **index.html** in any browser — or play the hosted version via GitHub Pages.
+- Frontend: vanilla HTML, CSS, and JavaScript in `index.html`
+- Backend: Node.js native HTTP server in `server.js`
+- Data: JSON files, with Railway volume persistence for production data
+- Email: Resend
+- Hosting: Railway, automatically deployed from the `main` branch
+- Build step: none
 
-## Host it for friends (GitHub Pages)
+## Run locally
 
-1. Create a new repository on GitHub (e.g. `nrl-fantasy`)
-2. Upload `index.html` and this `README.md`
-3. Repo **Settings → Pages → Source: Deploy from a branch → main / root → Save**
-4. Your shareable link appears in a minute: `https://YOUR-USERNAME.github.io/nrl-fantasy/`
+Node.js 18 or newer is required.
 
-*Unofficial fan project for personal use. Player names and statistics are factual data. Not affiliated with the NRL.*
+```powershell
+npm start
+```
+
+The server listens on `PORT`, defaulting to `3000` locally.
+
+## Production configuration
+
+Railway uses these environment variables:
+
+- `APP_URL=https://nrl.the-squad.com.au`
+- `FROM_EMAIL=NRL Fantasy <noreply@the-squad.com.au>`
+- `RESEND_API_KEY`
+- `ADMIN_KEY`
+
+Do not commit secret values to the repository.
+
+## Deployment
+
+Push changes to `main`; Railway deploys them automatically.
+
+```powershell
+git add .
+git commit -m "Describe the update"
+git push
+```
+
+The Railway-provided domain remains available as a fallback, while the public production address is `https://nrl.the-squad.com.au`.
+
+## Disclaimer
+
+Unofficial fan project for personal use. Player names and statistics are factual data. Not affiliated with the NRL.
