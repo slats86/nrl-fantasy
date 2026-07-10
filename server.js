@@ -4,7 +4,37 @@ const https  = require('https');
 const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
-const PORT   = process.env.PORT || 3000;
+const PORT     = process.env.PORT || 3000;
+const APP_URL  = (process.env.APP_URL || 'https://nrl-fantasy-production.up.railway.app').replace(/\/$/, '');
+const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@nrl-fantasy.app>';
+const RESEND_KEY = process.env.RESEND_API_KEY || '';
+
+/* ── Email via Resend API ─────────────────────────────────── */
+function sendEmail(to, subject, html) {
+  return new Promise((resolve) => {
+    if (!RESEND_KEY) {
+      console.log('[email] RESEND_API_KEY not set — skipping:', subject, '→', to);
+      return resolve();
+    }
+    const body = JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html });
+    const opts = {
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + RESEND_KEY,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    };
+    const req = https.request(opts, r => {
+      let d = ''; r.on('data', c => d += c);
+      r.on('end', () => { console.log('[email] sent:', subject, '→', to, JSON.parse(d).id || d); resolve(); });
+    });
+    req.on('error', e => { console.error('[email] error:', e.message); resolve(); });
+    req.write(body); req.end();
+  });
+}
 
 /* ── Data storage ─────────────────────────────────────────── */
 const DATA_DIR    = path.join(__dirname, 'data');
@@ -14,6 +44,7 @@ const SCORES_FILE = path.join(DATA_DIR, 'soo-scores.json');
 let leagues = {};
 let users   = {};  /* keyed by email (lowercase) */
 let tokens  = {};  /* token → email */
+let resetTokens = {}; /* token → { email, expires } — in-memory only, cleared on restart */
 /* sooScores: { "gameNum:playerId": points }  e.g. { "3:1234": 87 } */
 let sooScores = {};
 
@@ -135,6 +166,16 @@ http.createServer(function(req, res) {
       tokens[token] = email;
       saveUsers();
       jsonRes(res, 200, { token, userId, name, email });
+      /* Welcome email (async — don't block response) */
+      sendEmail(email, 'Welcome to NRL Fantasy! 🏉', `
+        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px">
+          <h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy 🏉</h2>
+          <p>Hey ${name},</p>
+          <p>You're all set! Head back to the app to pick your State of Origin team and compete with mates.</p>
+          <a href="${APP_URL}" style="display:inline-block;background:#4ade80;color:#071d10;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">Go to NRL Fantasy</a>
+          <p style="color:#888;font-size:12px;margin-top:24px">Unofficial fan-made game · Not affiliated with the NRL</p>
+        </div>
+      `).catch(() => {});
     });
     return;
   }
@@ -153,6 +194,49 @@ http.createServer(function(req, res) {
       tokens[token] = email;
       saveUsers();
       jsonRes(res, 200, { token, userId: user.userId, name: user.name, email: user.email, leagueCode: user.leagueCode||null, teamId: user.teamId||null });
+    });
+    return;
+  }
+
+  /* POST /api/soo/forgot-password { email } */
+  if (url === '/api/soo/forgot-password' && req.method === 'POST') {
+    readBody(req, async (err, body) => {
+      if (err) return jsonRes(res, 400, {error: 'Bad request'});
+      const email = (body.email||'').trim().toLowerCase();
+      /* Always 200 — never reveal whether an email is registered */
+      jsonRes(res, 200, {ok: true});
+      const user = users[email];
+      if (!user) return;
+      const tok = genToken();
+      resetTokens[tok] = { email, expires: Date.now() + 3600000 }; /* 1 hour */
+      const link = APP_URL + '/?resetToken=' + tok;
+      await sendEmail(email, 'Reset your NRL Fantasy password', '<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px"><h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy 🏉</h2><p>Hi ' + user.name + ',</p><p>Someone requested a password reset for your account. Click below to set a new password — this link expires in <strong>1 hour</strong>.</p><a href="' + link + '" style="display:inline-block;background:#4ade80;color:#071d10;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">Reset Password</a><p style="color:#888;font-size:12px">If you did not request this, you can safely ignore this email.</p><p style="color:#888;font-size:11px;word-break:break-all">Or copy this link: ' + link + '</p></div>').catch(() => {});
+    });
+    return;
+  }
+
+  /* POST /api/soo/reset-password { token, password } */
+  if (url === '/api/soo/reset-password' && req.method === 'POST') {
+    readBody(req, (err, body) => {
+      if (err) return jsonRes(res, 400, {error: 'Bad request'});
+      const record = resetTokens[body.token];
+      if (!record || Date.now() > record.expires)
+        return jsonRes(res, 400, {error: 'Reset link has expired or is invalid. Please request a new one.'});
+      if (!body.password || body.password.length < 6)
+        return jsonRes(res, 400, {error: 'Password must be at least 6 characters'});
+      const user = users[record.email];
+      if (!user) return jsonRes(res, 400, {error: 'Account not found'});
+      const salt = crypto.randomBytes(16).toString('hex');
+      user.salt = salt;
+      user.hash = hashPwd(body.password, salt);
+      const loginToken = genToken();
+      if (user.token) delete tokens[user.token];
+      user.token = loginToken;
+      tokens[loginToken] = user.email;
+      delete resetTokens[body.token];
+      saveUsers();
+      jsonRes(res, 200, { token: loginToken, userId: user.userId, name: user.name, email: user.email,
+        leagueCode: user.leagueCode||null, teamId: user.teamId||null });
     });
     return;
   }
@@ -178,7 +262,6 @@ http.createServer(function(req, res) {
           picks: body.picks || {}
         }]
       };
-      /* store league association on user */
       user.leagueCode = code; user.teamId = teamId; saveUsers();
       saveLeagues();
       jsonRes(res, 200, { code, teamId });
@@ -195,7 +278,6 @@ http.createServer(function(req, res) {
       const lg = leagues[body.code];
       if (!lg) return jsonRes(res, 404, {error: 'League not found'});
       if (lg.teams.length >= 30) return jsonRes(res, 400, {error: 'League full'});
-      /* One team per user per league */
       const existing = lg.teams.find(t => t.userId === user.userId);
       if (existing) return jsonRes(res, 409, {error: 'You already have a team in this league', teamId: existing.id, league: {name: lg.name, code: body.code, teams: lg.teams, ownerId: lg.ownerId}});
       const teamId = genCode(10);
@@ -205,7 +287,6 @@ http.createServer(function(req, res) {
         name: (body.teamName || user.name || 'New Team').slice(0, 30),
         picks: body.picks || {}
       });
-      /* store league association on user */
       user.leagueCode = body.code; user.teamId = teamId; saveUsers();
       saveLeagues();
       jsonRes(res, 200, { teamId, league: { name: lg.name, code: body.code, teams: lg.teams, ownerId: lg.ownerId } });
@@ -213,7 +294,7 @@ http.createServer(function(req, res) {
     return;
   }
 
-  /* GET /api/soo/my-league — returns the league the authed user belongs to */
+  /* GET /api/soo/my-league */
   if (url === '/api/soo/my-league' && req.method === 'GET') {
     const tok = (req.headers['authorization']||'').replace(/^Bearer\s+/i,'');
     const uEmail = tokens[tok];
@@ -234,7 +315,7 @@ http.createServer(function(req, res) {
     return;
   }
 
-  /* POST /api/soo/league/:code/picks  { teamId, picks, token } */
+  /* POST /api/soo/league/:code/picks */
   const leaguePicks = url.match(/^\/api\/soo\/league\/([A-Z0-9]+)\/picks$/);
   if (leaguePicks && req.method === 'POST') {
     readBody(req, (err, body) => {
@@ -251,7 +332,7 @@ http.createServer(function(req, res) {
     return;
   }
 
-  /* DELETE /api/soo/league/:code/team/:teamId  — owner removes a team */
+  /* DELETE /api/soo/league/:code/team/:teamId */
   const teamDel = url.match(/^\/api\/soo\/league\/([A-Z0-9]+)\/team\/([A-Z0-9]+)$/);
   if (teamDel && req.method === 'DELETE') {
     readBody(req, (err, body) => {
@@ -270,7 +351,7 @@ http.createServer(function(req, res) {
     return;
   }
 
-  /* DELETE /api/soo/league/:code  — owner deletes entire league */
+  /* DELETE /api/soo/league/:code */
   const leagueDel = url.match(/^\/api\/soo\/league\/([A-Z0-9]+)$/);
   if (leagueDel && req.method === 'DELETE') {
     readBody(req, (err, body) => {
@@ -289,23 +370,19 @@ http.createServer(function(req, res) {
 
   /* ── SoO Scores API ── */
 
-  /* GET /api/soo/scores — returns all stored scores { "gameNum:playerId": pts } */
   if (url === '/api/soo/scores' && req.method === 'GET') {
     jsonRes(res, 200, sooScores);
     return;
   }
 
-  /* POST /api/soo/scores  { secret, game, scores: { playerId: pts, ... } }
-     Admin-only: enter scores after each game */
   if (url === '/api/soo/scores' && req.method === 'POST') {
     readBody(req, (err, body) => {
       if (err) return jsonRes(res, 400, {error: 'bad json'});
       if (body.secret !== 'SCORESECRET2026') return jsonRes(res, 403, {error: 'Forbidden'});
       const game = parseInt(body.game);
       if (!game || !body.scores) return jsonRes(res, 400, {error: 'game and scores required'});
-      /* Merge scores: { playerId: pts } → store as "game:playerId" */
       Object.entries(body.scores).forEach(([pid, pts]) => {
-        sooScores[`${game}:${pid}`] = Number(pts);
+        sooScores[game + ':' + pid] = Number(pts);
       });
       saveScores();
       jsonRes(res, 200, {ok: true, stored: Object.keys(body.scores).length});
@@ -313,7 +390,6 @@ http.createServer(function(req, res) {
     return;
   }
 
-  /* DELETE /api/soo/scores?secret=SCORESECRET2026&game=3 — clear scores for a game */
   if (url.startsWith('/api/soo/scores') && req.method === 'DELETE') {
     const qs = req.url.split('?')[1] || '';
     if (!qs.includes('secret=SCORESECRET2026')) return jsonRes(res, 403, {error: 'Forbidden'});
@@ -329,20 +405,17 @@ http.createServer(function(req, res) {
     return;
   }
 
-  /* GET /api/soo/admin/wipe-leagues?secret=WIPEIT — one-time league reset */
   if (url === '/api/soo/admin/wipe-leagues' && req.method === 'GET') {
     const qs = req.url.split('?')[1] || '';
     if (!qs.includes('secret=WIPEIT')) return jsonRes(res, 403, {error: 'Forbidden'});
     leagues = {};
     saveLeagues();
-    /* also clear leagueCode/teamId from all users */
     Object.values(users).forEach(u => { delete u.leagueCode; delete u.teamId; });
     saveUsers();
     jsonRes(res, 200, {ok: true, message: 'All leagues wiped. Users unlinked from leagues.'});
     return;
   }
 
-  /* /soo — redirect to standalone */
   if (url === '/soo') {
     res.writeHead(302, { 'Location': '/?soo=1' });
     res.end();
