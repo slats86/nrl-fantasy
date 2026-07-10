@@ -256,6 +256,10 @@ footer{text-align:center;color:#4b5a76;font-size:11px;padding:20px}
   .pcard .meta{font-size:10px}
   .pcard .sc{font-size:14px}
   .bench-row{gap:4px}
+  /* prevent border-radius from clipping edge cards on the field */
+  .field{padding:16px 14px;overflow:visible}
+  /* pos-filter pills scroll horizontally instead of wrapping */
+  .pos-filter{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
 }
 
 
