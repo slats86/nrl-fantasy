@@ -129,18 +129,22 @@ jobs:
 
           // Replace the embedded data line in index.html
           const patchJson = JSON.stringify(patch);
+          const patchPattern = /const __NRL_PATCH__=[^/]+\/\/ \[nrl-data\]/;
+          if (!patchPattern.test(html)) {
+            console.error('ERROR: Replacement pattern not found in index.html');
+            process.exit(1);
+          }
           const updated = html.replace(
-            /const __NRL_PATCH__=[^/]+\/\/ \[nrl-data\]/,
+            patchPattern,
             'const __NRL_PATCH__=' + patchJson + ';// [nrl-data]'
           );
 
           if (updated === html) {
-            console.error('ERROR: Replacement pattern not found in index.html');
-            process.exit(1);
+            console.log('Embedded patch is already current');
+          } else {
+            fs.writeFileSync('index.html', updated);
+            console.log('index.html updated (patch size: ' + Math.round(patchJson.length / 1024) + ' KB)');
           }
-
-          fs.writeFileSync('index.html', updated);
-          console.log('index.html updated (patch size: ' + Math.round(patchJson.length / 1024) + ' KB)');
           JSEOF
 
       - name: Commit through a protected pull request
