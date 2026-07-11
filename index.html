@@ -12,6 +12,8 @@
 <meta name="apple-mobile-web-app-title" content="The Squad">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/assets/app-icon.svg" type="image/svg+xml">
+<link rel="preload" href="/assets/data-core.js" as="script">
+<link rel="preload" href="/assets/season-data.js" as="script">
 <title>The Squad — NRL Fantasy</title>
 <style>
 :root{
@@ -21,6 +23,7 @@
   --button-fg:#0b1220; --topbar:linear-gradient(90deg,#0d1a10,#132013 40%,#0e1729); --bottom:#0d0d15;
 }
 *{box-sizing:border-box;margin:0;padding:0}
+.skip-link{position:fixed;left:12px;top:-60px;z-index:1000;background:var(--acc);color:var(--button-fg);padding:10px 14px;border-radius:8px;font-weight:800}.skip-link:focus{top:12px}.empty-state{padding:28px 18px;text-align:center;border:1px dashed var(--line);border-radius:12px;color:var(--dim)}
 button,[role="button"],a{touch-action:manipulation}
 body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;min-height:100dvh;font-size:14px}
 /* ---- app shell layout ---- */
@@ -74,6 +77,11 @@ main{padding:22px 26px;max-width:1440px;margin:0 auto;width:100%;box-sizing:bord
   main{padding:12px 10px}
   .card{padding:12px}
   .row>.card{min-width:0}
+  input,select,textarea{font-size:16px}
+  button,.navitem,.btab,[role="button"]{min-height:44px}
+  #modal-bg{padding:0;align-items:flex-end}
+  #modal{max-height:92dvh;border-radius:16px 16px 0 0;padding:20px 14px calc(18px + env(safe-area-inset-bottom))}
+  #modal .x{width:44px;height:44px;top:4px;right:4px}
 }
 .page{display:none}
 .page.on{display:block}
@@ -399,6 +407,7 @@ input,select,textarea{font-size:16px!important}
 }
 </style>
 <body>
+<a class="skip-link" href="#app-main">Skip to main content</a>
 <div id="login-page" hidden></div>
 <div id="app-shell" style="display:none">
   <!-- Sidebar — desktop nav -->
@@ -407,7 +416,7 @@ input,select,textarea{font-size:16px!important}
       <div class="brand-ball">🏉</div>
       <div><div class="brand-name">THE SQUAD</div><div class="brand-sub">NRL Fantasy · 2026</div></div>
     </div>
-    <nav id="sidebar-nav">
+    <nav id="sidebar-nav" aria-label="Primary navigation">
       <div class="navitem" data-pg="home"><span class="ni">⌂</span>Home</div>
       <div class="navitem on" data-pg="classic"><span class="ni">♙</span>My Team</div>
       <div class="navitem" data-pg="leagues"><span class="ni">♧</span>Leagues</div>
@@ -431,10 +440,10 @@ input,select,textarea{font-size:16px!important}
         <span class="pill" id="hdr-round">Round 1</span>
         <span class="pill" id="hdr-status" style="font-size:11px;background:var(--card2);border:1px solid var(--line);cursor:default"></span>
       </div>
-      <div class="topbar-alert" aria-label="Notifications">&#128276;</div>
+      <div class="topbar-alert" aria-hidden="true">&#128276;</div>
       <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none"></div>
     </div>
-    <main id="app-main">
+    <main id="app-main" tabindex="-1">
       <div class="page" id="pg-home"></div>
       <div class="page on" id="pg-classic"></div>
       <div class="page" id="pg-custom"></div>
@@ -447,7 +456,7 @@ input,select,textarea{font-size:16px!important}
     </main>
   </div>
   <!-- Bottom tab bar — mobile nav -->
-  <nav id="bottom-tabbar">
+  <nav id="bottom-tabbar" aria-label="Mobile navigation">
     <div class="btab" data-pg="home"><span class="bi">📈</span>Home</div>
     <div class="btab on" data-pg="classic"><span class="bi">♙</span>Team</div>
     <div class="btab" data-pg="leagues"><span class="bi">♧</span>Leagues</div>

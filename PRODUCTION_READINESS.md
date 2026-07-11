@@ -77,6 +77,6 @@ Ongoing operations:
 
 ## Responsive browser automation
 
-`npm run test:browser` covers authenticated registration/login state, logout, league creation/joining, pick updates, owner removal controls, score administration, console errors, navigation, and horizontal overflow at 320, 375, 390, 768, 1024, 1440, and 1920 pixels.
+`npm run test:browser` covers authenticated registration/login state, logout, league creation/joining, Custom-versus-Classic team isolation, reload persistence, pick updates, owner removal controls, score administration, accessibility landmarks, console errors, navigation, and horizontal overflow at 320, 375, 390, 768, 1024, 1440, and 1920 pixels.
 
 The suite passed in the Linux test workspace after Chromium dependencies were installed. Password-reset delivery, rendering, and the reset/login flow were also verified against production.

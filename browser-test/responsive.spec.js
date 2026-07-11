@@ -36,6 +36,25 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   await page.evaluate(() => window.setPage('home'));
   await expect(page.locator('#pg-home')).toHaveClass(/on/);
 
+  const isolation = await page.evaluate(() => {
+    const original = JSON.stringify(S.classic);
+    S.classic = {squad:[0],line:emptyLine(),bank:S.settings.cap-price(0),history:{},startRound:1,tradesRound:0,tradesSeason:0,chips:{active:{},used:{},injured:[]}};
+    S.classic.line.starters[PLAYERS[0].pos[0]][0]=0;
+    S.customLeague={name:'Isolation Test',cap:S.settings.cap,tradesPerRound:2,seasonTrades:30};
+    setPage('custom');
+    const startsEmpty=activeTeamState().squad.length===0;
+    const customPid=PLAYERS.find(p=>p.id!==0&&p.pos.includes(1))?.id;
+    if(customPid!=null)addToSlot(customPid,{kind:'st',posId:1,i:0});
+    const customCount=activeTeamState().squad.length;
+    save();setPage('classic');
+    const classicIntact=S.classic.squad.length===1&&S.classic.squad[0]===0;
+    S.classic=JSON.parse(original);S.customLeague=null;save();
+    return {startsEmpty,customCount,classicIntact};
+  });
+  expect(isolation).toEqual({startsEmpty:true,customCount:1,classicIntact:true});
+  await page.reload();
+  await expect(page.locator('#pg-classic')).toHaveClass(/on/);
+
   const member = await browser.newContext({baseURL:'http://127.0.0.1:32188'});
   const memberPage = await member.newPage();
   expect((await memberPage.request.post('/api/soo/register', {data:{name:'Member',email:'member@example.com',password:'member-password-123'}})).status()).toBe(201);
@@ -66,6 +85,9 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   await page.getByRole('button', {name:'Skip tour'}).click();
   await expect(page).toHaveTitle('The Squad — NRL Fantasy');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
+  await expect(page.locator('#app-main')).toHaveAttribute('tabindex', '-1');
+  await expect(page.locator('#sidebar-nav')).toHaveAttribute('aria-label', 'Primary navigation');
+  await expect(page.locator('#bottom-tabbar')).toHaveAttribute('aria-label', 'Mobile navigation');
   await page.evaluate(() => window.setPage('home'));
   await expect(page.locator('[data-testid="dashboard-hero"]')).toBeVisible();
   await expect(page.getByRole('button', {name:/Manage team/i})).toBeVisible();
