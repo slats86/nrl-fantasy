@@ -33,6 +33,12 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   await page.goto('/'); await page.waitForLoadState('domcontentloaded');
   await expect(page).toHaveTitle('The Squad — NRL Fantasy');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
+  await page.evaluate(() => window.setPage('leagues'));
+  const cardTab = page.locator('.format-tabs > div').first();
+  await expect(cardTab).toHaveAttribute('role', 'button');
+  await expect(cardTab).toHaveAttribute('tabindex', '0');
+  await cardTab.focus();
+  await cardTab.press('Enter');
   for (const name of ['home','classic','match','leagues','custom','players','settings']) {
     await page.evaluate(pg => { if (typeof window.setPage === 'function') window.setPage(pg); }, name);
     await page.waitForTimeout(50);

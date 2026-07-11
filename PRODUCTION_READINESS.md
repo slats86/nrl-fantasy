@@ -22,6 +22,7 @@
 - Mobile safe-area, narrow-screen, touch-target, and bottom-navigation fixes
 - Installable mobile/desktop web-app metadata with standalone display and a scalable app icon
 - Keyboard navigation, focus styles, accessible modal behavior, and reduced motion
+- Keyboard activation for dynamically rendered cards, tabs, match rows, and player controls
 - Authentication form labels, autocomplete metadata, and 12-character password guidance
 - Scheduled data workflow concurrency, timeouts, pinned Playwright, and schema checks
 - Fifteen-minute production health, PostgreSQL readiness, and application-shell monitoring

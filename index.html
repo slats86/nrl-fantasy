@@ -4997,6 +4997,27 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+/* Make tap/click-only cards and tabs work with a keyboard as well. */
+function enhanceClickTargets(root=document){
+  const targets=[];
+  if(root.nodeType===1&&root.matches('[onclick]'))targets.push(root);
+  if(root.querySelectorAll)targets.push(...root.querySelectorAll('[onclick]'));
+  targets.forEach(el=>{
+    if(el.matches('button,a,input,select,textarea,summary,label'))return;
+    if(!el.hasAttribute('role'))el.setAttribute('role','button');
+    if(!el.hasAttribute('tabindex'))el.tabIndex=0;
+  });
+}
+enhanceClickTargets();
+new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(enhanceClickTargets)))
+  .observe(document.body,{childList:true,subtree:true});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const target=e.target.closest&&e.target.closest('[onclick][role="button"]');
+  if(!target||target!==e.target)return;
+  e.preventDefault();target.click();
+});
+
 function setPage(pg){
   if(pg==='cgames')pg=window._cgamesLastTab||'custom';
   if(['custom','draft','origin'].includes(pg))window._cgamesLastTab=pg;
