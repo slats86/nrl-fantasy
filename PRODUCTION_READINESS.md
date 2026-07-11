@@ -62,6 +62,7 @@ Completed operationally:
 2. The encrypted backup workflow completed and produced a verified artifact.
 3. The guarded restore workflow restored the backup to the isolated PostgreSQL service and verified record counts.
 4. Production monitoring, integration tests, and logged-in responsive browser flows have passed.
+5. Authenticated Classic, Custom, Draft, league, theme, and preference state is persisted to PostgreSQL and restored across devices.
 
 Ongoing operations:
 
@@ -77,6 +78,6 @@ Ongoing operations:
 
 ## Responsive browser automation
 
-`npm run test:browser` covers authenticated registration/login state, logout, league creation/joining, Custom-versus-Classic team isolation, reload persistence, pick updates, owner removal controls, score administration, accessibility landmarks, console errors, navigation, and horizontal overflow at 320, 375, 390, 768, 1024, 1440, and 1920 pixels.
+`npm run test:browser` covers authenticated registration/login state, logout, cross-device game-state synchronisation, league creation/joining, Custom-versus-Classic team isolation, reload persistence, pick updates, owner removal controls, score administration, accessibility landmarks, console errors, navigation, and horizontal overflow at 320, 375, 390, 768, 1024, 1440, and 1920 pixels.
 
 The suite passed in the Linux test workspace after Chromium dependencies were installed. Password-reset delivery, rendering, and the reset/login flow were also verified against production.

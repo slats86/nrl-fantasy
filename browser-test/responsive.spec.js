@@ -74,6 +74,25 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   await member.close(); await owner.close();
 });
 
+test('classic and custom state sync across devices', async ({browser}) => {
+  const first=await browser.newContext({baseURL:'http://127.0.0.1:32188'}),page=await first.newPage();
+  expect((await page.request.post('/api/soo/register',{data:{name:'Sync User',email:'sync@example.com',password:'sync-password-123'}})).status()).toBe(201);
+  await page.goto('/');
+  await page.getByRole('button',{name:'Modern Lime'}).click();await page.getByRole('button',{name:'Skip tour'}).click();
+  await page.evaluate(()=>{
+    S.classic.squad=[0];S.classic.line=emptyLine();S.classic.line.starters[PLAYERS[0].pos[0]][0]=0;
+    S.customLeague={name:'Synced Custom',cap:S.settings.cap,tradesPerRound:2,seasonTrades:30,team:{squad:[],line:emptyLine(),bank:S.settings.cap,history:{},startRound:S.round,tradesRound:0,tradesSeason:0}};
+    save();
+  });
+  await page.waitForTimeout(1300);
+  const second=await browser.newContext({baseURL:'http://127.0.0.1:32188'}),phone=await second.newPage();
+  expect((await phone.request.post('/api/soo/login',{data:{email:'sync@example.com',password:'sync-password-123'}})).status()).toBe(200);
+  await phone.goto('/');await phone.waitForLoadState('domcontentloaded');await phone.waitForTimeout(300);
+  const synced=await phone.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague&&S.customLeague.name}));
+  expect(synced).toEqual({classic:[0],custom:'Synced Custom'});
+  await second.close();await first.close();
+});
+
 for (const width of widths) test(`responsive app shell at ${width}px`, async ({page}) => {
   await page.setViewportSize({width,height:900});
   const errors=[]; page.on('pageerror', error => errors.push(error.message));
@@ -111,6 +130,8 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   expect(mobileNav).toBe(width <= 768);
   if (width <= 768) {
     await expect(page.locator('#bottom-tabbar .btab')).toHaveCount(5);
+    await expect(page.getByRole('button',{name:'Open navigation menu'})).toBeVisible();
+    await expect(page.locator('.topbar-brand')).toBeVisible();
     await page.locator('#bottom-tabbar .btab').filter({hasText:'More'}).click();
     await expect(page.getByRole('button', {name:'State of Origin'})).toBeVisible();
     await page.keyboard.press('Escape');

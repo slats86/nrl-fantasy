@@ -66,6 +66,10 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
           token_hash text PRIMARY KEY, user_email text NOT NULL REFERENCES users(email) ON DELETE CASCADE,
           expires_at timestamptz NOT NULL, used_at timestamptz
         );
+        CREATE TABLE IF NOT EXISTS app_states (
+          user_email text PRIMARY KEY REFERENCES users(email) ON DELETE CASCADE,
+          state jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now()
+        );
         CREATE TABLE IF NOT EXISTS leagues (
           code text PRIMARY KEY, name text NOT NULL, owner_id text NOT NULL, created_at timestamptz NOT NULL
         );
@@ -107,6 +111,9 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
     await client.query(`INSERT INTO users(email,user_id,name,salt,password_hash,iterations,league_code,team_id)
       VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(email) DO NOTHING`,
     [user.email, user.userId, user.name, user.salt, user.hash, user.iterations || 10000, user.leagueCode || null, user.teamId || null]);
+    if (user.appState && typeof user.appState === 'object') await client.query(
+      'INSERT INTO app_states(user_email,state,updated_at) VALUES($1,$2,now()) ON CONFLICT(user_email) DO UPDATE SET state=EXCLUDED.state,updated_at=now()',
+      [user.email, JSON.stringify(user.appState)]);
     const sessionHash = user.tokenHash || (user.token ? require('crypto').createHash('sha256').update(user.token).digest('hex') : null);
     if (sessionHash && user.tokenExpires) await client.query('INSERT INTO sessions VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [sessionHash, user.email, new Date(user.tokenExpires)]);
     if (user.resetTokenHash && user.resetExpires) await client.query('INSERT INTO password_resets(token_hash,user_email,expires_at) VALUES($1,$2,$3) ON CONFLICT DO NOTHING', [user.resetTokenHash, user.email, new Date(user.resetExpires)]);
@@ -123,14 +130,16 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
   }
 
   async function load() {
-    const [ur, sr, rr, lr, tr, pr, scr] = await Promise.all([
+    const [ur, sr, rr, ar, lr, tr, pr, scr] = await Promise.all([
       pool.query('SELECT * FROM users'), pool.query('SELECT * FROM sessions'), pool.query('SELECT * FROM password_resets WHERE used_at IS NULL'),
+      pool.query('SELECT * FROM app_states'),
       pool.query('SELECT * FROM leagues'), pool.query('SELECT * FROM teams'), pool.query('SELECT * FROM picks'), pool.query('SELECT * FROM scores')
     ]);
     const users = {}, leagues = {}, scores = {};
     for (const row of ur.rows) users[row.email] = {userId: row.user_id, email: row.email, name: row.name, salt: row.salt, hash: row.password_hash, iterations: row.iterations, leagueCode: row.league_code || undefined, teamId: row.team_id || undefined};
     for (const row of sr.rows) if (users[row.user_email]) Object.assign(users[row.user_email], {tokenHash: row.token_hash, tokenExpires: +new Date(row.expires_at)});
     for (const row of rr.rows) if (users[row.user_email]) Object.assign(users[row.user_email], {resetTokenHash: row.token_hash, resetExpires: +new Date(row.expires_at)});
+    for (const row of ar.rows) if (users[row.user_email]) Object.assign(users[row.user_email], {appState: row.state, appStateUpdated: +new Date(row.updated_at)});
     for (const row of lr.rows) leagues[row.code] = {name: row.name, ownerId: row.owner_id, created: +new Date(row.created_at), teams: []};
     const teams = {};
     for (const row of tr.rows) { const team = {id: row.id, userId: row.user_id, name: row.name, picks: {}}; teams[row.id] = team; if (leagues[row.league_code]) leagues[row.league_code].teams.push(team); }
@@ -148,8 +157,11 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
     for (const [code, league] of Object.entries(leagues)) await insertLeague(c, code, league);
   })); }
   async function saveScores(scores) { return retry(() => transaction(async c => { await c.query('DELETE FROM scores'); for (const [key, points] of Object.entries(scores)) { const [g,p] = key.split(':').map(Number); await c.query('INSERT INTO scores VALUES($1,$2,$3)', [g,p,points]); } })); }
+  async function saveAppState(email, state) { return retry(() => pool.query(
+    'INSERT INTO app_states(user_email,state,updated_at) VALUES($1,$2,now()) ON CONFLICT(user_email) DO UPDATE SET state=EXCLUDED.state,updated_at=now()',
+    [email, JSON.stringify(state)])); }
   async function ping() { await pool.query('SELECT 1'); }
-  return {migrate, load, saveUsers, saveLeagues, saveAccountState, saveScores, ping, close: () => pool.end(), retry};
+  return {migrate, load, saveUsers, saveLeagues, saveAccountState, saveScores, saveAppState, ping, close: () => pool.end(), retry};
 }
 
 module.exports = {createDatabase, readLegacySnapshot};
