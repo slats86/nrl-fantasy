@@ -69,7 +69,11 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   await page.evaluate(() => window.setPage('home'));
   await expect(page.locator('[data-testid="dashboard-hero"]')).toBeVisible();
   await expect(page.getByRole('button', {name:/Manage team/i})).toBeVisible();
+  await page.evaluate(() => window.setPage('classic'));
+  await expect(page.locator('.team-builder')).toBeVisible();
+  await expect(page.locator('#pool-card')).toBeVisible();
   await page.evaluate(() => window.setPage('leagues'));
+  await expect(page.locator('.league-hub')).toBeVisible();
   const cardTab = page.locator('.format-tabs > div').first();
   await expect(cardTab).toHaveAttribute('role', 'button');
   await expect(cardTab).toHaveAttribute('tabindex', '0');
