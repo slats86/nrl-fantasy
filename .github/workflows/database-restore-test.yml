@@ -51,11 +51,13 @@ jobs:
         run: |
           run_id="$(gh run list --workflow database-backup.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
           test -n "$run_id" || { echo 'No successful backup run found'; exit 1; }
+          artifact_name="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts" --jq '.artifacts[] | select(.expired == false) | select(.name | startswith("nrl-fantasy-postgres-")) | .name' | head -n 1)"
+          test -n "$artifact_name" || { echo 'No unexpired encrypted backup artifact found'; exit 1; }
           mkdir -p backup
-          gh run download "$run_id" --dir backup
+          gh run download "$run_id" --name "$artifact_name" --dir backup
           test -s backup/nrl-fantasy.dump.gpg
           test -s backup/nrl-fantasy.dump.gpg.sha256
-          echo "Restoring encrypted artifact from backup run $run_id"
+          echo "Restoring encrypted artifact $artifact_name from backup run $run_id"
 
       - name: Verify and decrypt backup
         shell: bash
