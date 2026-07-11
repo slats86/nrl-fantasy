@@ -14,7 +14,7 @@ An unofficial NRL fantasy game for mates, hosted at [nrl.the-squad.com.au](https
 
 - Frontend: vanilla HTML, CSS, and JavaScript in `index.html`
 - Backend: Node.js native HTTP server in `server.js`
-- Data: JSON files, with Railway volume persistence for production data
+- Data: PostgreSQL in production, with JSON files as a development-only fallback
 - Email: Resend
 - Hosting: Railway, automatically deployed from the `main` branch
 - Build step: none
@@ -36,10 +36,22 @@ Railway uses these environment variables:
 - `APP_URL=https://nrl.the-squad.com.au`
 - `FROM_EMAIL=NRL Fantasy <noreply@the-squad.com.au>`
 - `RESEND_API_KEY`
-- `ADMIN_KEY`
+- `DATABASE_URL` — Railway PostgreSQL connection string (required in production)
+- `ADMIN_EMAILS` — comma-separated accounts allowed to update official scores
+- `DATA_DIR` — mounted Railway volume path (JSON fallback only)
+- `PGPOOL_MAX` — optional PostgreSQL connection-pool limit
 
 Do not commit secret values to the repository.
 
+Production uses secure, expiring HttpOnly session cookies. Existing bearer-token sessions are migrated on first load.
+
+## Production readiness
+
+- Railway health checks and restart behavior are defined in `railway.json`.
+- `npm run check` validates the server, all inline JavaScript blocks, and the API regression suite.
+- Railway runs the idempotent PostgreSQL migration before each deployment.
+- Maintain tested PostgreSQL backups and restore procedures.
+- Set `ADMIN_EMAILS` before an administrator needs to enter official State of Origin scores. Administrative secrets are never sent to browsers.
 ## Deployment
 
 Push changes to `main`; Railway deploys them automatically.

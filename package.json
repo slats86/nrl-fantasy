@@ -3,7 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate": "node scripts/migrate.js",
+    "test:browser": "playwright test",
+    "check": "node --check server.js && node scripts/check-html.js && node --test",
+    "test": "node --test"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1"
+  }
 }
