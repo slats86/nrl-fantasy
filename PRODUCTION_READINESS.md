@@ -43,9 +43,9 @@ Completed against Railway:
 
 Still required operationally:
 
-1. Enable scheduled Railway backups for the production PostgreSQL volume and retain at least one weekly recovery point.
-2. Create an off-platform backup with `pg_dump --format=custom --no-owner --file=nrl-fantasy.dump "$DATABASE_URL"`.
-3. Restore into an isolated database with `pg_restore --clean --if-exists --no-owner --dbname="$RESTORE_DATABASE_URL" nrl-fantasy.dump`, then run the integration and logged-in browser suites against it.
+1. Configure the two repository secrets documented in `BACKUP_AND_RECOVERY.md`, run the encrypted backup workflow manually, and confirm its artifact exists.
+2. Restore an artifact into the isolated Postgres Test database and run the integration and logged-in browser suites against it.
+3. Repeat the restore test monthly and after database schema or backup-workflow changes.
 4. Retain the source JSON snapshot through the rollback window; do not point production back to JSON writes.
 
 ## Rollout requirements
