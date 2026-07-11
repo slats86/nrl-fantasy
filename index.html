@@ -3124,44 +3124,59 @@ function sooInitState(){
 
 
 /* ── SoO Auth (standalone) ──────────────────────────────── */
+function sooSetBusy(btn,busy,busyText){
+  if(!btn)return false;
+  if(busy&&btn.disabled)return false;
+  if(busy){btn.dataset.label=btn.textContent;btn.disabled=true;btn.setAttribute('aria-busy','true');btn.textContent=busyText;}
+  else{btn.disabled=false;btn.removeAttribute('aria-busy');btn.textContent=btn.dataset.label||btn.textContent;}
+  return true;
+}
+function sooSetStatus(id,message,success=false){
+  const el=document.getElementById(id);if(!el)return;
+  el.style.color=success?'var(--acc)':'var(--red)';el.textContent=message;
+}
 async function sooDoRegister(){
   const name =document.getElementById('soo-reg-name').value.trim();
   const email=document.getElementById('soo-reg-email').value.trim();
   const pass =document.getElementById('soo-reg-pass').value;
   const err  =document.getElementById('soo-auth-err');
+  const btn=document.getElementById('soo-register-submit');
   err.textContent='';
   if(!name||!email||pass.length<12){err.textContent='Fill in all fields (password min 12 chars)';return;}
+  if(!sooSetBusy(btn,true,'Creating account…'))return;
   try{
     const r=await fetch('/api/soo/register',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({name,email,password:pass})});
     const d=await r.json();
-    if(!r.ok){err.textContent=d.error||'Registration failed';return;}
+    if(!r.ok){err.textContent=d.error||'Registration failed';sooSetBusy(btn,false);return;}
     const prevId=S.sooAuth&&S.sooAuth.userId;
     S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};
     if(prevId&&prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&!S.origin.league.code){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.user.name||''};}
     save();showApp();setPage('origin');
-  }catch(e){err.textContent='Network error — try again';}
+  }catch(e){err.textContent='Network error — try again';sooSetBusy(btn,false);}
 }
 async function sooDoLogin(){
   const email=document.getElementById('soo-login-email').value.trim();
   const pass =document.getElementById('soo-login-pass').value;
   const err  =document.getElementById('soo-auth-err');
+  const btn=document.getElementById('soo-login-submit');
   err.textContent='';
   if(!email||!pass){err.textContent='Enter email and password';return;}
+  if(!sooSetBusy(btn,true,'Signing in…'))return;
   try{
     const r=await fetch('/api/soo/login',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({email,password:pass})});
     const d=await r.json();
-    if(!r.ok){err.textContent=d.error||'Login failed';return;}
+    if(!r.ok){err.textContent=d.error||'Login failed';sooSetBusy(btn,false);return;}
     const prevId2=S.sooAuth&&S.sooAuth.userId;
     S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};
     if(prevId2&&prevId2!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&(!S.origin.league||!S.origin.league.code)){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.sooAuth.name||''};}
     save();showApp();setPage('origin');
-  }catch(e){err.textContent='Network error — try again';}
+  }catch(e){err.textContent='Network error — try again';sooSetBusy(btn,false);}
 }
 function sooShowAuthTab(tab){
   document.getElementById('soo-tab-login').classList.toggle('on',tab==='login');
@@ -3596,6 +3611,9 @@ function sooLeagueTeamGameScore(picks,gameNum){
 async function sooCreateLeague(){
   const lname=document.getElementById('soo-lg-name').value.trim()||'SoO League';
   const tname=document.getElementById('soo-team-name').value.trim()||(S.sooAuth&&S.sooAuth.name)||S.user.name||'My Team';
+  const btn=document.getElementById('soo-create-submit');
+  sooSetStatus('soo-league-status','');
+  if(!sooSetBusy(btn,true,'Creating league…'))return;
   try{
     const r=await fetch(SOO_API+'/create',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -3605,13 +3623,16 @@ async function sooCreateLeague(){
     if(!r.ok)throw new Error(d.error||'Failed');
     S.origin.league={code:d.code,teamId:d.teamId,name:lname,teamName:tname};
     save();renderOrigin();
-  }catch(e){alert('Error: '+e.message);}
+  }catch(e){sooSetBusy(btn,false);sooSetStatus('soo-league-status',e.message||'Could not create the league. Try again.');}
 }
 
 async function sooJoinLeague(){
   const code=(document.getElementById('soo-join-code').value||'').trim().toUpperCase();
   const tname=document.getElementById('soo-join-tname').value.trim()||(S.sooAuth&&S.sooAuth.name)||S.user.name||'My Team';
-  if(!code){alert('Enter a league code');return;}
+  const btn=document.getElementById('soo-join-submit');
+  sooSetStatus('soo-league-status','');
+  if(!code){sooSetStatus('soo-league-status','Enter a league code.');document.getElementById('soo-join-code').focus();return;}
+  if(!sooSetBusy(btn,true,'Joining league…'))return;
   try{
     const r=await fetch(SOO_API+'/join',{
       method:'POST',headers:{'Content-Type':'application/json'},
@@ -3628,7 +3649,7 @@ async function sooJoinLeague(){
     save();
     _sooLeagueCache=d.league;
     renderOrigin();
-  }catch(e){alert('Error: '+e.message);}
+  }catch(e){sooSetBusy(btn,false);sooSetStatus('soo-league-status',e.message||'Could not join the league. Check the code and try again.');}
 }
 
 async function sooSyncPicks(){
@@ -3705,6 +3726,7 @@ async function sooSubmitScores(game){
   });
   if(filled===0){alert('Enter at least one score.');return;}
   const btn=document.getElementById('soo-scores-submit');
+  if(btn.disabled)return;
   btn.disabled=true;btn.textContent='Saving…';
   try{
     const r=await fetch(SOO_API+'/scores',{
@@ -3962,17 +3984,18 @@ function renderSooLeague(){
 
       <div style="border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px">
         <div style="font-weight:700;margin-bottom:12px">Create a league</div>
-        <input id="soo-lg-name" placeholder="League name" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:8px">
-        <input id="soo-team-name" placeholder="Your team name" value="${esc((S.sooAuth&&S.sooAuth.name)||S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
-        <button class="btn-primary" onclick="sooCreateLeague()" style="width:100%">Create League</button>
+        <input id="soo-lg-name" aria-label="League name" placeholder="League name" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:8px">
+        <input id="soo-team-name" aria-label="Your team name" placeholder="Your team name" value="${esc((S.sooAuth&&S.sooAuth.name)||S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
+        <button id="soo-create-submit" class="btn-primary" onclick="sooCreateLeague()" style="width:100%">Create League</button>
       </div>
 
       <div style="border:1px solid var(--line);border-radius:12px;padding:16px">
         <div style="font-weight:700;margin-bottom:12px">Join a league</div>
-        <input id="soo-join-code" placeholder="League code (e.g. XY3K9P)" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;text-transform:uppercase;margin-bottom:8px">
-        <input id="soo-join-tname" placeholder="Your team name" value="${esc((S.sooAuth&&S.sooAuth.name)||S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
-        <button class="btn-primary" onclick="sooJoinLeague()" style="width:100%">Join League</button>
+        <input id="soo-join-code" aria-label="League code" placeholder="League code (e.g. XY3K9P)" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;text-transform:uppercase;margin-bottom:8px">
+        <input id="soo-join-tname" aria-label="Your team name" placeholder="Your team name" value="${esc((S.sooAuth&&S.sooAuth.name)||S.user.name||'')}" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;color:var(--fg);font-size:14px;margin-bottom:12px">
+        <button id="soo-join-submit" class="btn-primary" onclick="sooJoinLeague()" style="width:100%">Join League</button>
       </div>
+      <p id="soo-league-status" role="status" aria-live="polite" style="min-height:18px;margin:12px 0 0;color:var(--red);font-size:13px;text-align:center"></p>
     </div>`;
   }
 
@@ -4685,7 +4708,7 @@ function byePlannerHTML(){
             <label for="soo-login-pass" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
             <input id="soo-login-pass" type="password" autocomplete="current-password" placeholder="••••••••••••" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoLogin()">
           </div>
-          <button onclick="sooDoLogin()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Sign In</button>
+          <button id="soo-login-submit" onclick="sooDoLogin()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Sign In</button>
           <div style="text-align:center;margin-top:14px">
             <button onclick="sooShowAuthTab('forgot')" style="background:none;border:none;color:var(--dim);font-size:13px;cursor:pointer;text-decoration:underline">Forgot password?</button>
           </div>
@@ -4729,9 +4752,9 @@ function byePlannerHTML(){
             <label for="soo-reg-pass" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
             <input id="soo-reg-pass" type="password" autocomplete="new-password" minlength="12" placeholder="Minimum 12 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoRegister()">
           </div>
-          <button onclick="sooDoRegister()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Create Account</button>
+          <button id="soo-register-submit" onclick="sooDoRegister()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Create Account</button>
         </div>
-        <p id="soo-auth-err" style="color:var(--red);font-size:13px;margin-top:12px;text-align:center;min-height:18px"></p>
+        <p id="soo-auth-err" role="status" aria-live="polite" style="color:var(--red);font-size:13px;margin-top:12px;text-align:center;min-height:18px"></p>
       </div>
     </div>
   </div>
