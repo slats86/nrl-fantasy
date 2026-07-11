@@ -44,6 +44,10 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   await page.evaluate(()=>showStatLine(0,1));
   await expect(page.locator('#modal-bg')).toHaveClass(/on/);
   await page.keyboard.press('Escape');
+  await page.evaluate(()=>showStatLine(0,999));
+  await expect(page.getByText('Season average')).toBeVisible();
+  await expect(page.getByText(/official feed currently provides/i)).toBeVisible();
+  await page.keyboard.press('Escape');
 
   const isolation = await page.evaluate(() => {
     const original = JSON.stringify(S.classic);
@@ -52,8 +56,9 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
     S.customLeague={name:'Isolation Test',cap:S.settings.cap,tradesPerRound:2,seasonTrades:30};
     setPage('custom');
     const startsEmpty=activeTeamState().squad.length===0;
-    const customPid=PLAYERS.find(p=>p.id!==0&&p.pos.includes(1))?.id;
-    if(customPid!=null)addToSlot(customPid,{kind:'st',posId:1,i:0});
+    const customPid=PLAYERS.find(p=>p.id!==0&&p.pos.includes(1)&&price(p.id)<S.settings.cap)?.id;
+    S.classic.bank=9000;S.ui.slotPick={kind:'st',posId:1,i:0};
+    if(customPid!=null)poolClick(customPid);
     const customCount=activeTeamState().squad.length;
     save();setPage('classic');
     const classicIntact=S.classic.squad.length===1&&S.classic.squad[0]===0;

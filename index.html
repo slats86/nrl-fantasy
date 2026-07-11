@@ -2071,8 +2071,9 @@ function renderPool(){
   </tbody></table></div>`;
 }
 function refreshPool(){$('#pool-card').innerHTML=renderPool();const inp=$('#pool-card input');inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}
+function renderActiveTeamPage(){if(S.ui.page==='custom')renderCustom();else renderClassic();}
 function openMobilePlayerPicker(slot){S.ui.slotPick=slot;openModal(`<div id="pool-card"><div class="home-kicker" style="margin-bottom:8px">Team selection</div>${renderPool()}</div>`);}
-function openSlotPicker(slot){if(matchMedia('(max-width:600px)').matches){openMobilePlayerPicker(slot);return}S.ui.slotPick=slot;renderClassic();}
+function openSlotPicker(slot){if(matchMedia('(max-width:600px)').matches){openMobilePlayerPicker(slot);return}S.ui.slotPick=slot;renderActiveTeamPage();}
 function poolClick(pid){
   const T=activeTeamState();
   if(isPlayerLocked(pid)){alert(esc(PLAYERS[pid].name)+' is locked — their game has already started this round.');return;}
@@ -2084,16 +2085,18 @@ function poolClick(pid){
     if(!slot){alert('Squad full — remove a player first.');return}
   }
   const freed=slot.pid!=null?price(slot.pid):0;
-  if(price(pid)-freed>S.classic.bank){alert('Not enough salary — '+fmtK(S.classic.bank+freed)+' available for this slot.');return}
+  if(price(pid)-freed>T.bank){alert('Not enough salary — '+fmtK(T.bank+freed)+' available for this slot.');return}
   if(seasonStarted()){
-    if(S.classic.tradesRound>=S.settings.tradesPerRound){alert('No trades left this round.');return}
-    if(S.classic.tradesSeason>=S.settings.seasonTrades){alert('No season trades left.');return}
-    S.classic.tradesRound++;S.classic.tradesSeason++;
+    const roundLimit=S.ui.page==='custom'?clTpr():S.settings.tradesPerRound;
+    const seasonLimit=S.ui.page==='custom'?clSts():S.settings.seasonTrades;
+    if((T.tradesRound||0)>=roundLimit){alert('No trades left this round.');return}
+    if((T.tradesSeason||0)>=seasonLimit){alert('No season trades left.');return}
+    T.tradesRound=(T.tradesRound||0)+1;T.tradesSeason=(T.tradesSeason||0)+1;
   }
   /* if slot occupied, remove old */
   if(slot.pid!=null)removeFromLine(slot.pid);
   addToSlot(pid,slot);
-  S.ui.slotPick=null;save();if(matchMedia('(max-width:600px)').matches)closeModal();renderClassic();
+  S.ui.slotPick=null;save();if(matchMedia('(max-width:600px)').matches)closeModal();renderActiveTeamPage();
 }
 function autoComplete(){
   const rng=mulberry32(Date.now()%1e9);
@@ -3089,11 +3092,18 @@ function showStatLine(pid,r){
       return `<tr><td>${STAT_LABELS[k]}</td><td>${v}</td><td class="${ptsk>=0?'good':'bad'}">${ptsk>0?'+':''}${ptsk}</td></tr>`;
     }).join('');
     if(st[24])rows+=`<tr><td class="muted">Minutes on field</td><td class="muted">${st[24]}</td><td></td></tr>`;
+  }else{
+    rows=`<tr><td>Fantasy score</td><td><b>${pts??'—'}</b></td><td>Round ${r}</td></tr>
+      <tr><td>Season average</td><td><b>${p.avg||'—'}</b></td><td>${p.gp||0} games</td></tr>
+      <tr><td>Last 3 average</td><td><b>${p.l3||'—'}</b></td><td>Recent form</td></tr>
+      <tr><td>Current price</td><td><b>${fmtK(price(pid))}</b></td><td>${p.own||0}% owned</td></tr>
+      <tr><td>Season range</td><td>${p.lo||'—'}–${p.hi||'—'}</td><td>Low–high</td></tr>`;
   }
   openModal(`<div class="flex">${avatar(p,56)}<div><h3 style="margin:0">${esc(p.name)} — Round ${r}</h3>
    <div class="muted">${CLUBS[p.sq].n} · ${posStr(p)} · official stat line</div></div>
    <span class="spacer"></span><div class="stat"><div class="v">${pts}</div><div class="l">${S.settings.scoreMode==='custom'?'custom pts':'official pts'}</div></div></div>
-   <table style="margin-top:12px"><thead><tr><th>Stat</th><th>Count</th><th>Points</th></tr></thead><tbody>${rows||'<tr><td colspan=3 class="muted">No detailed stat line available for this game.</td></tr>'}</tbody></table>
+   <table style="margin-top:12px"><thead><tr><th>${st?'Stat':'Metric'}</th><th>${st?'Count':'Value'}</th><th>${st?'Points':'Context'}</th></tr></thead><tbody>${rows}</tbody></table>
+   ${!st?'<p class="tooltip">The official feed currently provides the Fantasy total for this match but not its tackle, metre and attacking-stat components. Season context is shown above while detailed match data is unavailable.</p>':''}
    ${st&&off!=null?`<p class="tooltip">Official NRL Fantasy score: <b>${off}</b>. Per-stat points use your current rules${S.settings.scoreMode==='custom'?'':' (display only — official mode is on)'}.</p>`:''}`);
 }
 
