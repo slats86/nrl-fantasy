@@ -49,7 +49,7 @@ Production uses secure, expiring HttpOnly session cookies. Existing bearer-token
 
 - Railway health checks and restart behavior are defined in `railway.json`.
 - `npm run check` validates the server, all inline JavaScript blocks, and the API regression suite.
-- Railway runs the idempotent PostgreSQL migration before each deployment.
+- Application startup runs the idempotent PostgreSQL migration before opening the HTTP port.
 - Maintain tested PostgreSQL backups and restore procedures.
 - Set `ADMIN_EMAILS` before an administrator needs to enter official State of Origin scores. Administrative secrets are never sent to browsers.
 ## Deployment
