@@ -129,6 +129,40 @@ test('registration issues a secure cookie without exposing a bearer token', asyn
   assert.equal(body.token, undefined);
 });
 
+test('account deletion requires a password and removes login and league data', async () => {
+  const email = 'delete-me@example.com';
+  const password = 'delete-account-password';
+  const registration = await fetch(`http://127.0.0.1:${port}/api/soo/register`, {
+    method: 'POST', headers: {'content-type': 'application/json'},
+    body: JSON.stringify({name: 'Delete Me', email, password})
+  });
+  assert.equal(registration.status, 201);
+  const cookie = registration.headers.get('set-cookie').split(';')[0];
+  const created = await fetch(`http://127.0.0.1:${port}/api/soo/create`, {
+    method: 'POST', headers: {'content-type': 'application/json', cookie},
+    body: JSON.stringify({name: 'Temporary League', teamName: 'Temporary Team', picks: {}})
+  });
+  assert.equal(created.status, 200);
+  const {code} = await created.json();
+
+  const rejected = await fetch(`http://127.0.0.1:${port}/api/soo/account`, {
+    method: 'DELETE', headers: {'content-type': 'application/json', cookie}, body: JSON.stringify({password: 'wrong-password'})
+  });
+  assert.equal(rejected.status, 403);
+
+  const deleted = await fetch(`http://127.0.0.1:${port}/api/soo/account`, {
+    method: 'DELETE', headers: {'content-type': 'application/json', cookie}, body: JSON.stringify({password})
+  });
+  assert.equal(deleted.status, 200);
+  assert.match(deleted.headers.get('set-cookie'), /Max-Age=0/);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/soo/me`, {headers: {cookie}})).status, 401);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/soo/league/${code}`, {headers: {cookie}})).status, 404);
+  const login = await fetch(`http://127.0.0.1:${port}/api/soo/login`, {
+    method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({email, password})
+  });
+  assert.equal(login.status, 401);
+});
+
 test('score writes reject non-admin users and browser secrets', async () => {
   const response = await fetch(`http://127.0.0.1:${port}/api/soo/scores`, {
     method: 'POST', headers: {'content-type': 'application/json'},

@@ -84,6 +84,10 @@ function atomicSave(file, value) {
 async function saveLeagues() { if (database) return database.saveLeagues(leagues); try { atomicSave(LEAGUE_FILE, leagues); } catch(e) { console.error('[storage] leagues:', e.message); throw e; } }
 async function saveUsers()   { if (database) return database.saveUsers(users); try { atomicSave(USERS_FILE, users); } catch(e) { console.error('[storage] users:', e.message); throw e; } }
 async function saveScores()  { if (database) return database.saveScores(sooScores); try { atomicSave(SCORES_FILE, sooScores); } catch(e) { console.error('[storage] scores:', e.message); throw e; } }
+async function saveAccountState() {
+  if (database) return database.saveAccountState(users, leagues);
+  await saveLeagues(); await saveUsers();
+}
 
 function hashPwd(password, salt, iterations) {
   return new Promise((resolve, reject) => crypto.pbkdf2(password, salt, iterations || 310000, 64, 'sha512',
@@ -499,6 +503,32 @@ async function handleRequest(req, res) {
       delete user.token; delete user.tokenHash; delete user.tokenExpires; saveUsers().catch(e => console.error('[storage] logout:', e.message));
     }
     jsonRes(req, res, 200, {ok: true}, {'Set-Cookie': 'session=; Path=/; HttpOnly' + (COOKIE_SECURE ? '; Secure' : '') + '; SameSite=Lax; Max-Age=0'});
+    return;
+  }
+
+  if (url === '/api/soo/account' && req.method === 'DELETE') {
+    readBody(req, async (err, body) => {
+      if (err) return bodyError(req, res, err);
+      const user = authUser(req, body);
+      if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
+      const supplied = Buffer.from(await hashPwd(body.password || '', user.salt, user.iterations || 10000), 'hex');
+      const expected = Buffer.from(user.hash, 'hex');
+      if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected))
+        return jsonRes(req, res, 403, {error: 'Incorrect password'});
+
+      for (const [code, league] of Object.entries(leagues)) {
+        league.teams = (league.teams || []).filter(team => team.userId !== user.userId);
+        if (league.ownerId === user.userId) {
+          if (league.teams.length) league.ownerId = league.teams[0].userId;
+          else delete leagues[code];
+        }
+      }
+      if (user.tokenHash) delete tokens[user.tokenHash];
+      if (user.token) delete tokens[user.token];
+      delete users[user.email];
+      await saveAccountState();
+      jsonRes(req, res, 200, {ok: true}, {'Set-Cookie': 'session=; Path=/; HttpOnly' + (COOKIE_SECURE ? '; Secure' : '') + '; SameSite=Lax; Max-Age=0'});
+    });
     return;
   }
 
