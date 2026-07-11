@@ -271,6 +271,26 @@ function serveLocal(req, res, filePath) {
   });
 }
 
+function serveAsset(req, res, fileName) {
+  const allowed = new Set(['data-core.js', 'season-data.js', 'history-data.js']);
+  if (!allowed.has(fileName)) return jsonRes(req, res, 404, {error: 'Asset not found'});
+  fs.readFile(path.join(__dirname, 'public', 'assets', fileName), function(err, data) {
+    if (err) return jsonRes(req, res, 404, {error: 'Asset not found'});
+    const headers = {
+      'Content-Type': 'application/javascript; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'ETag': contentEtag(data)
+    };
+    if (req.method === 'HEAD') {
+      if (String(req.headers['if-none-match'] || '').split(',').map(value => value.trim()).includes(headers.ETag)) {
+        res.writeHead(304, Object.assign({}, securityHeaders(headers['Content-Type']), headers)); res.end(); return;
+      }
+      res.writeHead(200, Object.assign({}, securityHeaders(headers['Content-Type']), headers)); res.end(); return;
+    }
+    compressedRes(req, res, 200, data, headers);
+  });
+}
+
 function proxyNRL(req, res, nrlPath) {
   const opts = {
     hostname: 'fantasy.nrl.com',
@@ -326,6 +346,9 @@ async function handleRequest(req, res) {
 
   if (url === '/api/players') return serveLocal(req, res, path.join(__dirname, 'public/players.json'));
   if (url === '/api/rounds')  return serveLocal(req, res, path.join(__dirname, 'public/rounds.json'));
+  const asset = url.match(/^\/assets\/(data-core|season-data|history-data)\.js$/);
+  if (asset && (req.method === 'GET' || req.method === 'HEAD')) return serveAsset(req, res, asset[1] + '.js');
+  if (url.startsWith('/assets/')) return jsonRes(req, res, 404, {error: 'Asset not found'});
 
   /* â”€â”€ Auth â”€â”€ */
 

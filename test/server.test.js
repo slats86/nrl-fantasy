@@ -50,7 +50,7 @@ test('large frontend responses are compressed', async () => {
 });
 
 test('HTML and data support conditional requests without retransferring bodies', async () => {
-  for (const requestPath of ['/', '/api/players']) {
+  for (const requestPath of ['/', '/api/players', '/assets/season-data.js']) {
     const initial = await fetch(`http://127.0.0.1:${port}${requestPath}`);
     assert.equal(initial.status, 200);
     const etag = initial.headers.get('etag');
@@ -59,6 +59,14 @@ test('HTML and data support conditional requests without retransferring bodies',
     assert.equal(conditional.status, 304);
     assert.equal((await conditional.arrayBuffer()).byteLength, 0);
   }
+});
+
+test('cacheable data assets are JavaScript and unknown assets are unavailable', async () => {
+  const asset = await fetch(`http://127.0.0.1:${port}/assets/data-core.js`);
+  assert.equal(asset.status, 200);
+  assert.match(asset.headers.get('content-type'), /application\/javascript/);
+  assert.ok((await asset.text()).includes('const PLAYERS='));
+  assert.equal((await fetch(`http://127.0.0.1:${port}/assets/unknown.js`)).status, 404);
 });
 
 test('team updates require authentication', async () => {

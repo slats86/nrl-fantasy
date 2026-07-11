@@ -7,7 +7,9 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: write
   contents: write
+  pull-requests: write
 
 concurrency:
   group: nrl-data-refresh
@@ -26,7 +28,7 @@ jobs:
 
       - name: Install Playwright
         run: |
-          npm install --no-save --save-exact playwright@1.55.0
+          npm ci
           npx playwright install chromium --with-deps
 
       - name: Fetch NRL Fantasy data via browser
@@ -76,11 +78,12 @@ jobs:
           const players = JSON.parse(fs.readFileSync('public/players.json', 'utf8'));
           const rounds  = JSON.parse(fs.readFileSync('public/rounds.json',  'utf8'));
 
-          // Extract FEEDIDS and SQUAD_FEED_IDS from index.html
+          // Extract FEEDIDS and SQUAD_FEED_IDS from the cacheable season asset
           const html = fs.readFileSync('index.html', 'utf8');
+          const seasonData = fs.readFileSync('public/assets/season-data.js', 'utf8');
 
-          const feedMatch = html.match(/const FEEDIDS=\[([^\]]+)\]/);
-          const sqMatch   = html.match(/const SQUAD_FEED_IDS=\[([^\]]+)\]/);
+          const feedMatch = seasonData.match(/const FEEDIDS=\[([^\]]+)\]/);
+          const sqMatch   = seasonData.match(/const SQUAD_FEED_IDS=\[([^\]]+)\]/);
           if (!feedMatch || !sqMatch) { console.error('Could not find FEEDIDS or SQUAD_FEED_IDS'); process.exit(1); }
 
           const FEEDIDS        = JSON.parse('[' + feedMatch[1] + ']');
@@ -140,9 +143,27 @@ jobs:
           console.log('index.html updated (patch size: ' + Math.round(patchJson.length / 1024) + ' KB)');
           JSEOF
 
-      - name: Commit if changed
+      - name: Commit through a protected pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "nrl-data-bot"
           git config user.email "bot@nrl-fantasy"
+          git switch -C bot/nrl-data-refresh
           git add public/players.json public/rounds.json index.html
-          git diff --staged --quiet && echo "No changes" || (git commit -m "data: embed NRL Fantasy scores Rd$(node -e "const r=require('./public/rounds.json');const d=r.filter(x=>x.status==='complete').map(x=>x.id);console.log(Math.max(...d))")" && git push)
+          if git diff --staged --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          round="$(node -e "const r=require('./public/rounds.json');const d=r.filter(x=>x.status==='complete').map(x=>x.id);console.log(Math.max(...d))")"
+          git commit -m "data: embed NRL Fantasy scores Rd${round}"
+          git push --force-with-lease --set-upstream origin bot/nrl-data-refresh
+          pr="$(gh pr list --head bot/nrl-data-refresh --base main --state open --json number --jq '.[0].number')"
+          if [ -z "$pr" ]; then
+            gh pr create --base main --head bot/nrl-data-refresh \
+              --title "data: refresh NRL Fantasy scores Rd${round}" \
+              --body "Automated player, fixture, price, and score refresh. Merge is gated by the required CI check."
+            pr="$(gh pr list --head bot/nrl-data-refresh --base main --state open --json number --jq '.[0].number')"
+          fi
+          gh workflow run ci.yml --ref bot/nrl-data-refresh
+          gh pr merge "$pr" --auto --merge --delete-branch
