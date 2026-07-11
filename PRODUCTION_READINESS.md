@@ -28,6 +28,8 @@
 - Bounded HTTP lifetimes, early payload rejection, and consistent upstream/API failure responses
 - Password-confirmed account deletion with session revocation, league cleanup, and local-data removal
 - Dashboard-first authentication and non-blocking league loading with browser regression coverage
+- Five accessible, persistent colour schemes selectable during registration and from Settings
+- Versioned first-login appearance prompt and two-step navigation tutorial for new and existing users
 - Scheduled data workflow concurrency, timeouts, pinned Playwright, and schema checks
 - Fifteen-minute production health, PostgreSQL readiness, and application-shell monitoring
 - Structured request-error boundaries with traceable 500 responses and crash-regression coverage

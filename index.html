@@ -18,6 +18,7 @@
   --bg:#07070c; --bg2:#13131f; --card:#1a1a28; --card2:#161622; --line:#252535;
   --txt:#e8f0e8; --dim:#a8a8bc; --acc:#00e676; --acc2:#00b050; --red:#ff4d4d; --amber:#ffb700;
   --blue:#00b7ff; --violet:#8a3df0; --pink:#f472b6; --fg:var(--txt); --green:var(--acc); --danger:var(--red); --acc-rgb:0,230,118;
+  --button-fg:#0b1220; --topbar:linear-gradient(90deg,#0d1a10,#132013 40%,#0e1729); --bottom:#0d0d15;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 button,[role="button"],a{touch-action:manipulation}
@@ -45,14 +46,14 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
 /* ---- main wrap ---- */
 #main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow-x:hidden}
 /* ---- topbar ---- */
-#topbar{background:linear-gradient(90deg,#0d1a10,#132013 40%,#0e1729);border-bottom:1px solid var(--line);padding:0 20px;height:60px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:49;flex-shrink:0}
+#topbar{background:var(--topbar);border-bottom:1px solid var(--line);padding:0 20px;height:60px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:49;flex-shrink:0}
 .topbar-brand{font-size:16px;font-weight:800;letter-spacing:.3px;display:none;margin-right:4px}
 .topbar-brand .ball{color:var(--acc)}
 .rd-pill{display:flex;align-items:center;gap:10px;margin-right:auto}
 .rd-pill .pill{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-weight:700;font-size:14px}
 main{padding:18px;max-width:1280px;margin:0 auto;width:100%;box-sizing:border-box}
 /* ---- bottom tab bar (mobile) ---- */
-#bottom-tabbar{display:none;position:fixed;bottom:0;left:0;right:0;background:#0d0d15;border-top:1px solid var(--line);z-index:50;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
+#bottom-tabbar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bottom);border-top:1px solid var(--line);z-index:50;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
 .btab{display:flex;flex:1;min-width:0;min-height:44px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;color:var(--dim);font-size:10px;font-weight:600;cursor:pointer;border-radius:8px;letter-spacing:.2px;user-select:none}
 .btab .bi{font-size:18px;line-height:1.3}
 .btab.on{color:var(--acc)}
@@ -80,11 +81,18 @@ main{padding:18px;max-width:1280px;margin:0 auto;width:100%;box-sizing:border-bo
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
 .card h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
 .card h3 .tag{font-size:10px;background:var(--card2);border:1px solid var(--line);padding:2px 8px;border-radius:10px;color:var(--dim);font-weight:500}
+.theme-options{display:grid;grid-template-columns:repeat(5,minmax(110px,1fr));gap:8px;margin-top:12px}
+.theme-option{background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;text-align:left;font:inherit}
+.theme-option.on{border:2px solid var(--acc);padding:9px}
+.theme-swatches{display:flex;gap:4px;margin-bottom:8px}.theme-swatches span{height:14px;flex:1;border-radius:4px;border:1px solid rgba(127,127,127,.25)}
+@media(max-width:700px){.theme-options{grid-template-columns:1fr 1fr}}
 .row{display:flex;gap:14px;flex-wrap:wrap}
 .row>.card{flex:1;min-width:300px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:900px){.grid2{grid-template-columns:1fr}}
-button.btn{background:var(--acc);color:#0b1220;border:none;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px}
+button.btn{background:var(--acc);color:var(--button-fg);border:none;padding:9px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px}
+.btn-primary{background:var(--acc);color:var(--button-fg);border:none;border-radius:8px;font-weight:750;cursor:pointer}
+.btn-primary:hover{background:var(--acc2)}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
 button.btn:hover{background:var(--acc2)}
 button.btn.sec{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
 button.btn.sec:hover{border-color:var(--acc)}
@@ -120,7 +128,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 [style*="overflow-x:auto"],.pl-main-table-wrap{scrollbar-gutter:stable;-webkit-overflow-scrolling:touch}
 th{color:var(--dim);text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;white-space:nowrap}
 th:hover{color:var(--txt)}
-td{padding:7px 8px;border-bottom:1px solid #1b2740;white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
 tr:hover td{background:rgba(0,230,118,.04)}
 .posb{display:inline-block;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:var(--card2);border:1px solid var(--line);margin-right:3px}
 .posb.hok{background:rgba(255,183,0,.13);color:#ffb700;border-color:rgba(255,183,0,.28)}
@@ -3124,6 +3132,54 @@ function sooInitState(){
 
 
 /* ── SoO Auth (standalone) ──────────────────────────────── */
+const APP_THEMES={
+  lime:{name:'Modern Lime',dark:true,bg:'#080D18',bg2:'#0D1524',card:'#101827',card2:'#172235',line:'#26344A',txt:'#F7FAFC',dim:'#94A3B8',acc:'#A3E635',acc2:'#84CC16',blue:'#38BDF8',rgb:'163,230,53',button:'#142033',top:'#0B1422',bottom:'#0B1320'},
+  blue:{name:'Electric Blue',dark:true,bg:'#070B16',bg2:'#0C1424',card:'#10182A',card2:'#16233A',line:'#263752',txt:'#F8FAFC',dim:'#94A3B8',acc:'#3B82F6',acc2:'#22D3EE',blue:'#22D3EE',rgb:'59,130,246',button:'#07111F',top:'#091426',bottom:'#080F1D'},
+  gold:{name:'Stadium Gold',dark:true,bg:'#0D0E10',bg2:'#131518',card:'#181A1F',card2:'#22252B',line:'#343840',txt:'#FFFFFF',dim:'#A1A1AA',acc:'#F5B700',acc2:'#D99A00',blue:'#60A5FA',rgb:'245,183,0',button:'#181200',top:'#15130C',bottom:'#111214'},
+  teal:{name:'Teal & Coral',dark:true,bg:'#07151A',bg2:'#0B1D23',card:'#102329',card2:'#173139',line:'#29444B',txt:'#F7F7F5',dim:'#8CA3A8',acc:'#2DD4BF',acc2:'#14B8A6',blue:'#FB7185',rgb:'45,212,191',button:'#06201D',top:'#092128',bottom:'#08191E'},
+  light:{name:'Light Editorial',dark:false,bg:'#F4F5F7',bg2:'#E9EDF2',card:'#FFFFFF',card2:'#F7F8FA',line:'#DDE2E8',txt:'#142033',dim:'#64748B',acc:'#6D4AFF',acc2:'#5533DD',blue:'#6D4AFF',rgb:'109,74,255',button:'#FFFFFF',top:'#FFFFFF',bottom:'#FFFFFF'}
+};
+function applyTheme(id,persist=false){
+  const key=APP_THEMES[id]?id:'lime',t=APP_THEMES[key],root=document.documentElement;
+  const values={bg:t.bg,bg2:t.bg2,card:t.card,card2:t.card2,line:t.line,txt:t.txt,fg:t.txt,dim:t.dim,acc:t.acc,acc2:t.acc2,blue:t.blue,'acc-rgb':t.rgb,'button-fg':t.button,topbar:t.top,bottom:t.bottom};
+  Object.entries(values).forEach(([name,value])=>root.style.setProperty('--'+name,value));
+  root.style.colorScheme=t.dark?'dark':'light';
+  document.querySelector('meta[name="theme-color"]').setAttribute('content',t.bg);
+  document.querySelector('meta[name="color-scheme"]').setAttribute('content',t.dark?'dark':'light');
+  if(S&&S.settings){S.settings.theme=key;if(persist)save();}
+}
+function setTheme(id){applyTheme(id,true);S.settings.themeChosen=true;save();renderSettings();}
+
+function onboardingThemeOptions(){
+  return Object.entries(APP_THEMES).map(([id,t])=>`<button class="theme-option" onclick="chooseOnboardingTheme('${id}')">
+    <span class="theme-swatches"><span style="background:${t.bg}"></span><span style="background:${t.card}"></span><span style="background:${t.acc}"></span></span><b>${t.name}</b>
+  </button>`).join('');
+}
+function maybeShowOnboarding(){
+  if(!S.sooAuth||!S.sooAuth.authenticated||Number(S.settings.onboardingVersion||0)>=1)return;
+  showOnboarding(S.settings.themeChosen?1:0);
+}
+function showOnboarding(step){
+  if(step===0)return openModal(`<div style="text-align:center"><span class="tag">Welcome to The Squad</span><h2 style="margin:12px 0 6px">Choose your look</h2>
+    <p class="muted">Pick a colour scheme to use across the app. You can change it any time in Settings.</p></div>
+    <div class="theme-options">${onboardingThemeOptions()}</div>`);
+  if(step===1)return openModal(`<div style="text-align:center"><span class="tag">Quick tour · 1 of 2</span><h2 style="margin:12px 0 6px">Finding your way around</h2></div>
+    <div style="display:grid;gap:9px;margin:18px 0">
+      <div class="notice"><b>Home</b><br><span class="muted">Your round, score, rank, deadlines and important alerts.</span></div>
+      <div class="notice"><b>My Team</b><br><span class="muted">Select players, manage trades, and set your captain.</span></div>
+      <div class="notice"><b>Leagues</b><br><span class="muted">Create or join Classic, Draft, Custom and State of Origin competitions.</span></div>
+      <div class="notice"><b>Players &amp; Match Centre</b><br><span class="muted">Research form, prices and upcoming fixtures.</span></div>
+    </div><div class="flex"><button class="btn" onclick="showOnboarding(2)">Next</button><button class="btn sec" onclick="finishOnboarding()">Skip tour</button></div>`);
+  openModal(`<div style="text-align:center"><span class="tag">Quick tour · 2 of 2</span><h2 style="margin:12px 0 6px">Your first three steps</h2></div>
+    <ol style="display:grid;gap:12px;margin:18px 0 20px;padding-left:22px;line-height:1.5">
+      <li><b>Build your team</b> and keep within the salary cap.</li><li><b>Join a league</b> using a mate's code, or create your own.</li><li><b>Check Home each round</b> for deadlines, alerts and results.</li>
+    </ol><p class="muted" style="margin-bottom:16px">On mobile, the main sections are always available from the bottom navigation bar.</p>
+    <button class="btn" style="width:100%" onclick="finishOnboarding()">Start playing</button>`);
+}
+function chooseOnboardingTheme(id){applyTheme(id,true);S.settings.themeChosen=true;save();showOnboarding(1);}
+function finishOnboarding(){S.settings.onboardingVersion=1;S.settings.themeChosen=true;save();closeModal();}
+function replayOnboarding(){S.settings.themeChosen=true;S.settings.onboardingVersion=0;save();showOnboarding(1);}
+
 function sooSetBusy(btn,busy,busyText){
   if(!btn)return false;
   if(busy&&btn.disabled)return false;
@@ -3143,6 +3199,8 @@ async function sooDoRegister(){
   const btn=document.getElementById('soo-register-submit');
   err.textContent='';
   if(!name||!email||pass.length<12){err.textContent='Fill in all fields (password min 12 chars)';return;}
+  applyTheme(document.getElementById('soo-reg-theme').value,true);
+  S.settings.themeChosen=true;save();
   if(!sooSetBusy(btn,true,'Creating account…'))return;
   try{
     const r=await fetch('/api/soo/register',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -3154,7 +3212,7 @@ async function sooDoRegister(){
     if(prevId&&prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&!S.origin.league.code){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.user.name||''};}
-    save();showApp();setPage(SOO_STANDALONE?'origin':'home');
+    save();showApp();setPage(SOO_STANDALONE?'origin':'home');setTimeout(maybeShowOnboarding,150);
   }catch(e){err.textContent='Network error — try again';sooSetBusy(btn,false);}
 }
 async function sooDoLogin(){
@@ -3175,7 +3233,7 @@ async function sooDoLogin(){
     if(prevId2&&prevId2!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&(!S.origin.league||!S.origin.league.code)){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.sooAuth.name||''};}
-    save();showApp();setPage(SOO_STANDALONE?'origin':'home');
+    save();showApp();setPage(SOO_STANDALONE?'origin':'home');setTimeout(maybeShowOnboarding,150);
   }catch(e){err.textContent='Network error — try again';sooSetBusy(btn,false);}
 }
 function sooShowAuthTab(tab){
@@ -3238,7 +3296,7 @@ async function sooDoReset(){
     /* Remove token from URL */
     window.history.replaceState({},'',window.location.pathname);
     sessionStorage.removeItem('resetToken');
-    showApp();setPage(SOO_STANDALONE?'origin':'home');
+    showApp();setPage(SOO_STANDALONE?'origin':'home');setTimeout(maybeShowOnboarding,150);
   }catch(e){
     if(btn){btn.disabled=false;btn.textContent='Set New Password';}
     err.textContent='Something went wrong. Try again.';
@@ -4776,6 +4834,12 @@ function byePlannerHTML(){
             <label for="soo-reg-pass" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Password</label>
             <input id="soo-reg-pass" type="password" autocomplete="new-password" minlength="12" placeholder="Minimum 12 characters" style="width:100%;box-sizing:border-box;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--fg);font-size:14px" onkeydown="if(event.key==='Enter')sooDoRegister()">
           </div>
+          <div style="margin-bottom:20px">
+            <label for="soo-reg-theme" style="font-size:12px;color:var(--dim);display:block;margin-bottom:5px">Colour scheme</label>
+            <select id="soo-reg-theme" style="width:100%" onchange="applyTheme(this.value)">
+              <option value="lime">Modern Lime</option><option value="blue">Electric Blue</option><option value="gold">Stadium Gold</option><option value="teal">Teal &amp; Coral</option><option value="light">Light Editorial</option>
+            </select>
+          </div>
           <button id="soo-register-submit" onclick="sooDoRegister()" class="btn-primary" style="width:100%;padding:12px;font-size:15px">Create Account</button>
         </div>
         <p id="soo-auth-err" role="status" aria-live="polite" style="color:var(--red);font-size:13px;margin-top:12px;text-align:center;min-height:18px"></p>
@@ -4945,6 +5009,13 @@ function renderSettings(){
   const el=$('#pg-settings');
   const st=S.settings;
   el.innerHTML=`
+  <div class="card"><h3>Appearance</h3>
+   <p class="muted">Choose a colour scheme. Changes apply immediately and are saved on this device.</p>
+   <div class="theme-options">${Object.entries(APP_THEMES).map(([id,t])=>`<button class="theme-option ${st.theme===id?'on':''}" aria-pressed="${st.theme===id}" onclick="setTheme('${id}')">
+    <span class="theme-swatches"><span style="background:${t.bg}"></span><span style="background:${t.card}"></span><span style="background:${t.acc}"></span></span><b>${t.name}</b>
+   </button>`).join('')}</div>
+   <button class="btn sec" style="margin-top:12px" onclick="replayOnboarding()">Replay quick tour</button>
+  </div>
   <div class="card"><h3>Season data <span class="tag">results through Rd ${MAXR} · current round: ${S.round}</span></h3>
    <p class="muted" style="margin-bottom:10px">Prices are the official round-by-round prices. When new rounds finish, update to pull in the latest scores, stat lines, prices and results.</p>
    <div class="flex"><button class="btn" onclick="updateData()">⟳ Update data from NRL Fantasy</button></div>
@@ -5120,6 +5191,7 @@ const __NRL_PATCH__={"maxR":18,"off":{"0":{"1":56,"2":75,"3":67,"5":43,"6":65,"7
 
 /* ================= INIT ================= */
 load();
+applyTheme((S.settings&&S.settings.theme)||'lime');
 applyLayout();
 /* Merge embedded patch from GitHub Actions before applyDataPatch() */
 if(typeof __NRL_PATCH__!=='undefined'&&__NRL_PATCH__){
@@ -5145,7 +5217,7 @@ async function bootstrapAuth(){
     if(r.ok){const d=await r.json();S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};save();}
     else if(S.sooAuth){S.sooAuth=null;save();}
   }catch(e){console.warn('Session check failed',e);}
-  showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));
+  showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));setTimeout(maybeShowOnboarding,150);
 }
 bootstrapAuth();
 </script>

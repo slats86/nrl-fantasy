@@ -9,6 +9,18 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   expect(register.status()).toBe(201);
   expect((await page.request.get('/api/soo/me')).status()).toBe(200);
   await page.goto('/');
+  await expect(page.getByText('Choose your look')).toBeVisible();
+  await page.getByRole('button', {name:'Electric Blue'}).click();
+  await expect(page.getByText('Finding your way around')).toBeVisible();
+  await page.getByRole('button', {name:'Next'}).click();
+  await page.getByRole('button', {name:'Start playing'}).click();
+  await page.evaluate(() => window.setPage('settings'));
+  await page.locator('.theme-option').filter({hasText:'Light Editorial'}).click();
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(244, 245, 247)');
+  await page.reload();
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(244, 245, 247)');
+  await page.evaluate(() => window.setPage('settings'));
+  await page.locator('.theme-option').filter({hasText:'Modern Lime'}).click();
   await page.evaluate(() => window.setPage('origin'));
   await page.locator('.soo-tab').filter({hasText:'League'}).click();
   await expect(page.locator('#soo-league-status')).toHaveAttribute('aria-live', 'polite');
