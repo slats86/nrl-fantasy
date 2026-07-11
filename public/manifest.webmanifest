@@ -1,0 +1,21 @@
+{
+  "name": "The Squad — NRL Fantasy",
+  "short_name": "The Squad",
+  "description": "An unofficial NRL fantasy game for mates.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07070c",
+  "theme_color": "#07070c",
+  "categories": ["sports", "games"],
+  "icons": [
+    {
+      "src": "/assets/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

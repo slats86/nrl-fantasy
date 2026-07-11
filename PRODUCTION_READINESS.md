@@ -20,6 +20,7 @@
 - Railway configuration-as-code
 - CI, inline-script validation, and API/security regression tests
 - Mobile safe-area, narrow-screen, touch-target, and bottom-navigation fixes
+- Installable mobile/desktop web-app metadata with standalone display and a scalable app icon
 - Keyboard navigation, focus styles, accessible modal behavior, and reduced motion
 - Authentication form labels, autocomplete metadata, and 12-character password guidance
 - Scheduled data workflow concurrency, timeouts, pinned Playwright, and schema checks

@@ -69,6 +69,21 @@ test('cacheable data assets are JavaScript and unknown assets are unavailable', 
   assert.equal((await fetch(`http://127.0.0.1:${port}/assets/unknown.js`)).status, 404);
 });
 
+test('web app manifest and install icon are available with safe content types', async () => {
+  const manifestResponse = await fetch(`http://127.0.0.1:${port}/manifest.webmanifest`);
+  assert.equal(manifestResponse.status, 200);
+  assert.match(manifestResponse.headers.get('content-type'), /application\/manifest\+json/);
+  const manifest = await manifestResponse.json();
+  assert.equal(manifest.short_name, 'The Squad');
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.icons[0].src, '/assets/app-icon.svg');
+
+  const icon = await fetch(`http://127.0.0.1:${port}/assets/app-icon.svg`);
+  assert.equal(icon.status, 200);
+  assert.match(icon.headers.get('content-type'), /image\/svg\+xml/);
+  assert.match(await icon.text(), /<svg/);
+});
+
 test('team updates require authentication', async () => {
   const response = await fetch(`http://127.0.0.1:${port}/api/soo/league/ABC123/picks`, {
     method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({teamId: 'TEAM', picks: {}})

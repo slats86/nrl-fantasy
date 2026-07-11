@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">The Squad NRL Fantasy</title>
+  <rect width="512" height="512" rx="112" fill="#07070c"/>
+  <circle cx="256" cy="256" r="184" fill="#00e676"/>
+  <path d="M256 104c86 30 134 82 134 152s-48 122-134 152c-86-30-134-82-134-152s48-122 134-152Z" fill="#10141c"/>
+  <g transform="rotate(-28 256 256)">
+    <ellipse cx="256" cy="256" rx="62" ry="116" fill="#f5fff8"/>
+    <path d="M256 145v222M228 224h56M224 248h64M224 272h64M228 296h56" fill="none" stroke="#10141c" stroke-width="14" stroke-linecap="round"/>
+  </g>
+</svg>

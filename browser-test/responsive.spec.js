@@ -31,6 +31,8 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   await page.setViewportSize({width,height:900});
   const errors=[]; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/'); await page.waitForLoadState('domcontentloaded');
+  await expect(page).toHaveTitle('The Squad — NRL Fantasy');
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
   for (const name of ['home','classic','match','leagues','custom','players','settings']) {
     await page.evaluate(pg => { if (typeof window.setPage === 'function') window.setPage(pg); }, name);
     await page.waitForTimeout(50);
