@@ -26,15 +26,13 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
 /* ---- app shell layout ---- */
 #app-shell{display:flex;min-height:100vh;min-height:100dvh}
 /* ---- sidebar (desktop) ---- */
-#sidebar{width:218px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto}
+#sidebar{width:218px;flex-shrink:0;background:linear-gradient(180deg,#07111f,var(--bg2));border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px;position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto}
 .brand-row{display:flex;align-items:center;gap:11px;padding:0 4px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
-.brand-ball{font-size:28px;line-height:1}
-.brand-name{font-size:15px;font-weight:800;letter-spacing:.2px}
-.brand-sub{font-size:9px;color:var(--dim);letter-spacing:1px;margin-top:2px;text-transform:uppercase}
+.brand-ball{display:none}.brand-row>div:last-child{width:100%;text-align:center;padding:8px 0}.brand-name{font-size:22px;font-weight:950;font-style:italic;letter-spacing:-1px;color:#fff}.brand-name:before{content:'THE ';display:block;font-size:8px;line-height:5px;letter-spacing:1px}.brand-sub{font-size:8px;color:var(--acc);font-weight:900;letter-spacing:2px;margin-top:4px;text-transform:uppercase}
 #sidebar-nav{display:flex;flex-direction:column;gap:1px}
 .navitem{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;color:var(--dim);font-size:13.5px;font-weight:600;cursor:pointer;transition:background .13s,color .13s;user-select:none}
 .navitem:hover{color:var(--txt);background:rgba(255,255,255,.06)}
-.navitem.on{color:var(--bg);background:var(--acc)}
+.navitem.on{color:var(--acc);background:rgba(var(--acc-rgb),.09);box-shadow:inset 3px 0 var(--acc);border-radius:0 9px 9px 0}
 .ni{font-size:15px;width:20px;text-align:center;flex-shrink:0}
 .navsep{height:1px;background:var(--line);margin:8px 4px}
 .navspacer{flex:1}
@@ -46,12 +44,12 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
 /* ---- main wrap ---- */
 #main-wrap{flex:1;display:flex;flex-direction:column;min-width:0;overflow-x:hidden}
 /* ---- topbar ---- */
-#topbar{background:var(--topbar);border-bottom:1px solid var(--line);padding:0 20px;height:60px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:49;flex-shrink:0}
+#topbar{background:linear-gradient(90deg,#07111f,#0a1524);border-bottom:1px solid var(--line);padding:0 26px;height:72px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:49;flex-shrink:0}.topbar-title{font-size:21px;font-weight:850;letter-spacing:-.35px;margin-right:auto}.topbar-alert{width:36px;height:36px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;color:var(--txt)}
 .topbar-brand{font-size:16px;font-weight:800;letter-spacing:.3px;display:none;margin-right:4px}
 .topbar-brand .ball{color:var(--acc)}
-.rd-pill{display:flex;align-items:center;gap:10px;margin-right:auto}
+.rd-pill{display:none;align-items:center;gap:10px;margin-right:auto}
 .rd-pill .pill{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-weight:700;font-size:14px}
-main{padding:18px;max-width:1280px;margin:0 auto;width:100%;box-sizing:border-box}
+main{padding:22px 26px;max-width:1440px;margin:0 auto;width:100%;box-sizing:border-box}
 /* ---- bottom tab bar (mobile) ---- */
 #bottom-tabbar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bottom);border-top:1px solid var(--line);z-index:50;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
 .btab{display:flex;flex:1;min-width:0;min-height:44px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;color:var(--dim);font-size:10px;font-weight:600;cursor:pointer;border-radius:8px;letter-spacing:.2px;user-select:none}
@@ -64,6 +62,7 @@ main{padding:18px;max-width:1280px;margin:0 auto;width:100%;box-sizing:border-bo
   .topbar-brand{display:block}
   #bottom-tabbar{display:flex}
   #app-main{padding-bottom:80px}
+  #topbar{height:58px;padding:0 14px}.topbar-title{font-size:16px}.topbar-alert{width:32px;height:32px}.home-head{display:none}
 }
 @media(max-width:480px){
   #topbar{height:54px;padding:0 10px;gap:8px}
@@ -427,10 +426,12 @@ input,select,textarea{font-size:16px!important}
   <div id="main-wrap">
     <div id="topbar">
       <span class="topbar-brand"><span class="ball">THE</span> SQUAD</span>
+      <div class="topbar-title" id="topbar-title">Dashboard</div>
       <div class="rd-pill">
         <span class="pill" id="hdr-round">Round 1</span>
         <span class="pill" id="hdr-status" style="font-size:11px;background:var(--card2);border:1px solid var(--line);cursor:default"></span>
       </div>
+      <div class="topbar-alert" aria-label="Notifications">&#128276;</div>
       <div class="user-chip" id="user-chip" onclick="showUserMenu()" style="display:none"></div>
     </div>
     <main id="app-main">
@@ -1513,6 +1514,7 @@ function renderHome(){
   const tradesLeft=Math.max(0,(S.settings.seasonTrades||0)-(S.classic.tradesSeason||0));
   const hour=new Date().getHours(),greeting=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
   const userName=(S.sooAuth&&S.sooAuth.name)||S.user.name||'Coach';
+  const topbarTitle=document.getElementById('topbar-title');if(topbarTitle)topbarTitle.textContent=`${greeting}, ${userName.split(' ')[0]}`;
   const alerts=getDashNews().slice(0,3);
   const alertHTML=alerts.length?alerts.map(n=>`<div class="dash-list-item"><div class="dash-list-icon">${n.icon}</div><div class="dash-list-main"><b>${n.title}</b><span>${n.sub}</span></div><span class="muted">›</span></div>`).join(''):'<p class="muted">No urgent alerts. Your team is ready.</p>';
   const modes=[];
@@ -5222,6 +5224,8 @@ function setPage(pg){
   if(['custom','draft','origin'].includes(pg))window._cgamesLastTab=pg;
   if(pg!=='match')stopMcPoll();
   S.ui.page=pg;
+  const pageTitles={classic:'My Team',leagues:'Leagues',players:'Players',match:'Match Centre',custom:'Custom Games',draft:'Draft Leagues',origin:'State of Origin',settings:'Settings & Help'};
+  const topbarTitle=document.getElementById('topbar-title');if(topbarTitle&&pg!=='home')topbarTitle.textContent=pageTitles[pg]||'The Squad';
   $$('#sidebar-nav .navitem').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
   const _cgPgs=['custom','draft','origin'];
   $$('#bottom-tabbar .btab').forEach(b=>{
