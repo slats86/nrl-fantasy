@@ -80,3 +80,32 @@ test('score writes reject non-admin users and browser secrets', async () => {
   });
   assert.equal(response.status, 403);
 });
+
+test('unexpected async storage errors return a traceable 500 without crashing', async () => {
+  const failurePort = port + 1;
+  const invalidDataDir = path.join(os.tmpdir(), `nrl-fantasy-invalid-data-${process.pid}`);
+  fs.writeFileSync(invalidDataDir, 'not a directory');
+  const child = spawn(process.execPath, ['server.js'], {
+    cwd: path.join(__dirname, '..'),
+    env: {...process.env, PORT: String(failurePort), DATA_DIR: invalidDataDir, APP_URL: `http://127.0.0.1:${failurePort}`},
+    stdio: 'ignore'
+  });
+  try {
+    for (let i = 0; i < 30; i++) {
+      try { if ((await fetch(`http://127.0.0.1:${failurePort}/health`)).ok) break; } catch (_) {}
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    const response = await fetch(`http://127.0.0.1:${failurePort}/api/soo/register`, {
+      method: 'POST', headers: {'content-type': 'application/json'},
+      body: JSON.stringify({name: 'Failure Test', email: 'failure@example.com', password: 'a-long-test-password'})
+    });
+    assert.equal(response.status, 500);
+    const body = await response.json();
+    assert.equal(body.error, 'Internal server error');
+    assert.match(body.requestId, /^[0-9a-f-]{36}$/i);
+    assert.equal((await fetch(`http://127.0.0.1:${failurePort}/health`)).status, 200);
+  } finally {
+    child.kill();
+    fs.rmSync(invalidDataDir, {force: true});
+  }
+});

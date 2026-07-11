@@ -101,10 +101,14 @@ function genCode(len) {
 function readBody(req, cb) {
   let body = '';
   let tooLarge = false;
+  const invoke = (...args) => {
+    try { Promise.resolve(cb(...args)).catch(error => req.emit('handlerError', error)); }
+    catch (error) { req.emit('handlerError', error); }
+  };
   req.on('data', d => { body += d; if (body.length > BODY_LIMIT) tooLarge = true; });
   req.on('end', () => {
-    if (tooLarge) return cb(Object.assign(new Error('Payload too large'), {status: 413}));
-    try { cb(null, body ? JSON.parse(body) : {}); } catch(e) { cb(e); }
+    if (tooLarge) return invoke(Object.assign(new Error('Payload too large'), {status: 413}));
+    try { invoke(null, body ? JSON.parse(body) : {}); } catch(e) { invoke(e); }
   });
 }
 
@@ -133,6 +137,19 @@ function corsHeaders(req) {
 function jsonRes(req, res, status, obj, extra) {
   res.writeHead(status, Object.assign({}, securityHeaders('application/json; charset=utf-8'), {'Cache-Control': 'no-store', 'X-Request-Id': req.id || ''}, corsHeaders(req), extra || {}));
   res.end(status === 204 ? '' : JSON.stringify(obj));
+}
+
+function requestError(req, res, error) {
+  console.error(JSON.stringify({
+    type: 'request_error',
+    id: req.id || null,
+    method: req.method,
+    path: String(req.url || '').split('?')[0],
+    message: error && error.message ? error.message : 'Unknown request failure',
+    stack: process.env.NODE_ENV === 'production' ? undefined : error && error.stack
+  }));
+  if (!res.headersSent) jsonRes(req, res, 500, {error: 'Internal server error', requestId: req.id || null});
+  else if (!res.writableEnded) res.destroy();
 }
 
 function clientIp(req) {
@@ -275,8 +292,9 @@ function proxyNRL(req, res, nrlPath) {
 }
 
 /* â”€â”€ HTTP server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-const server = http.createServer(async function(req, res) {
+async function handleRequest(req, res) {
   req.id = crypto.randomUUID();
+  req.once('handlerError', error => requestError(req, res, error));
   const started = Date.now();
   res.on('finish', () => console.log(JSON.stringify({type: 'request', id: req.id, method: req.method,
     path: String(req.url || '').split('?')[0], status: res.statusCode, durationMs: Date.now() - started})));
@@ -630,6 +648,10 @@ const server = http.createServer(async function(req, res) {
       'Cache-Control': 'no-cache'
     });
   });
+}
+
+const server = http.createServer((req, res) => {
+  Promise.resolve(handleRequest(req, res)).catch(error => requestError(req, res, error));
 });
 
 async function start() {

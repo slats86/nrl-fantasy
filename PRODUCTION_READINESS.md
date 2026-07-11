@@ -22,6 +22,7 @@
 - Authentication form labels, autocomplete metadata, and 12-character password guidance
 - Scheduled data workflow concurrency, timeouts, pinned Playwright, and schema checks
 - Fifteen-minute production health, PostgreSQL readiness, and application-shell monitoring
+- Structured request-error boundaries with traceable 500 responses and crash-regression coverage
 - Weekly npm and GitHub Actions dependency updates, production vulnerability auditing, and sensitive-file ownership
 
 ## PostgreSQL cutover
