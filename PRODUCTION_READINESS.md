@@ -51,17 +51,22 @@ Completed against Railway:
 3. Production readiness reports PostgreSQL and restored account login/password-reset flows pass.
 4. Empty legacy snapshots no longer receive a completed-import marker, so startup can retry after a volume becomes available.
 
-Still required operationally:
+Completed operationally:
 
-1. Configure the two repository secrets documented in `BACKUP_AND_RECOVERY.md`, run the encrypted backup workflow manually, and confirm its artifact exists.
-2. Run the guarded `Test database restore` workflow, confirm restored counts, and run the integration and logged-in browser suites against the isolated database.
-3. Repeat the restore test monthly and after database schema or backup-workflow changes.
-4. Retain the source JSON snapshot through the rollback window; do not point production back to JSON writes.
+1. Repository backup and isolated-test database secrets are configured.
+2. The encrypted backup workflow completed and produced a verified artifact.
+3. The guarded restore workflow restored the backup to the isolated PostgreSQL service and verified record counts.
+4. Production monitoring, integration tests, and logged-in responsive browser flows have passed.
+
+Ongoing operations:
+
+1. Repeat the guarded restore test monthly and after database schema or backup-workflow changes.
+2. Keep encrypted backup artifacts and their passphrase separate; retain the source JSON snapshot only through the agreed rollback window.
 
 ## Rollout requirements
 
 - Set `ADMIN_EMAILS` in Railway before score administration is needed.
-- Require PostgreSQL migration and logged-in browser tests before storage changes are deployed.
+- CI requires PostgreSQL migration/integration and logged-in browser tests before changes are merged.
 - Test at 320, 375, 390, 768, 1024, 1440, and 1920 pixel widths.
 - Test account migration, login, logout, registration, password reset, league creation/joining, pick updates, owner controls, and score administration.
 
