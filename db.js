@@ -141,9 +141,15 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
 
   async function saveUsers(users) { return retry(() => transaction(async c => { await c.query('DELETE FROM sessions'); await c.query('DELETE FROM password_resets'); await c.query('DELETE FROM users'); for (const u of Object.values(users)) await insertUser(c, u); })); }
   async function saveLeagues(leagues) { return retry(() => transaction(async c => { await c.query('DELETE FROM leagues'); for (const [code, league] of Object.entries(leagues)) await insertLeague(c, code, league); })); }
+  async function saveAccountState(users, leagues) { return retry(() => transaction(async c => {
+    await c.query('DELETE FROM sessions'); await c.query('DELETE FROM password_resets'); await c.query('DELETE FROM users');
+    await c.query('DELETE FROM leagues');
+    for (const u of Object.values(users)) await insertUser(c, u);
+    for (const [code, league] of Object.entries(leagues)) await insertLeague(c, code, league);
+  })); }
   async function saveScores(scores) { return retry(() => transaction(async c => { await c.query('DELETE FROM scores'); for (const [key, points] of Object.entries(scores)) { const [g,p] = key.split(':').map(Number); await c.query('INSERT INTO scores VALUES($1,$2,$3)', [g,p,points]); } })); }
   async function ping() { await pool.query('SELECT 1'); }
-  return {migrate, load, saveUsers, saveLeagues, saveScores, ping, close: () => pool.end(), retry};
+  return {migrate, load, saveUsers, saveLeagues, saveAccountState, saveScores, ping, close: () => pool.end(), retry};
 }
 
 module.exports = {createDatabase, readLegacySnapshot};

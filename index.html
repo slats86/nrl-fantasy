@@ -3253,6 +3253,30 @@ async function sooSignOut(){
   showApp();
 }
 
+function sooConfirmDeleteAccount(){
+  openModal(`<h2>Delete account</h2>
+    <p>This permanently deletes your account and removes your teams from every league. This cannot be undone.</p>
+    <label for="delete-account-password" style="display:block;margin:14px 0 6px">Confirm your password</label>
+    <input id="delete-account-password" type="password" autocomplete="current-password" style="width:100%;box-sizing:border-box">
+    <p id="delete-account-status" role="status" aria-live="polite" style="min-height:18px;color:var(--red);font-size:13px"></p>
+    <div class="flex"><button id="delete-account-submit" class="btn danger" onclick="sooDeleteAccount()">Permanently delete account</button>
+    <button class="btn sec" onclick="closeModal()">Cancel</button></div>`);
+}
+async function sooDeleteAccount(){
+  const password=document.getElementById('delete-account-password').value;
+  const status=document.getElementById('delete-account-status');
+  const btn=document.getElementById('delete-account-submit');
+  status.textContent='';
+  if(!password){status.textContent='Enter your current password.';document.getElementById('delete-account-password').focus();return;}
+  if(!sooSetBusy(btn,true,'Deleting account…'))return;
+  try{
+    const r=await fetch('/api/soo/account',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});
+    const d=await r.json();
+    if(!r.ok){status.textContent=d.error||'Account deletion failed.';sooSetBusy(btn,false);return;}
+    localStorage.removeItem(STORE_KEY);sessionStorage.removeItem('resetToken');location.reload();
+  }catch(e){status.textContent='Network error — try again.';sooSetBusy(btn,false);}
+}
+
 function renderOrigin(){
   const el=$('#pg-origin');
   sooInitState();
@@ -4933,6 +4957,13 @@ function renderSettings(){
     <button class="btn danger" onclick="if(confirm('Reset the ENTIRE game — teams, leagues, season history?')){localStorage.removeItem(STORE_KEY);location.reload()}">⚠ Full reset</button>
    </div>
   </div>
+
+  ${S.sooAuth&&S.sooAuth.authenticated?`<div class="card"><h3>Account &amp; privacy</h3>
+   <p class="muted">Signed in as <b>${esc(S.sooAuth.email||'')}</b>. Your account, league membership and picks are stored securely so they work across devices.</p>
+   <p class="muted" style="margin-top:8px">Signing out keeps your account data. Deleting your account permanently removes your login and teams from all leagues.</p>
+   <div class="flex" style="margin-top:12px"><button class="btn sec" onclick="sooSignOut()">Sign out</button>
+    <button class="btn danger" onclick="sooConfirmDeleteAccount()">Delete account</button></div>
+  </div>`:''}
 
   <div class="card"><h3>📖 Rules &amp; features explained</h3>
   <div style="display:flex;flex-direction:column;gap:14px;margin-top:6px">
