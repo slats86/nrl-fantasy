@@ -337,14 +337,14 @@ function serveInstallFile(req, res, filePath, contentType) {
 
 function proxyNRL(req, res, nrlPath) {
   const opts = {
-    hostname: 'fantasy.nrl.com',
+    hostname: 'www.fantasy.nrl.com',
     path: '/data/nrl/' + nrlPath,
     method: 'GET',
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
       'Accept': 'application/json',
-      'Referer': 'https://fantasy.nrl.com/',
-      'Origin': 'https://fantasy.nrl.com'
+      'Referer': 'https://www.fantasy.nrl.com/',
+      'Origin': 'https://www.fantasy.nrl.com'
     }
   };
   let settled = false;
