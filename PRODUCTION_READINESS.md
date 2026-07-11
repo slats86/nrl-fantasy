@@ -44,7 +44,7 @@ Completed against Railway:
 Still required operationally:
 
 1. Configure the two repository secrets documented in `BACKUP_AND_RECOVERY.md`, run the encrypted backup workflow manually, and confirm its artifact exists.
-2. Restore an artifact into the isolated Postgres Test database and run the integration and logged-in browser suites against it.
+2. Run the guarded `Test database restore` workflow, confirm restored counts, and run the integration and logged-in browser suites against the isolated database.
 3. Repeat the restore test monthly and after database schema or backup-workflow changes.
 4. Retain the source JSON snapshot through the rollback window; do not point production back to JSON writes.
 
