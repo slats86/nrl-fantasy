@@ -35,6 +35,15 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   await expect(page.getByText('Origin League', {exact:true}).first()).toBeVisible();
   await page.evaluate(() => window.setPage('home'));
   await expect(page.locator('#pg-home')).toHaveClass(/on/);
+  const livePlayerRow=await page.evaluate(()=>{
+    const previous=LIVE;const player=PLAYERS[0];
+    LIVE={round:S.round,status:'live',scores:{[player.id]:42},fetched:Date.now(),kickoffs:{}};
+    const html=mcPlayerRows(player.sq,S.round,true);LIVE=previous;return html;
+  });
+  expect(livePlayerRow).toContain('showStatLine');
+  await page.evaluate(()=>showStatLine(0,1));
+  await expect(page.locator('#modal-bg')).toHaveClass(/on/);
+  await page.keyboard.press('Escape');
 
   const isolation = await page.evaluate(() => {
     const original = JSON.stringify(S.classic);

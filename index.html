@@ -2959,7 +2959,7 @@ function mcPlayerRows(ci,r,isLive){
     const g=avg>0?(pts/avg>=1.6?'A+':pts/avg>=1.2?'A':pts/avg>=0.85?'B':pts/avg>=0.5?'C':'D'):(pts>=50?'A+':pts>=30?'A':pts>=15?'B':'C');
     const gc=g==='A+'?'grade-aplus':g==='A'?'grade-a':g==='B'?'grade-b':g==='C'?'grade-c':'grade-d';
     const inMy=myIds.has(p.id);
-    const onclick=isLive?'':'onclick="showStatLine('+p.id+','+r+')" style="cursor:pointer"';
+    const onclick='onclick="showStatLine('+p.id+','+r+')" style="cursor:pointer" role="button" tabindex="0"';
     return`<tr ${onclick}${inMy?' class="mc-mine"':''}>
       <td style="width:32px">${avatar(p,24)}</td>
       <td><b>${esc(p.name)}</b>${inMy?'<span class="tag" style="font-size:9px;margin-left:4px">MY</span>':''}
@@ -3052,7 +3052,7 @@ function renderMatch(){
       <h3>${CLUBS[h].n} <span style="color:var(--acc)">${hPts}</span>
         <span style="color:var(--dim)"> — </span>
         <span style="color:var(--acc)">${aPts}</span> ${CLUBS[a].n}
-        <span class="tag" style="font-size:11px">${isLive?'live':'tap row for stat line'}</span>
+        <span class="tag" style="font-size:11px">${isLive?'live · tap player for details':'tap player for stat line'}</span>
       </h3>
       <div class="grid2" style="gap:8px">
         <table><thead><tr>
@@ -3079,7 +3079,7 @@ function myRoundSummary(r,isLive){
   return `<span class="pill" style="background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:6px 14px">My score Rd ${r}: <b class="good">${sc.total}</b></span>`;
 }
 function showStatLine(pid,r){
-  const p=PLAYERS[pid],st=RST[pid]&&RST[pid][r],pts=playerPts(pid,r);
+  const p=PLAYERS[pid],st=RST[pid]&&RST[pid][r],live=isLiveRound(r),pts=live?mcPts(pid,r):playerPts(pid,r);
   const off=OFFS[pid]?OFFS[pid][r-1]:null;
   let rows='';
   if(st){
