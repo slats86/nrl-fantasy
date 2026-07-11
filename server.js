@@ -367,6 +367,36 @@ function proxyNRL(req, res, nrlPath) {
   upstreamReq.end();
 }
 
+function proxyFootyStatistics(req, res, playerId) {
+  const opts = {
+    hostname: 'footystatistics.com',
+    path: '/api/player-stats?player_id=' + encodeURIComponent(playerId),
+    method: 'GET',
+    headers: {
+      'User-Agent': 'NRL-Fantasy-The-Squad/1.0',
+      'Accept': 'application/json'
+    }
+  };
+  let settled = false;
+  const upstreamReq = https.request(opts, function(upstream) {
+    if (settled) { upstream.resume(); return; }
+    settled = true;
+    res.writeHead(upstream.statusCode, Object.assign({}, securityHeaders('application/json; charset=utf-8'), corsHeaders(req), {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600'
+    }));
+    upstream.pipe(res);
+  });
+  upstreamReq.on('error', function(e) {
+    if (settled) return;
+    settled = true;
+    console.error('[footystatistics-proxy]', e.message);
+    jsonRes(req, res, 502, {error: 'Detailed player statistics are temporarily unavailable', requestId: req.id || null});
+  });
+  upstreamReq.setTimeout(10000, () => upstreamReq.destroy(new Error('upstream timeout')));
+  upstreamReq.end();
+}
+
 /* â”€â”€ HTTP server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function handleRequest(req, res) {
   req.id = crypto.randomUUID();
@@ -396,7 +426,7 @@ async function handleRequest(req, res) {
   if (url === '/api/players') return serveLocal(req, res, path.join(__dirname, 'public/players.json'));
   if (url === '/api/rounds')  return serveLocal(req, res, path.join(__dirname, 'public/rounds.json'));
   const playerStats = url.match(/^\/api\/player-stats\/(\d+)$/);
-  if (playerStats && req.method === 'GET') return proxyNRL(req, res, 'stats/players/' + playerStats[1] + '.json');
+  if (playerStats && req.method === 'GET') return proxyFootyStatistics(req, res, playerStats[1]);
   if (url === '/manifest.webmanifest' && (req.method === 'GET' || req.method === 'HEAD'))
     return serveInstallFile(req, res, path.join(__dirname, 'public', 'manifest.webmanifest'), 'application/manifest+json; charset=utf-8');
   if (url === '/assets/app-icon.svg' && (req.method === 'GET' || req.method === 'HEAD'))
