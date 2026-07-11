@@ -44,6 +44,14 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   await page.evaluate(()=>showStatLine(0,1));
   await expect(page.locator('#modal-bg')).toHaveClass(/on/);
   await page.keyboard.press('Escape');
+  await page.route('**/api/player-stats/*', route => route.fulfill({json:{stats:[{
+    year:new Date().getFullYear(),round_id:998,match_type:'nrl',fantasy_points:80,
+    tackles:12,metres_gained:219,tries:2,time_on_ground:80
+  }]}}));
+  await page.evaluate(()=>showStatLine(0,998));
+  await expect(page.locator('tr').filter({hasText:'Tackle'})).toContainText('12');
+  await expect(page.locator('tr').filter({hasText:'Run Metres'})).toContainText('219');
+  await page.keyboard.press('Escape');
   await page.evaluate(()=>showStatLine(0,999,true));
   await expect(page.getByText(/not available from the official feed for this game/i)).toBeVisible();
   await expect(page.getByText(/never substitutes season averages/i)).toBeVisible();

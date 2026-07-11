@@ -3091,9 +3091,17 @@ async function showStatLine(pid,r,skipFetch=false){
     try{
       const response=await fetch('/api/player-stats/'+FEEDIDS[pid]);
       if(!response.ok)throw new Error('Official stats request failed ('+response.status+')');
-      const games=await response.json(),game=games[r]||games[String(r)];
+      const payload=await response.json();
+      const game=Array.isArray(payload.stats)
+        ? payload.stats.find(x=>+x.year===new Date().getFullYear()&&+x.round_id===+r&&x.match_type==='nrl')
+        : payload[r]||payload[String(r)];
       if(game){
-        st=STAT_KEYS.concat(['TOG']).map(k=>game[k]||0);
+        const fields={T:'tries',TS:'try_saves',G:'goals',FG:'field_goals',TA:'try_assists',LB:'line_breaks',
+          LBA:'line_break_assists',TCK:'tackles',TB:'tackle_breaks',MT:'missed_tackles',OFH:'off_half',
+          OFG:'off_game',ER:'errors',FTF:'forty_twenty',MG:'metres_gained',KM:'kick_metres',KD:'kick_defusals',
+          PC:'penalties_conceded',SB:'sin_bin',SO:'send_off',FDO:'forced_drop_out',TO:'forced_turn_over',
+          SAI:'sai',EFIG:'efig',TOG:'time_on_ground'};
+        st=STAT_KEYS.concat(['TOG']).map(k=>+(game[fields[k]]||0));
         if(!RST[pid])RST[pid]={};
         RST[pid][r]=st;
         S.dataPatch=S.dataPatch||{};S.dataPatch.st=S.dataPatch.st||{};
