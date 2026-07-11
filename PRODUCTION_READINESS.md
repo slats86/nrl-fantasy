@@ -31,6 +31,7 @@
 - Five accessible, persistent colour schemes selectable during registration and from Settings
 - Versioned first-login appearance prompt and two-step navigation tutorial for new and existing users
 - Modern responsive dashboard hierarchy, simplified primary navigation, and mobile More menu
+- Unified My Team builder, player finder, and league hub component styling across desktop and mobile
 - Scheduled data workflow concurrency, timeouts, pinned Playwright, and schema checks
 - Fifteen-minute production health, PostgreSQL readiness, and application-shell monitoring
 - Structured request-error boundaries with traceable 500 responses and crash-regression coverage

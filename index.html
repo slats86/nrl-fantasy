@@ -91,8 +91,14 @@ main{padding:18px;max-width:1280px;margin:0 auto;width:100%;box-sizing:border-bo
 .deadline{font-size:18px;font-weight:800;margin-top:7px}.deadline-sub{color:var(--acc);font-weight:750;margin-top:5px}.metric-panel{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;padding:0;overflow:hidden}.metric-cell{padding:21px 18px;border-right:1px solid var(--line);min-width:0}.metric-cell:last-of-type{border:0}.metric-label{color:var(--dim);font-size:10px;font-weight:750;letter-spacing:.7px;text-transform:uppercase}.metric-value{font-size:25px;font-weight:900;margin:8px 0 2px;letter-spacing:-.5px}.metric-sub{font-size:10px;color:var(--dim)}.metric-action{grid-column:1/-1;margin:0 18px 18px;padding:12px!important}
 .home-panels{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:14px}.panel-link{color:var(--acc);font-size:11px;font-weight:750;cursor:pointer}.dash-list{display:grid;gap:7px}.dash-list-item{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:9px}.dash-list-icon{width:30px;height:30px;border-radius:50%;background:rgba(var(--acc-rgb),.13);color:var(--acc);display:grid;place-items:center;flex:none}.dash-list-main{min-width:0;flex:1}.dash-list-main b{display:block;font-size:12px}.dash-list-main span{font-size:10px;color:var(--dim)}
 .home-details{margin-top:14px}.home-details summary{cursor:pointer;color:var(--dim);font-weight:700;padding:4px 0 12px}.home-details[open] summary{color:var(--txt)}
+.mode-hdr{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px!important}.mode-hdr h1{font-size:23px!important;letter-spacing:-.4px}.mode-tabs{background:transparent!important;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0!important;padding:0!important;gap:18px!important}.mode-tabs button{flex:0 0 auto!important;border-radius:0!important;padding:10px 2px!important;border-bottom:3px solid transparent!important}.mode-tabs button.on{background:transparent!important;color:var(--acc)!important;border-bottom-color:var(--acc)!important}
+.team-summary{display:grid!important;grid-template-columns:repeat(7,minmax(105px,1fr));gap:8px!important}.team-summary .stat{min-width:0;padding:12px;background:var(--card2)}.team-summary .stat .v{font-size:18px}.team-builder{display:grid!important;grid-template-columns:minmax(520px,1.5fr) minmax(350px,.85fr)!important;align-items:start}.team-builder>#pool-card{position:sticky;top:74px;max-height:calc(100vh - 92px);overflow:hidden}.team-builder #pool-list{max-height:calc(100vh - 245px)!important}.team-builder .field{box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)}#pool-card>input{padding:11px 12px}.team-builder #pool-list tr{transition:background .12s}.team-builder #pool-list tr:hover td{background:rgba(var(--acc-rgb),.08)}
+.leagues-head{display:flex;align-items:end;justify-content:space-between;margin-bottom:15px}.leagues-head h1{font-size:24px;letter-spacing:-.5px}.league-hub .format-tabs{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px}.league-hub .format-tabs>div{border:0;border-radius:8px;margin:0;padding:9px}.league-hub .format-tabs>div.on{background:var(--acc);color:var(--button-fg)}.league-overview-card{border-radius:14px!important;padding:18px!important}.league-team-link{display:flex;align-items:center;gap:12px;margin-top:14px;padding:13px;background:rgba(var(--acc-rgb),.08);border-radius:10px;cursor:pointer;border:1px solid rgba(var(--acc-rgb),.22)}.league-avatar{width:38px;height:38px;border-radius:10px;background:var(--acc);display:grid;place-items:center;font-size:15px;font-weight:800;color:var(--button-fg);flex:none}
 @media(max-width:980px){.home-hero{grid-template-columns:1fr}.home-panels{grid-template-columns:1fr 1fr}.home-panels>.card:last-child{grid-column:1/-1}}
+@media(max-width:1100px){.team-summary{grid-template-columns:repeat(4,1fr)}.team-builder{grid-template-columns:1fr!important}.team-builder>#pool-card{position:static;max-height:none}.team-builder #pool-list{max-height:520px!important}}
 @media(max-width:600px){.home-head h1{font-size:22px}.home-hero,.home-panels{grid-template-columns:1fr}.home-panels>.card:last-child{grid-column:auto}.round-hero{min-height:158px}.metric-panel{grid-template-columns:1fr 1fr}.metric-cell:nth-child(2){border-right:0}.metric-cell{padding:14px}.metric-value{font-size:22px}.metric-action{margin:0 14px 14px}.home-head{align-items:start}.home-head .muted{display:none}}
+@media(max-width:600px){.mode-hdr{padding:13px!important}.mode-hdr>div:last-child{width:100%;justify-content:space-between!important;gap:8px!important}.mode-tabs{gap:8px!important;overflow-x:auto;flex-wrap:nowrap!important}.team-summary{display:flex!important;overflow-x:auto;padding-bottom:4px}.team-summary .stat{min-width:132px}.team-builder #pool-card{margin-top:2px}.team-builder #pool-list{max-height:58vh!important}.league-hub .format-tabs{display:flex;overflow-x:auto}.leagues-head h1{font-size:21px}}
+@media(max-width:600px){#pool-card table th:nth-child(3),#pool-card table td:nth-child(3),#pool-card table th:nth-child(6),#pool-card table td:nth-child(6){display:none}#pool-card td{padding:10px 6px}#pool-card td:nth-child(2){white-space:normal;min-width:128px}.pcard{border-radius:9px}.league-team-link{padding:12px}}
 .row{display:flex;gap:14px;flex-wrap:wrap}
 .row>.card{flex:1;min-width:300px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -1017,7 +1023,7 @@ function squadInnerHTML(){
   const trLeft=isInCustom?(clTpr()-(cl().tradesRound||0)):(S.settings.tradesPerRound-S.classic.tradesRound);
   const trSLeft=isInCustom?(clSts()-(cl().tradesSeason||0)):(S.settings.seasonTrades-S.classic.tradesSeason);
   return `
-  <div class="statbar">
+  <div class="statbar team-summary">
     <div class="stat"><div class="v">${n}/${SQUAD_N}</div><div class="l">Squad</div></div>
     <div class="stat ${rem<0?'warn':''}"><div class="v">${fmtM(rem)}</div><div class="l">Salary remaining</div></div>
     <div class="stat"><div class="v">${fmtM(val)}</div><div class="l">Team value</div></div>
@@ -1034,7 +1040,7 @@ function squadInnerHTML(){
     <button class="btn sec" onclick="clearTeam()">Clear team</button>
     <span class="muted" style="font-size:12px">Click a player for captain/trade options · C = captain (${S.settings.captainMult}x) · VC = vice</span>
   </div>
-  <div class="grid2">
+  <div class="grid2 team-builder">
     <div><div class="field" id="field-view">${renderField()}</div></div>
     <div class="card" id="pool-card">${renderPool()}</div>
   </div>`;
@@ -1658,8 +1664,8 @@ function renderClassic(){
   const lateJoin=sr>1&&S.classic.squad.length>0;
   el.innerHTML=`
   <div class="mode-hdr">
-    <div><h1>🏆 Classic</h1>
-      <div class="msub">Official NRL Fantasy · cap ${fmtK(S.settings.cap)} · Round ${S.round}</div>
+    <div><h1>My Team</h1>
+      <div class="msub">Classic · Official NRL Fantasy · cap ${fmtK(S.settings.cap)} · Round ${S.round}</div>
       ${lateJoin?`<div style="font-size:11px;color:var(--amber);margin-top:2px">⚠ Joined Round ${sr} — scores counted from Round ${sr}</div>`:''}
     </div>
     <span class="spacer"></span>
@@ -1671,9 +1677,9 @@ function renderClassic(){
   </div>
   ${notStarted?'<div class="notice" style="margin-bottom:14px">👋 Pick your squad below to join the season from <b>Round '+S.round+'</b>. Your scores will be tracked from that round onwards.</div>':''}
   <div class="mode-tabs">
-    <button class="${tab==='team'?'on':''}" onclick="S.ui.classicTab='team';renderClassic()">👥 My Team</button>
-    <button class="${tab==='trades'?'on':''}" onclick="S.ui.classicTab='trades';renderClassic()">🔄 Trades</button>
-    <button class="${tab==='matchup'?'on':''}" onclick="S.ui.classicTab='matchup';renderClassic()">🏟 League Matchup</button>
+    <button class="${tab==='team'?'on':''}" onclick="S.ui.classicTab='team';renderClassic()">Squad</button>
+    <button class="${tab==='trades'?'on':''}" onclick="S.ui.classicTab='trades';renderClassic()">Trades</button>
+    <button class="${tab==='matchup'?'on':''}" onclick="S.ui.classicTab='matchup';renderClassic()">League matchup</button>
   </div>
   ${tab==='team'?squadInnerHTML():''}
   ${tab==='trades'?modeTradesHTML('classic'):''}
@@ -4473,11 +4479,11 @@ function renderLeagues(){
       const fx=leagueFixtures(S.league.teams.length,nextR);
       const myFx=fx.find(([a,b])=>a===0||b===0);
       const oppI=myFx?(myFx[0]===0?myFx[1]:myFx[0]):null;
-      content=`<div class="card" style="margin-bottom:10px">
+      content=`<div class="card league-overview-card" style="margin-bottom:10px">
         <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(S.league.name)}</div>
         <div class="muted" style="font-size:12px">${S.league.teams.length} teams · Round ${S.round}</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;background:rgba(0,230,118,.07);border-radius:8px;cursor:pointer;border:1px solid rgba(0,230,118,.15)" onclick="setPage('classic')">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0">${esc(S.league.teams[0].name||'M').charAt(0)}</div>
+        <div class="league-team-link" onclick="setPage('classic')">
+          <div class="league-avatar">${esc(S.league.teams[0].name||'M').charAt(0)}</div>
           <div style="flex:1">
             <div style="font-weight:600;font-size:14px">${esc(S.league.teams[0].name)}</div>
             <div class="muted" style="font-size:12px">${pos} place · ${myData.pf||0} pts scored</div>
@@ -4505,11 +4511,11 @@ function renderLeagues(){
   } else if(tab==='draft'){
     const draftLg=S.draft&&S.draft.league;
     if(draftLg){
-      content=`<div class="card">
+      content=`<div class="card league-overview-card">
         <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(draftLg.name||'Draft League')}</div>
         <div class="muted" style="font-size:12px">${draftLg.size||''} teams · Round ${S.round}</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;background:rgba(0,230,118,.07);border-radius:8px;cursor:pointer;border:1px solid rgba(0,230,118,.15)" onclick="setPage('draft')">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0">D</div>
+        <div class="league-team-link" onclick="setPage('draft')">
+          <div class="league-avatar">D</div>
           <div style="flex:1">
             <div style="font-weight:600;font-size:14px">My Draft Team</div>
             <div class="muted" style="font-size:12px">Tap to manage your team</div>
@@ -4527,11 +4533,11 @@ function renderLeagues(){
   } else {
     const cl=S.customLeague;
     if(cl){
-      content=`<div class="card">
+      content=`<div class="card league-overview-card">
         <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(cl.n||cl.name||'Custom League')}</div>
         <div class="muted" style="font-size:12px">Round ${S.round}</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;background:rgba(0,230,118,.07);border-radius:8px;cursor:pointer;border:1px solid rgba(0,230,118,.15)" onclick="setPage('custom')">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0">${esc(cl.n||cl.name||'C').charAt(0)}</div>
+        <div class="league-team-link" onclick="setPage('custom')">
+          <div class="league-avatar">${esc(cl.n||cl.name||'C').charAt(0)}</div>
           <div style="flex:1">
             <div style="font-weight:600;font-size:14px">My Custom Team</div>
             <div class="muted" style="font-size:12px">Tap to manage your team</div>
@@ -4547,7 +4553,7 @@ function renderLeagues(){
       </div>`;
     }
   }
-  el.innerHTML=`<h3 style="font-size:18px;margin-bottom:12px">🏆 My Leagues</h3>${tabsHTML}${content}`;
+  el.innerHTML=`<div class="league-hub"><div class="leagues-head"><div><div class="home-kicker">Competition centre</div><h1>My Leagues</h1></div><span class="muted">Round ${S.round}</span></div>${tabsHTML}${content}</div>`;
 }
 
 
