@@ -395,6 +395,8 @@ async function handleRequest(req, res) {
 
   if (url === '/api/players') return serveLocal(req, res, path.join(__dirname, 'public/players.json'));
   if (url === '/api/rounds')  return serveLocal(req, res, path.join(__dirname, 'public/rounds.json'));
+  const playerStats = url.match(/^\/api\/player-stats\/(\d+)$/);
+  if (playerStats && req.method === 'GET') return proxyNRL(req, res, 'stats/players/' + playerStats[1] + '.json');
   if (url === '/manifest.webmanifest' && (req.method === 'GET' || req.method === 'HEAD'))
     return serveInstallFile(req, res, path.join(__dirname, 'public', 'manifest.webmanifest'), 'application/manifest+json; charset=utf-8');
   if (url === '/assets/app-icon.svg' && (req.method === 'GET' || req.method === 'HEAD'))
