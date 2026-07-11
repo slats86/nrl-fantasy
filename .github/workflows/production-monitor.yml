@@ -1,0 +1,28 @@
+name: Production monitor
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-monitor
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check production application
+        env:
+          SMOKE_BASE_URL: https://nrl.the-squad.com.au
+          SMOKE_TIMEOUT_MS: 15000
+        run: node scripts/smoke-production.js
