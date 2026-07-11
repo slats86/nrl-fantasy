@@ -35,6 +35,15 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   await expect(page.getByText('Origin League', {exact:true}).first()).toBeVisible();
   await page.evaluate(() => window.setPage('home'));
   await expect(page.locator('#pg-home')).toHaveClass(/on/);
+  const livePlayerRow=await page.evaluate(()=>{
+    const previous=LIVE;const player=PLAYERS[0];
+    LIVE={round:S.round,status:'live',scores:{[player.id]:42},fetched:Date.now(),kickoffs:{}};
+    const html=mcPlayerRows(player.sq,S.round,true);LIVE=previous;return html;
+  });
+  expect(livePlayerRow).toContain('showStatLine');
+  await page.evaluate(()=>showStatLine(0,1));
+  await expect(page.locator('#modal-bg')).toHaveClass(/on/);
+  await page.keyboard.press('Escape');
 
   const isolation = await page.evaluate(() => {
     const original = JSON.stringify(S.classic);
@@ -99,9 +108,12 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   const login = await page.request.post('/api/soo/login', {data:{email:'owner@example.com',password:'owner-password-123'}});
   expect(login.status()).toBe(200);
   await page.goto('/'); await page.waitForLoadState('domcontentloaded');
-  await expect(page.getByText('Choose your look')).toBeVisible();
-  await page.getByRole('button', {name:'Modern Lime'}).click();
-  await page.getByRole('button', {name:'Skip tour'}).click();
+  await page.waitForTimeout(250);
+  const appearancePrompt=page.getByText('Choose your look');
+  if(await appearancePrompt.isVisible().catch(()=>false)){
+    await page.getByRole('button', {name:'Modern Lime'}).click();
+    await page.getByRole('button', {name:'Skip tour'}).click();
+  }
   await expect(page).toHaveTitle('The Squad — NRL Fantasy');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
   await expect(page.locator('#app-main')).toHaveAttribute('tabindex', '-1');
@@ -112,7 +124,10 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   await expect(page.getByRole('button', {name:/Manage team/i})).toBeVisible();
   await page.evaluate(() => window.setPage('classic'));
   await expect(page.locator('.team-builder')).toBeVisible();
-  await expect(page.locator('#pool-card')).toBeVisible();
+  if(width<=600){
+    await expect(page.locator('.team-builder>#pool-card')).toBeHidden();
+    await expect(page.getByRole('button',{name:'Find and add players'})).toBeVisible();
+  }else await expect(page.locator('#pool-card')).toBeVisible();
   await page.evaluate(() => window.setPage('leagues'));
   await expect(page.locator('.league-hub')).toBeVisible();
   const cardTab = page.locator('.format-tabs > div').first();
@@ -134,6 +149,14 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
     await expect(page.locator('.topbar-brand')).toBeVisible();
     await page.locator('#bottom-tabbar .btab').filter({hasText:'More'}).click();
     await expect(page.getByRole('button', {name:'State of Origin'})).toBeVisible();
+    await page.keyboard.press('Escape');
+  }
+  if(width<=600){
+    await page.evaluate(()=>window.setPage('classic'));
+    await expect(page.locator('.team-summary')).toHaveCSS('position','sticky');
+    await expect(page.getByRole('button',{name:'Find and add players'})).toBeVisible();
+    await page.getByRole('button',{name:'Find and add players'}).click();
+    await expect(page.locator('#modal #pool-card')).toBeVisible();
     await page.keyboard.press('Escape');
   }
   expect(errors).toEqual([]);
