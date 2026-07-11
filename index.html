@@ -49,6 +49,7 @@ body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',system-ui,-app
 /* ---- topbar ---- */
 #topbar{background:linear-gradient(90deg,#07111f,#0a1524);border-bottom:1px solid var(--line);padding:0 26px;height:72px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:49;flex-shrink:0}.topbar-title{font-size:21px;font-weight:850;letter-spacing:-.35px;margin-right:auto}.topbar-alert{width:36px;height:36px;border:1px solid var(--line);border-radius:50%;display:grid;place-items:center;color:var(--txt)}
 .topbar-brand{font-size:16px;font-weight:800;letter-spacing:.3px;display:none;margin-right:4px}
+.mobile-menu-btn{display:none;background:none;border:0;color:var(--txt);font-size:22px;width:40px;height:40px;cursor:pointer}
 .topbar-brand .ball{color:var(--acc)}
 .rd-pill{display:none;align-items:center;gap:10px;margin-right:auto}
 .rd-pill .pill{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:5px 14px;font-weight:700;font-size:14px}
@@ -65,7 +66,7 @@ main{padding:22px 26px;max-width:1440px;margin:0 auto;width:100%;box-sizing:bord
   .topbar-brand{display:block}
   #bottom-tabbar{display:flex}
   #app-main{padding-bottom:80px}
-  #topbar{height:58px;padding:0 14px}.topbar-title{font-size:16px}.topbar-alert{width:32px;height:32px}.home-head{display:none}
+  #topbar{height:58px;padding:0 10px;justify-content:space-between}.mobile-menu-btn{display:grid;place-items:center}.topbar-brand{display:block;position:absolute;left:50%;transform:translateX(-50%);font-size:15px;font-style:italic}.topbar-brand .ball{display:block;text-align:center;font-size:7px;line-height:5px;color:var(--txt)}.topbar-title,.rd-pill,.user-chip{display:none!important}.topbar-alert{width:36px;height:36px;margin-left:auto}.home-head{display:none}
 }
 @media(max-width:480px){
   #topbar{height:54px;padding:0 10px;gap:8px}
@@ -434,6 +435,7 @@ input,select,textarea{font-size:16px!important}
   <!-- Main content area -->
   <div id="main-wrap">
     <div id="topbar">
+      <button class="mobile-menu-btn" aria-label="Open navigation menu" onclick="setPage('more')">☰</button>
       <span class="topbar-brand"><span class="ball">THE</span> SQUAD</span>
       <div class="topbar-title" id="topbar-title">Dashboard</div>
       <div class="rd-pill">
@@ -5309,11 +5311,40 @@ if(!isNaN(MAXR)){/* dataPatch applied — advance any rounds the load() pass mis
 if(S.classic.bank==null)S.classic.bank=S.settings.cap-squadValue(); /* migrate: bank = cap - current value */
 /* LOGIN DISABLED — set a guest user so the app loads directly */
 if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};
+window._cloudReady=false;
+let _cloudSaveTimer=null;
+function cloudPayload(){
+  const keys=['classic','customLeague','league','draft','settings','watchlist','corrections','origin','priceHistory','round','season'];
+  return Object.fromEntries(keys.filter(k=>S[k]!==undefined).map(k=>[k,S[k]]));
+}
+function hasLocalGameData(){return !!(S.classic&&S.classic.squad&&S.classic.squad.length||S.customLeague||S.league||S.draft);}
+window.queueCloudSave=function(){
+  clearTimeout(_cloudSaveTimer);
+  _cloudSaveTimer=setTimeout(async()=>{
+    try{const r=await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:cloudPayload()})});if(!r.ok)console.warn('Cloud save failed',r.status);}
+    catch(e){console.warn('Cloud save unavailable',e);}
+  },900);
+};
+async function syncCloudState(){
+  try{
+    const r=await fetch('/api/app-state');if(!r.ok)return;
+    const d=await r.json();
+    if(d.state&&typeof d.state==='object'){
+      const auth=S.sooAuth,user=S.user,ui=S.ui,dataPatch=S.dataPatch;
+      Object.assign(S,d.state);S.sooAuth=auth;S.user=user;S.ui=ui||S.ui;S.dataPatch=dataPatch||S.dataPatch;
+      applyTheme((S.settings&&S.settings.theme)||'lime',false);applyLayout();
+      localStorage.setItem(STORE_KEY,JSON.stringify(S));
+    }else if(hasLocalGameData()){
+      await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:cloudPayload()})});
+    }
+    window._cloudReady=true;
+  }catch(e){console.warn('Cloud sync unavailable',e);}
+}
 async function bootstrapAuth(){
   const legacy=S.sooAuth&&S.sooAuth.token;
   try{
     const r=await fetch('/api/soo/me',{headers:legacy?{'Authorization':'Bearer '+legacy}:{}});
-    if(r.ok){const d=await r.json();S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};save();}
+    if(r.ok){const d=await r.json();S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};save();await syncCloudState();}
     else if(S.sooAuth){S.sooAuth=null;save();}
   }catch(e){console.warn('Session check failed',e);}
   showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));setTimeout(maybeShowOnboarding,150);

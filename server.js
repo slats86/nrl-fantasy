@@ -102,7 +102,7 @@ function genCode(len) {
   return s;
 }
 
-function readBody(req, cb) {
+function readBody(req, cb, limit = BODY_LIMIT) {
   let body = '';
   let size = 0;
   let finished = false;
@@ -115,7 +115,7 @@ function readBody(req, cb) {
   req.on('data', d => {
     if (finished) return;
     size += d.length;
-    if (size > BODY_LIMIT) {
+    if (size > limit) {
       invoke(Object.assign(new Error('Payload too large'), {status: 413}));
       req.resume();
       return;
@@ -209,6 +209,14 @@ function cleanPicks(value) {
     }
   }
   return out;
+}
+
+const APP_STATE_KEYS = new Set(['classic','customLeague','league','draft','settings','watchlist','corrections','origin','priceHistory','round','season']);
+function cleanAppState(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const clean = {};
+  for (const [key, item] of Object.entries(value)) if (APP_STATE_KEYS.has(key)) clean[key] = item;
+  return clean;
 }
 
 function safeName(value, fallback, max) {
@@ -541,6 +549,26 @@ async function handleRequest(req, res) {
       return jsonRes(req, res, 200, publicUser(user), {'Set-Cookie': session.cookie});
     }
     jsonRes(req, res, 200, publicUser(user));
+    return;
+  }
+
+  if (url === '/api/app-state' && req.method === 'GET') {
+    const user = authUser(req, {});
+    if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
+    return jsonRes(req, res, 200, {state: user.appState || null, updatedAt: user.appStateUpdated || null});
+  }
+
+  if (url === '/api/app-state' && req.method === 'PUT') {
+    readBody(req, async (err, body) => {
+      if (err) return bodyError(req, res, err);
+      const user = authUser(req, body);
+      if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
+      const state = cleanAppState(body.state);
+      if (!state) return jsonRes(req, res, 400, {error: 'Invalid app state'});
+      user.appState = state; user.appStateUpdated = Date.now();
+      if (database) await database.saveAppState(user.email, state); else await saveUsers();
+      jsonRes(req, res, 200, {ok:true, updatedAt:user.appStateUpdated});
+    }, 1000000);
     return;
   }
 

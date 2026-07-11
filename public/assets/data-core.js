@@ -154,7 +154,10 @@ function applyLayoutToTeams(){
   if(S.league)S.league.teams.forEach(t=>{if(!t.ai)return;resizeLine(t.line).forEach(pid=>seatInLine(t.line,pid))});
   if(S.draft&&S.draft.done)S.draft.teams.forEach(t=>autoSetDraftLineup(t)); /* rebuild draft lineups for new layout */
 }
-function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){console.warn('save failed',e)}}
+function save(){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){console.warn('save failed',e)}
+  if(window._cloudReady&&typeof window.queueCloudSave==='function')window.queueCloudSave();
+}
 function load(){
   try{const raw=localStorage.getItem(STORE_KEY);if(raw){S=JSON.parse(raw);
     if(S.settings&&S.settings.cap===11500000)S.settings.cap=13000000; /* migrate old default cap */
