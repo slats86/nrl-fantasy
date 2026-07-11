@@ -911,9 +911,16 @@ function autoSetDraftLineup(team){
   team.line=line;
 }
 
-/* classic squad helpers */
-function squadValue(){return S.classic.squad.reduce((s,pid)=>s+price(pid),0)}
-function squadIds(){return new Set(S.classic.squad)}
+/* Team state is isolated per game mode. Older custom leagues receive an empty team lazily. */
+function activeTeamState(){
+  if(S.ui.page==='custom'&&S.customLeague){
+    if(!S.customLeague.team)S.customLeague.team={squad:[],line:emptyLine(),bank:clCap(),history:{},startRound:S.round,tradesRound:0,tradesSeason:0,chips:{active:{},used:{},injured:[]}};
+    return S.customLeague.team;
+  }
+  return S.classic;
+}
+function squadValue(){return activeTeamState().squad.reduce((s,pid)=>s+price(pid),0)}
+function squadIds(){return new Set(activeTeamState().squad)}
 function lineSlots(line){
   const out=[];
   for(const[posId,n]of FIELD_STRUCT)for(let i=0;i<n;i++)out.push({kind:'st',posId,i,pid:line.starters[posId][i]});
@@ -922,21 +929,23 @@ function lineSlots(line){
   return out;
 }
 function removeFromLine(pid){
-  if(S.classic.bank!=null&&S.classic.squad.includes(pid))S.classic.bank+=price(pid);
-  const L=S.classic.line;
+  const T=activeTeamState();
+  if(T.bank!=null&&T.squad.includes(pid))T.bank+=price(pid);
+  const L=T.line;
   for(const[posId,]of FIELD_STRUCT)L.starters[posId]=L.starters[posId].map(x=>x===pid?null:x);
   L.bench=L.bench.map(x=>x===pid?null:x);
   L.res=L.res.map(x=>x===pid?null:x);
   if(L.c===pid)L.c=null;if(L.vc===pid)L.vc=null;
-  S.classic.squad=S.classic.squad.filter(x=>x!==pid);
+  T.squad=T.squad.filter(x=>x!==pid);
 }
 function addToSlot(pid,slot){
-  if(S.classic.bank!=null)S.classic.bank-=price(pid);
-  const L=S.classic.line;
+  const T=activeTeamState();
+  if(T.bank!=null)T.bank-=price(pid);
+  const L=T.line;
   if(slot.kind==='st')L.starters[slot.posId][slot.i]=pid;
   else if(slot.kind==='bench')L.bench[slot.i]=pid;
   else L.res[slot.i]=pid;
-  S.classic.squad.push(pid);
+  T.squad.push(pid);
 }
 function seasonStarted(){return S.round>1}
 </script>
@@ -1015,17 +1024,17 @@ function toggleInjured(pid){
 }
 
 function squadInnerHTML(){
-  const val=squadValue(),n=S.classic.squad.length;
+  const T=activeTeamState(),val=squadValue(),n=T.squad.length;
   const lastR=S.round-1;
-  const lastScore=lastR>=1&&S.classic.history[lastR]?lineupScore(S.classic.history[lastR],lastR).total:null;
-  const sr=S.classic.startRound||1;
-  let totalPts=0;for(let r=sr;r<=lastR;r++)if(S.classic.history[r])totalPts+=lineupScore(S.classic.history[r],r).total;
+  const lastScore=lastR>=1&&T.history[lastR]?lineupScore(T.history[lastR],lastR).total:null;
+  const sr=T.startRound||1;
+  let totalPts=0;for(let r=sr;r<=lastR;r++)if(T.history[r])totalPts+=lineupScore(T.history[r],r).total;
   /* use custom-mode bank/cap when viewing from Custom tab */
   const isInCustom=(S.ui.page==='custom'||S.ui.customTab!=null&&S.customLeague);
   const cap=isInCustom?clCap():S.settings.cap;
-  const rem=isInCustom?(clBank()):(S.classic.bank!=null?S.classic.bank:cap-val);
-  const trLeft=isInCustom?(clTpr()-(cl().tradesRound||0)):(S.settings.tradesPerRound-S.classic.tradesRound);
-  const trSLeft=isInCustom?(clSts()-(cl().tradesSeason||0)):(S.settings.seasonTrades-S.classic.tradesSeason);
+  const rem=T.bank!=null?T.bank:cap-val;
+  const trLeft=isInCustom?(clTpr()-(T.tradesRound||0)):(S.settings.tradesPerRound-T.tradesRound);
+  const trSLeft=isInCustom?(clSts()-(T.tradesSeason||0)):(S.settings.seasonTrades-T.tradesSeason);
   return `
   <div class="statbar team-summary">
     <div class="stat"><div class="v">${n}/${SQUAD_N}</div><div class="l">Squad</div></div>
@@ -1769,7 +1778,8 @@ function createCustomLeague(){
   S.settings.chipRules=chipsEnabled?{}:Object.fromEntries(Object.keys(CHIP_DEFS).map(k=>[k,0]));
   /* cap/trades/bank stored in customLeague — Classic settings untouched */
   S.customLeague={name,created:Date.now(),chipsEnabled,cap,captainMult,benchScores,
-    tradesPerRound,seasonTrades,bank:null,tradesRound:0,tradesSeason:0};
+    tradesPerRound,seasonTrades,bank:cap,tradesRound:0,tradesSeason:0,
+    team:{squad:[],line:emptyLine(),bank:cap,history:{},startRound:S.round,tradesRound:0,tradesSeason:0,chips:{active:{},used:{},injured:[]}}};
   S.ui.customTab='team';
   save();renderCustom();
 }
@@ -1984,8 +1994,8 @@ function bestBallScore(roster,r){
 }
 
 function renderField(){
-  const L=S.classic.line,lastR=S.round-1;
-  const sc=lastR>=1&&S.classic.history[lastR]?lineupScore(S.classic.history[lastR],lastR):null;
+  const T=activeTeamState(),L=T.line,lastR=S.round-1;
+  const sc=lastR>=1&&T.history[lastR]?lineupScore(T.history[lastR],lastR):null;
   const liveR=LIVE.round>0?LIVE.round:null;
   const scoreOf=pid=>{
     if(!sc)return '';
@@ -2021,6 +2031,7 @@ function renderField(){
   return html;
 }
 function renderPool(){
+  const T=activeTeamState();
   const slot=S.ui.slotPick;
   const ids=squadIds();
   let pool=PLAYERS.filter(p=>!ids.has(p.id));
@@ -2028,7 +2039,7 @@ function renderPool(){
   if(S.ui.plQ)pool=pool.filter(p=>p.name.toLowerCase().includes(S.ui.plQ.toLowerCase()));
   if(S.ui.poolPos)pool=pool.filter(p=>p.pos.includes(S.ui.poolPos));
   pool.sort((a,b)=>targetAvg(b)-targetAvg(a));
-  const afford=S.classic.bank!=null?S.classic.bank:S.settings.cap-squadValue();
+  const afford=T.bank!=null?T.bank:(S.ui.page==='custom'?clCap():S.settings.cap)-squadValue();
   return `<h3>${slot?`Pick: ${slot.posId?POSN[slot.posId]:slot.kind.toUpperCase()} slot <span class="tag">click player to add</span>`:'Player pool'}
     ${slot?'<button class="btn sec" style="margin-left:auto;padding:4px 10px" onclick="S.ui.slotPick=null;renderClassic()">✕ cancel</button>':''}</h3>
   <input placeholder="Search players…" style="width:100%" value="${esc(S.ui.plQ)}" oninput="S.ui.plQ=this.value;refreshPool()">
@@ -2048,11 +2059,12 @@ function renderPool(){
 function refreshPool(){$('#pool-card').innerHTML=renderPool();const inp=$('#pool-card input');inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}
 function openSlotPicker(slot){S.ui.slotPick=slot;renderClassic();}
 function poolClick(pid){
+  const T=activeTeamState();
   if(isPlayerLocked(pid)){alert(esc(PLAYERS[pid].name)+' is locked — their game has already started this round.');return;}
   let slot=S.ui.slotPick;
   if(!slot){ /* auto find a slot */
     const p=PLAYERS[pid];
-    const slots=lineSlots(S.classic.line);
+    const slots=lineSlots(T.line);
     slot=slots.find(s=>s.pid==null&&s.kind==='st'&&p.pos.includes(s.posId))||slots.find(s=>s.pid==null&&s.kind==='bench')||slots.find(s=>s.pid==null);
     if(!slot){alert('Squad full — remove a player first.');return}
   }
