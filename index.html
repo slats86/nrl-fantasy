@@ -3081,9 +3081,28 @@ function myRoundSummary(r,isLive){
   const sc=lineupScore(S.classic.history[r],r);
   return `<span class="pill" style="background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:6px 14px">My score Rd ${r}: <b class="good">${sc.total}</b></span>`;
 }
-function showStatLine(pid,r){
-  const p=PLAYERS[pid],st=RST[pid]&&RST[pid][r],live=isLiveRound(r),pts=live?mcPts(pid,r):playerPts(pid,r);
+async function showStatLine(pid,r,skipFetch=false){
+  const p=PLAYERS[pid];
+  let st=RST[pid]&&RST[pid][r];
+  const live=isLiveRound(r),pts=live?mcPts(pid,r):playerPts(pid,r);
   const off=OFFS[pid]?OFFS[pid][r-1]:null;
+  if(!st&&!skipFetch){
+    openModal(`<h3>${esc(p.name)} — Round ${r}</h3><p class="muted">Loading this game's official detailed stats…</p>`);
+    try{
+      const response=await fetch('/api/player-stats/'+FEEDIDS[pid]);
+      if(!response.ok)throw new Error('Official stats request failed ('+response.status+')');
+      const games=await response.json(),game=games[r]||games[String(r)];
+      if(game){
+        st=STAT_KEYS.concat(['TOG']).map(k=>game[k]||0);
+        if(!RST[pid])RST[pid]={};
+        RST[pid][r]=st;
+        S.dataPatch=S.dataPatch||{};S.dataPatch.st=S.dataPatch.st||{};
+        S.dataPatch.st[pid]=S.dataPatch.st[pid]||{};S.dataPatch.st[pid][r]=st;
+        save();
+      }
+    }catch(e){console.warn('Detailed player stats unavailable',e)}
+    return showStatLine(pid,r,true);
+  }
   let rows='';
   if(st){
     rows=STAT_KEYS.map((k,i)=>{
@@ -3092,18 +3111,12 @@ function showStatLine(pid,r){
       return `<tr><td>${STAT_LABELS[k]}</td><td>${v}</td><td class="${ptsk>=0?'good':'bad'}">${ptsk>0?'+':''}${ptsk}</td></tr>`;
     }).join('');
     if(st[24])rows+=`<tr><td class="muted">Minutes on field</td><td class="muted">${st[24]}</td><td></td></tr>`;
-  }else{
-    rows=`<tr><td>Fantasy score</td><td><b>${pts??'—'}</b></td><td>Round ${r}</td></tr>
-      <tr><td>Season average</td><td><b>${p.avg||'—'}</b></td><td>${p.gp||0} games</td></tr>
-      <tr><td>Last 3 average</td><td><b>${p.l3||'—'}</b></td><td>Recent form</td></tr>
-      <tr><td>Current price</td><td><b>${fmtK(price(pid))}</b></td><td>${p.own||0}% owned</td></tr>
-      <tr><td>Season range</td><td>${p.lo||'—'}–${p.hi||'—'}</td><td>Low–high</td></tr>`;
-  }
+  }else rows=`<tr><td colspan="3" class="muted">${live?'Detailed stat components are still pending from the official feed for this game.':'Detailed stats are not available from the official feed for this game.'}</td></tr>`;
   openModal(`<div class="flex">${avatar(p,56)}<div><h3 style="margin:0">${esc(p.name)} — Round ${r}</h3>
    <div class="muted">${CLUBS[p.sq].n} · ${posStr(p)} · official stat line</div></div>
    <span class="spacer"></span><div class="stat"><div class="v">${pts}</div><div class="l">${S.settings.scoreMode==='custom'?'custom pts':'official pts'}</div></div></div>
    <table style="margin-top:12px"><thead><tr><th>${st?'Stat':'Metric'}</th><th>${st?'Count':'Value'}</th><th>${st?'Points':'Context'}</th></tr></thead><tbody>${rows}</tbody></table>
-   ${!st?'<p class="tooltip">The official feed currently provides the Fantasy total for this match but not its tackle, metre and attacking-stat components. Season context is shown above while detailed match data is unavailable.</p>':''}
+   ${!st?'<p class="tooltip">The score above is the player’s Fantasy score for this specific game. This panel never substitutes season averages for missing match stats.</p>':''}
    ${st&&off!=null?`<p class="tooltip">Official NRL Fantasy score: <b>${off}</b>. Per-stat points use your current rules${S.settings.scoreMode==='custom'?'':' (display only — official mode is on)'}.</p>`:''}`);
 }
 

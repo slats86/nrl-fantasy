@@ -44,9 +44,9 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   await page.evaluate(()=>showStatLine(0,1));
   await expect(page.locator('#modal-bg')).toHaveClass(/on/);
   await page.keyboard.press('Escape');
-  await page.evaluate(()=>showStatLine(0,999));
-  await expect(page.getByText('Season average')).toBeVisible();
-  await expect(page.getByText(/official feed currently provides/i)).toBeVisible();
+  await page.evaluate(()=>showStatLine(0,999,true));
+  await expect(page.getByText(/not available from the official feed for this game/i)).toBeVisible();
+  await expect(page.getByText(/never substitutes season averages/i)).toBeVisible();
   await page.keyboard.press('Escape');
 
   const isolation = await page.evaluate(() => {
