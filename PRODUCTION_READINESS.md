@@ -34,18 +34,24 @@ Completed locally:
 4. Added bounded database retries, readiness state, unit failure/retry tests, and an opt-in `TEST_DATABASE_URL` integration test.
 5. Added the Railway pre-deploy migration command.
 
-Still required against Railway before deployment:
+Completed against Railway:
 
-1. Run `TEST_DATABASE_URL=<isolated database URL> npm test` and confirm the PostgreSQL integration test passes.
-2. Snapshot the JSON volume, run `npm run migrate`, and compare user/league/team/pick/score counts and representative records.
-3. Create a backup with `pg_dump --format=custom --no-owner --file=nrl-fantasy.dump "$DATABASE_URL"`.
-4. Restore into an isolated database with `pg_restore --clean --if-exists --no-owner --dbname="$RESTORE_DATABASE_URL" nrl-fantasy.dump`, then run the integration and logged-in browser suites against it.
-5. Retain the source JSON snapshot through the rollback window; do not point production back to JSON writes.
+1. PostgreSQL integration and responsive browser suites passed.
+2. The legacy snapshot was recovered into PostgreSQL with 11 users, 1 league, and 34 scores.
+3. Production readiness reports PostgreSQL and restored account login/password-reset flows pass.
+4. Empty legacy snapshots no longer receive a completed-import marker, so startup can retry after a volume becomes available.
+
+Still required operationally:
+
+1. Enable scheduled Railway backups for the production PostgreSQL volume and retain at least one weekly recovery point.
+2. Create an off-platform backup with `pg_dump --format=custom --no-owner --file=nrl-fantasy.dump "$DATABASE_URL"`.
+3. Restore into an isolated database with `pg_restore --clean --if-exists --no-owner --dbname="$RESTORE_DATABASE_URL" nrl-fantasy.dump`, then run the integration and logged-in browser suites against it.
+4. Retain the source JSON snapshot through the rollback window; do not point production back to JSON writes.
 
 ## Rollout requirements
 
 - Set `ADMIN_EMAILS` in Railway before score administration is needed.
-- Do not deploy the hardening branch until PostgreSQL migration and logged-in browser tests pass.
+- Require PostgreSQL migration and logged-in browser tests before storage changes are deployed.
 - Test at 320, 375, 390, 768, 1024, 1440, and 1920 pixel widths.
 - Test account migration, login, logout, registration, password reset, league creation/joining, pick updates, owner controls, and score administration.
 
@@ -53,4 +59,4 @@ Still required against Railway before deployment:
 
 `npm run test:browser` covers authenticated registration/login state, logout, league creation/joining, pick updates, owner removal controls, score administration, console errors, navigation, and horizontal overflow at 320, 375, 390, 768, 1024, 1440, and 1920 pixels.
 
-This workspace could download Chromium but could not install the host libraries (`libnspr4`, `libnss3`, and `libasound2t64`) because sudo authentication is unavailable. Install them on the browser-test runner, run the suite, and manually verify the password-reset email link before deployment.
+The suite passed in the Linux test workspace after Chromium dependencies were installed. Password-reset delivery, rendering, and the reset/login flow were also verified against production.
