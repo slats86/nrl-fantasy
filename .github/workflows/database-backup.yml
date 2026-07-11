@@ -32,7 +32,7 @@ jobs:
           docker run --rm \
             -e DATABASE_URL="$DATABASE_URL" \
             -v "$PWD:/backup" \
-            postgres:17-alpine \
+            postgres:18-alpine \
             sh -c 'pg_dump --format=custom --no-owner --no-acl --file=/backup/nrl-fantasy.dump "$DATABASE_URL"'
 
       - name: Encrypt and verify backup
