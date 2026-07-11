@@ -14,6 +14,7 @@
 - Restricted CORS, security headers, JSON API errors, and method handling
 - Request IDs and structured request logs
 - Brotli/gzip compression, ETags, and player-data caching
+- Conditional 304 validation for the application shell and large JSON feeds
 - `/health` and `/ready` endpoints
 - Railway configuration-as-code
 - CI, inline-script validation, and API/security regression tests

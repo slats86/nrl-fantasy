@@ -49,6 +49,18 @@ test('large frontend responses are compressed', async () => {
   assert.equal(response.headers.get('content-encoding'), 'br');
 });
 
+test('HTML and data support conditional requests without retransferring bodies', async () => {
+  for (const requestPath of ['/', '/api/players']) {
+    const initial = await fetch(`http://127.0.0.1:${port}${requestPath}`);
+    assert.equal(initial.status, 200);
+    const etag = initial.headers.get('etag');
+    assert.match(etag, /^W\/"[A-Za-z0-9_-]+"$/);
+    const conditional = await fetch(`http://127.0.0.1:${port}${requestPath}`, {headers: {'if-none-match': etag}});
+    assert.equal(conditional.status, 304);
+    assert.equal((await conditional.arrayBuffer()).byteLength, 0);
+  }
+});
+
 test('team updates require authentication', async () => {
   const response = await fetch(`http://127.0.0.1:${port}/api/soo/league/ABC123/picks`, {
     method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({teamId: 'TEAM', picks: {}})
