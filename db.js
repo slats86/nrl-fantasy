@@ -10,6 +10,18 @@ function json(file, fallback = {}) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { return fallback; }
 }
 
+function readLegacySnapshot(dataDir) {
+  const users = json(path.join(dataDir, 'soo-users.json'));
+  const leagues = json(path.join(dataDir, 'soo-leagues.json'));
+  const scores = json(path.join(dataDir, 'soo-scores.json'));
+  const counts = {
+    users: Object.keys(users).length,
+    leagues: Object.keys(leagues).length,
+    scores: Object.keys(scores).length
+  };
+  return {users, leagues, scores, counts, total: counts.users + counts.leagues + counts.scores};
+}
+
 function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
   if (!connectionString && !suppliedPool) return null;
   const pool = suppliedPool || new Pool({
@@ -74,9 +86,11 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
       `);
       const done = await client.query('SELECT 1 FROM schema_migrations WHERE name=$1', [MIGRATION]);
       if (done.rowCount) return;
-      const users = json(path.join(dataDir, 'soo-users.json'));
-      const leagues = json(path.join(dataDir, 'soo-leagues.json'));
-      const scores = json(path.join(dataDir, 'soo-scores.json'));
+      const {users, leagues, scores, counts, total} = readLegacySnapshot(dataDir);
+      if (!total) {
+        console.warn('[migration] no legacy JSON records found; leaving initial import pending');
+        return;
+      }
       for (const user of Object.values(users)) await insertUser(client, user);
       for (const [code, league] of Object.entries(leagues)) await insertLeague(client, code, league);
       for (const [key, points] of Object.entries(scores)) {
@@ -84,6 +98,7 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
         if (Number.isInteger(game) && Number.isSafeInteger(playerId)) await client.query('INSERT INTO scores VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [game, playerId, points]);
       }
       await client.query('INSERT INTO schema_migrations(name) VALUES ($1)', [MIGRATION]);
+      console.log('[migration] imported legacy JSON', counts);
     }));
   }
 
@@ -131,4 +146,4 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
   return {migrate, load, saveUsers, saveLeagues, saveScores, ping, close: () => pool.end(), retry};
 }
 
-module.exports = {createDatabase};
+module.exports = {createDatabase, readLegacySnapshot};
