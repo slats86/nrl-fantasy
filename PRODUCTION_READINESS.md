@@ -34,7 +34,7 @@ Completed locally:
 2. Added a transactional, idempotent JSON import recorded in `schema_migrations`.
 3. Restricted JSON fallback to non-production environments; production now refuses to start without `DATABASE_URL`.
 4. Added bounded database retries, readiness state, unit failure/retry tests, and an opt-in `TEST_DATABASE_URL` integration test.
-5. Added the Railway pre-deploy migration command.
+5. Startup runs migrations before opening the HTTP port, avoiding a redundant short-lived Railway pre-deploy container.
 
 Completed against Railway:
 
