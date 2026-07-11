@@ -1,8 +1,6 @@
 # NRL Fantasy App — Claude Handoff Document
 *Last updated: July 11, 2026*
 
-> Production-hardening work is in progress on `agent/production-readiness`. See `PRODUCTION_READINESS.md` before continuing or deploying.
-
 ---
 
 ## Project Overview
@@ -22,7 +20,7 @@ A single-file HTML/JS/CSS SPA — an NRL Fantasy app built for mates, with plans
 
 - **Frontend:** Vanilla JS/CSS/HTML — single file, no build step
 - **Backend:** Node.js native HTTP server (`server.js`)
-- **Database:** JSON flat-file (persisted on Railway volume)
+- **Database:** PostgreSQL in production; JSON files are a development-only fallback
 - **Email:** Resend API
 - **Hosting:** Railway (auto-deploys on git push)
 - **Git:** PowerShell on Windows — use semicolons not `&&`:
@@ -102,8 +100,11 @@ Home | Classic | Match | Leagues | C.Games | Stats
 
 ### Environment variables (Railway)
 - `RESEND_API_KEY` — Resend API key
-- `ADMIN_KEY` — admin endpoint protection
-- `JWT_SECRET` (if applicable)
+- `DATABASE_URL` — Railway PostgreSQL connection string (required in production)
+- `ADMIN_EMAILS` — comma-separated accounts allowed to update official scores
+- `APP_URL` — public application URL
+- `FROM_EMAIL` — verified Resend sender
+- `PGPOOL_MAX` — optional PostgreSQL connection-pool limit
 
 ---
 
