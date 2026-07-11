@@ -15,7 +15,9 @@ The workflow creates a PostgreSQL custom-format dump, encrypts it with AES-256 t
 
 Never test a restore against production. Download an artifact from GitHub Actions and restore it only into the isolated Postgres Test service.
 
-From a trusted Linux environment with GnuPG and PostgreSQL 18 client tools:
+The preferred procedure is the manual `Test database restore` GitHub Actions workflow. Configure `TEST_DATABASE_URL` with the isolated service's public Railway URL, run the workflow, and enter `RESTORE-POSTGRES-TEST` when prompted. The workflow rejects an identical production/test URL, downloads the newest successful encrypted backup, restores it with PostgreSQL 18 tooling, verifies record counts, and removes the plaintext dump.
+
+For an emergency manual restore from a trusted Linux environment with GnuPG and PostgreSQL 18 client tools:
 
 ```bash
 sha256sum --check nrl-fantasy.dump.gpg.sha256

@@ -1,0 +1,88 @@
+name: Test database restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type RESTORE-POSTGRES-TEST to replace the isolated test database'
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: test-database-restore
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Validate restore target
+        shell: bash
+        run: |
+          test '${{ inputs.confirmation }}' = 'RESTORE-POSTGRES-TEST' || { echo 'Confirmation phrase did not match'; exit 1; }
+          test -n "$TEST_DATABASE_URL" || { echo 'TEST_DATABASE_URL is not configured'; exit 1; }
+          test -n "$PRODUCTION_DATABASE_URL" || { echo 'PRODUCTION_DATABASE_URL is not configured'; exit 1; }
+          test -n "$BACKUP_PASSPHRASE" || { echo 'BACKUP_PASSPHRASE is not configured'; exit 1; }
+          python3 - <<'PY'
+          import os
+          from urllib.parse import urlparse
+          def target(name):
+              value = urlparse(os.environ[name])
+              return value.hostname, value.port, value.path
+          if target('TEST_DATABASE_URL') == target('PRODUCTION_DATABASE_URL'):
+              raise SystemExit('Refusing to restore over the production database target')
+          PY
+
+      - name: Download newest successful backup
+        shell: bash
+        run: |
+          run_id="$(gh run list --workflow database-backup.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          test -n "$run_id" || { echo 'No successful backup run found'; exit 1; }
+          mkdir -p backup
+          gh run download "$run_id" --dir backup
+          test -s backup/nrl-fantasy.dump.gpg
+          test -s backup/nrl-fantasy.dump.gpg.sha256
+          echo "Restoring encrypted artifact from backup run $run_id"
+
+      - name: Verify and decrypt backup
+        shell: bash
+        working-directory: backup
+        run: |
+          sha256sum --check nrl-fantasy.dump.gpg.sha256
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$BACKUP_PASSPHRASE" \
+            --output nrl-fantasy.dump --decrypt nrl-fantasy.dump.gpg
+          test -s nrl-fantasy.dump
+
+      - name: Restore isolated test database
+        shell: bash
+        run: |
+          docker run --rm \
+            -e TEST_DATABASE_URL="$TEST_DATABASE_URL" \
+            -v "$PWD/backup:/backup" \
+            postgres:18-alpine \
+            sh -c 'pg_restore --clean --if-exists --no-owner --no-acl --dbname="$TEST_DATABASE_URL" /backup/nrl-fantasy.dump'
+
+      - name: Verify restored record counts
+        shell: bash
+        run: |
+          counts="$(docker run --rm -e TEST_DATABASE_URL="$TEST_DATABASE_URL" postgres:18-alpine \
+            sh -c 'psql "$TEST_DATABASE_URL" --no-align --tuples-only --command="SELECT (SELECT count(*) FROM users), (SELECT count(*) FROM leagues), (SELECT count(*) FROM teams), (SELECT count(*) FROM picks), (SELECT count(*) FROM scores);"')"
+          echo "Restored counts (users|leagues|teams|picks|scores): $counts"
+          users="${counts%%|*}"
+          test "${users//[[:space:]]/}" -gt 0 || { echo 'Restore verification found no users'; exit 1; }
+
+      - name: Remove plaintext dump
+        if: always()
+        shell: bash
+        run: rm -f backup/nrl-fantasy.dump
