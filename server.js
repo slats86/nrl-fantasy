@@ -206,6 +206,9 @@ function textRes(res, status, text, contentType) {
 function compressedRes(req, res, status, data, headers) {
   const accepts = String(req.headers['accept-encoding'] || '');
   const base = Object.assign({}, securityHeaders(headers['Content-Type']), headers, {'Vary': 'Accept-Encoding', 'X-Request-Id': req.id || ''});
+  if (headers.ETag && String(req.headers['if-none-match'] || '').split(',').map(value => value.trim()).includes(headers.ETag)) {
+    res.writeHead(304, base); res.end(); return;
+  }
   if (accepts.includes('br')) {
     zlib.brotliCompress(data, (err, output) => {
       if (err) return textRes(res, 500, 'compression error');
@@ -219,6 +222,10 @@ function compressedRes(req, res, status, data, headers) {
   } else {
     res.writeHead(status, base); res.end(data);
   }
+}
+
+function contentEtag(data) {
+  return 'W/"' + crypto.createHash('sha256').update(data).digest('base64url').slice(0, 24) + '"';
 }
 
 /* Resolve user from token (body.token or Authorization header) */
@@ -259,7 +266,7 @@ function serveLocal(req, res, filePath) {
     compressedRes(req, res, 200, data, {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
-      'ETag': '"' + crypto.createHash('sha256').update(data).digest('base64url').slice(0, 24) + '"'
+      'ETag': contentEtag(data)
     });
   });
 }
@@ -640,13 +647,18 @@ async function handleRequest(req, res) {
   var file = path.join(__dirname, 'index.html');
   fs.readFile(file, function(err, data) {
     if (err) { textRes(res, 500, 'error'); return; }
-    if (req.method === 'HEAD') {
-      res.writeHead(200, Object.assign({}, securityHeaders('text/html; charset=utf-8'), {'Cache-Control': 'no-cache'})); res.end(); return;
-    }
-    compressedRes(req, res, 200, data, {
+    const headers = {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-cache'
-    });
+      'Cache-Control': 'no-cache',
+      'ETag': contentEtag(data)
+    };
+    if (req.method === 'HEAD') {
+      if (String(req.headers['if-none-match'] || '').split(',').map(value => value.trim()).includes(headers.ETag)) {
+        res.writeHead(304, Object.assign({}, securityHeaders(headers['Content-Type']), headers)); res.end(); return;
+      }
+      res.writeHead(200, Object.assign({}, securityHeaders(headers['Content-Type']), headers)); res.end(); return;
+    }
+    compressedRes(req, res, 200, data, headers);
   });
 }
 
