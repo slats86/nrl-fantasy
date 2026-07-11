@@ -5,6 +5,7 @@ const fs     = require('fs');
 const path   = require('path');
 const crypto = require('crypto');
 const zlib   = require('zlib');
+const {createDatabase} = require('./db');
 const PORT     = process.env.PORT || 3000;
 const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
 const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@the-squad.com.au>';
@@ -12,6 +13,7 @@ const RESEND_KEY = process.env.RESEND_API_KEY || '';
 const ADMIN_EMAILS = new Set((process.env.ADMIN_EMAILS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean));
 const ALLOWED_ORIGIN = new URL(APP_URL).origin;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const COOKIE_SECURE = process.env.NODE_ENV === 'production' || APP_URL.startsWith('https://');
 const BODY_LIMIT = 100000;
 const rateBuckets = new Map();
 setInterval(() => {
@@ -63,6 +65,8 @@ let users   = {};  /* keyed by email (lowercase) */
 let tokens  = {};  /* token â†’ email */
 /* sooScores: { "gameNum:playerId": points }  e.g. { "3:1234": 87 } */
 let sooScores = {};
+let database = null;
+let storageReady = false;
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e) {}
 try { leagues = JSON.parse(fs.readFileSync(LEAGUE_FILE, 'utf8')); } catch(e) {}
@@ -77,9 +81,9 @@ function atomicSave(file, value) {
   fs.writeFileSync(tmp, JSON.stringify(value));
   fs.renameSync(tmp, file);
 }
-function saveLeagues() { try { atomicSave(LEAGUE_FILE, leagues); } catch(e) { console.error('[storage] leagues:', e.message); } }
-function saveUsers()   { try { atomicSave(USERS_FILE, users); } catch(e) { console.error('[storage] users:', e.message); } }
-function saveScores()  { try { atomicSave(SCORES_FILE, sooScores); } catch(e) { console.error('[storage] scores:', e.message); } }
+async function saveLeagues() { if (database) return database.saveLeagues(leagues); try { atomicSave(LEAGUE_FILE, leagues); } catch(e) { console.error('[storage] leagues:', e.message); throw e; } }
+async function saveUsers()   { if (database) return database.saveUsers(users); try { atomicSave(USERS_FILE, users); } catch(e) { console.error('[storage] users:', e.message); throw e; } }
+async function saveScores()  { if (database) return database.saveScores(sooScores); try { atomicSave(SCORES_FILE, sooScores); } catch(e) { console.error('[storage] scores:', e.message); throw e; } }
 
 function hashPwd(password, salt, iterations) {
   return new Promise((resolve, reject) => crypto.pbkdf2(password, salt, iterations || 310000, 64, 'sha512',
@@ -209,7 +213,7 @@ function authUser(req, body) {
   const user = email ? users[email] : null;
   if (!user) return null;
   if (user.tokenExpires && user.tokenExpires < Date.now()) {
-    delete tokens[hash]; delete tokens[tok]; delete user.token; delete user.tokenHash; delete user.tokenExpires; saveUsers(); return null;
+    delete tokens[hash]; delete tokens[tok]; delete user.token; delete user.tokenHash; delete user.tokenExpires; saveUsers().catch(e => console.error('[storage] expired session:', e.message)); return null;
   }
   return user;
 }
@@ -222,7 +226,7 @@ function issueSession(user) {
   user.tokenHash = tokenHash(token);
   user.tokenExpires = Date.now() + SESSION_TTL_MS;
   tokens[user.tokenHash] = user.email;
-  return {token, cookie: 'session=' + encodeURIComponent(token) + '; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=' + Math.floor(SESSION_TTL_MS / 1000)};
+  return {token, cookie: 'session=' + encodeURIComponent(token) + '; Path=/; HttpOnly' + (COOKIE_SECURE ? '; Secure' : '') + '; SameSite=Lax; Max-Age=' + Math.floor(SESSION_TTL_MS / 1000)};
 }
 
 function publicUser(user) {
@@ -271,7 +275,7 @@ function proxyNRL(req, res, nrlPath) {
 }
 
 /* â”€â”€ HTTP server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-http.createServer(function(req, res) {
+const server = http.createServer(async function(req, res) {
   req.id = crypto.randomUUID();
   const started = Date.now();
   res.on('finish', () => console.log(JSON.stringify({type: 'request', id: req.id, method: req.method,
@@ -282,8 +286,17 @@ http.createServer(function(req, res) {
     jsonRes(req, res, 204, {}, {'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,Authorization'}); return;
   }
 
-  if (url === '/health' || url === '/ready') {
+  if (url === '/health') {
     jsonRes(req, res, 200, {ok: true, uptime: Math.floor(process.uptime())}); return;
+  }
+  if (url === '/ready') {
+    if (storageReady && database) {
+      try { await database.ping(); } catch (error) {
+        console.error('[readiness]', error.message);
+        return jsonRes(req, res, 503, {ok: false, storage: 'postgresql'});
+      }
+    }
+    jsonRes(req, res, storageReady ? 200 : 503, {ok: storageReady, storage: database ? 'postgresql' : 'json'}); return;
   }
 
   if (url === '/api/players') return serveLocal(req, res, path.join(__dirname, 'public/players.json'));
@@ -309,7 +322,7 @@ http.createServer(function(req, res) {
       const userId = genCode(10);
       users[email] = { userId, name: safeName(name, 'Player', 40), email, salt, iterations: 310000, hash: await hashPwd(pass, salt, 310000) };
       const session = issueSession(users[email]);
-      saveUsers();
+      await saveUsers();
       jsonRes(req, res, 201, publicUser(users[email]), {'Set-Cookie': session.cookie});
       /* Welcome email (async â€” don't block response) */
       sendEmail(email, 'Welcome to NRL Fantasy! ðŸ‰', `
@@ -340,7 +353,7 @@ http.createServer(function(req, res) {
         user.salt = crypto.randomBytes(16).toString('hex'); user.iterations = 310000; user.hash = await hashPwd(pass, user.salt, user.iterations);
       }
       const session = issueSession(user);
-      saveUsers();
+      await saveUsers();
       jsonRes(req, res, 200, publicUser(user), {'Set-Cookie': session.cookie});
     });
     return;
@@ -359,7 +372,7 @@ http.createServer(function(req, res) {
       const tok = genToken();
       user.resetTokenHash = tokenHash(tok);
       user.resetExpires = Date.now() + 3600000;
-      saveUsers();
+      await saveUsers();
       const link = APP_URL + '/?resetToken=' + tok;
       await sendEmail(email, 'Reset your NRL Fantasy password', '<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px"><h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy ðŸ‰</h2><p>Hi ' + user.name + ',</p><p>Someone requested a password reset for your account. Click below to set a new password â€” this link expires in <strong>1 hour</strong>.</p><a href="' + link + '" style="display:inline-block;background:#4ade80;color:#071d10;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">Reset Password</a><p style="color:#888;font-size:12px">If you did not request this, you can safely ignore this email.</p><p style="color:#888;font-size:11px;word-break:break-all">Or copy this link: ' + link + '</p></div>').catch(() => {});
     });
@@ -383,7 +396,7 @@ http.createServer(function(req, res) {
       user.hash = await hashPwd(body.password, salt, user.iterations);
       const session = issueSession(user);
       delete user.resetTokenHash; delete user.resetExpires;
-      saveUsers();
+      await saveUsers();
       jsonRes(req, res, 200, publicUser(user), {'Set-Cookie': session.cookie});
     });
     return;
@@ -394,9 +407,9 @@ http.createServer(function(req, res) {
     if (user) {
       if (user.token) delete tokens[user.token];
       if (user.tokenHash) delete tokens[user.tokenHash];
-      delete user.token; delete user.tokenHash; delete user.tokenExpires; saveUsers();
+      delete user.token; delete user.tokenHash; delete user.tokenExpires; saveUsers().catch(e => console.error('[storage] logout:', e.message));
     }
-    jsonRes(req, res, 200, {ok: true}, {'Set-Cookie': 'session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0'});
+    jsonRes(req, res, 200, {ok: true}, {'Set-Cookie': 'session=; Path=/; HttpOnly' + (COOKIE_SECURE ? '; Secure' : '') + '; SameSite=Lax; Max-Age=0'});
     return;
   }
 
@@ -405,7 +418,7 @@ http.createServer(function(req, res) {
     if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
     const hasCookie = !!parseCookies(req).session;
     if (!hasCookie) {
-      const session = issueSession(user); saveUsers();
+      const session = issueSession(user); await saveUsers();
       return jsonRes(req, res, 200, publicUser(user), {'Set-Cookie': session.cookie});
     }
     jsonRes(req, res, 200, publicUser(user));
@@ -416,7 +429,7 @@ http.createServer(function(req, res) {
 
   /* POST /api/soo/create  { name, teamName, picks, token } */
   if (url === '/api/soo/create' && req.method === 'POST') {
-    readBody(req, (err, body) => {
+    readBody(req, async (err, body) => {
       if (err) return jsonRes(req, res, 400, {error: 'bad json'});
       const user = authUser(req, body);
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
@@ -433,8 +446,8 @@ http.createServer(function(req, res) {
           picks: cleanPicks(body.picks)
         }]
       };
-      user.leagueCode = code; user.teamId = teamId; saveUsers();
-      saveLeagues();
+      user.leagueCode = code; user.teamId = teamId; await saveUsers();
+      await saveLeagues();
       jsonRes(req, res, 200, { code, teamId });
     });
     return;
@@ -442,7 +455,7 @@ http.createServer(function(req, res) {
 
   /* POST /api/soo/join  { code, teamName, picks, token } */
   if (url === '/api/soo/join' && req.method === 'POST') {
-    readBody(req, (err, body) => {
+    readBody(req, async (err, body) => {
       if (err) return jsonRes(req, res, 400, {error: 'bad json'});
       const user = authUser(req, body);
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
@@ -459,8 +472,8 @@ http.createServer(function(req, res) {
         name: safeName(body.teamName || user.name, 'New Team', 30),
         picks: cleanPicks(body.picks)
       });
-      user.leagueCode = code; user.teamId = teamId; saveUsers();
-      saveLeagues();
+      user.leagueCode = code; user.teamId = teamId; await saveUsers();
+      await saveLeagues();
       jsonRes(req, res, 200, { teamId, league: { name: lg.name, code: body.code, teams: lg.teams, ownerId: lg.ownerId } });
     });
     return;
@@ -468,9 +481,7 @@ http.createServer(function(req, res) {
 
   /* GET /api/soo/my-league */
   if (url === '/api/soo/my-league' && req.method === 'GET') {
-    const tok = (req.headers['authorization']||'').replace(/^Bearer\s+/i,'');
-    const uEmail = tokens[tok];
-    const u = uEmail && users[uEmail];
+    const u = authUser(req, {});
     if (!u || !u.leagueCode) return jsonRes(req, res, 404, {error: 'No league'});
     const lg = leagues[u.leagueCode];
     if (!lg) return jsonRes(req, res, 404, {error: 'League not found'});
@@ -492,7 +503,7 @@ http.createServer(function(req, res) {
   /* POST /api/soo/league/:code/picks */
   const leaguePicks = url.match(/^\/api\/soo\/league\/([A-Z0-9]+)\/picks$/);
   if (leaguePicks && req.method === 'POST') {
-    readBody(req, (err, body) => {
+    readBody(req, async (err, body) => {
       if (err) return jsonRes(req, res, 400, {error: 'bad json'});
       const lg = leagues[leaguePicks[1]];
       if (!lg) return jsonRes(req, res, 404, {error: 'Not found'});
@@ -503,7 +514,7 @@ http.createServer(function(req, res) {
       if (team.userId !== user.userId) return jsonRes(req, res, 403, {error: 'You can only update your own team'});
       team.picks = cleanPicks(body.picks);
       if (body.teamName) team.name = safeName(body.teamName, team.name, 30);
-      saveLeagues();
+      await saveLeagues();
       jsonRes(req, res, 200, { ok: true });
     });
     return;
@@ -512,7 +523,7 @@ http.createServer(function(req, res) {
   /* DELETE /api/soo/league/:code/team/:teamId */
   const teamDel = url.match(/^\/api\/soo\/league\/([A-Z0-9]+)\/team\/([A-Z0-9]+)$/);
   if (teamDel && req.method === 'DELETE') {
-    readBody(req, (err, body) => {
+    readBody(req, async (err, body) => {
       if (err) body = {};
       const user = authUser(req, body);
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
@@ -525,8 +536,8 @@ http.createServer(function(req, res) {
       lg.teams = lg.teams.filter(t => t.id !== teamDel[2]);
       if (lg.teams.length === before) return jsonRes(req, res, 404, {error: 'Team not found'});
       const removedUser = Object.values(users).find(u => removed && u.userId === removed.userId);
-      if (removedUser) { delete removedUser.leagueCode; delete removedUser.teamId; saveUsers(); }
-      saveLeagues();
+      if (removedUser) { delete removedUser.leagueCode; delete removedUser.teamId; await saveUsers(); }
+      await saveLeagues();
       jsonRes(req, res, 200, { ok: true, teams: lg.teams });
     });
     return;
@@ -535,7 +546,7 @@ http.createServer(function(req, res) {
   /* DELETE /api/soo/league/:code */
   const leagueDel = url.match(/^\/api\/soo\/league\/([A-Z0-9]+)$/);
   if (leagueDel && req.method === 'DELETE') {
-    readBody(req, (err, body) => {
+    readBody(req, async (err, body) => {
       if (err) body = {};
       const user = authUser(req, body);
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
@@ -544,8 +555,8 @@ http.createServer(function(req, res) {
       if (lg.ownerId && lg.ownerId !== user.userId) return jsonRes(req, res, 403, {error: 'Only the league owner can delete this league'});
       delete leagues[leagueDel[1]];
       Object.values(users).forEach(u => { if (u.leagueCode === leagueDel[1]) { delete u.leagueCode; delete u.teamId; } });
-      saveUsers();
-      saveLeagues();
+      await saveUsers();
+      await saveLeagues();
       jsonRes(req, res, 200, { ok: true });
     });
     return;
@@ -559,7 +570,7 @@ http.createServer(function(req, res) {
   }
 
   if (url === '/api/soo/scores' && req.method === 'POST') {
-    readBody(req, (err, body) => {
+    readBody(req, async (err, body) => {
       if (err) return jsonRes(req, res, 400, {error: 'bad json'});
       const user = authUser(req, body);
       if (!isAdmin(user)) return jsonRes(req, res, 403, {error: 'Admin access required'});
@@ -569,7 +580,7 @@ http.createServer(function(req, res) {
         const playerId = Number(pid), points = Number(pts);
         if (Number.isSafeInteger(playerId) && Number.isFinite(points) && points >= 0 && points <= 300) sooScores[game + ':' + playerId] = points;
       });
-      saveScores();
+      await saveScores();
       jsonRes(req, res, 200, {ok: true, stored: Object.keys(body.scores).length});
     });
     return;
@@ -586,7 +597,7 @@ http.createServer(function(req, res) {
     } else {
       sooScores = {};
     }
-    saveScores();
+    await saveScores();
     jsonRes(req, res, 200, {ok: true});
     return;
   }
@@ -619,4 +630,27 @@ http.createServer(function(req, res) {
       'Cache-Control': 'no-cache'
     });
   });
-}).listen(PORT, function() { console.log('NRL Fantasy on :' + PORT); });
+});
+
+async function start() {
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL)
+    throw new Error('DATABASE_URL is required in production; JSON storage is development-only');
+  database = createDatabase({connectionString: process.env.DATABASE_URL, dataDir: DATA_DIR});
+  if (database) {
+    await database.migrate();
+    const loaded = await database.load();
+    users = loaded.users; leagues = loaded.leagues; sooScores = loaded.scores; tokens = {};
+    Object.values(users).forEach(user => { if (user.tokenHash) tokens[user.tokenHash] = user.email; });
+  }
+  storageReady = true;
+  server.listen(PORT, function() { console.log('NRL Fantasy on :' + PORT + ' using ' + (database ? 'PostgreSQL' : 'local JSON')); });
+}
+
+start().catch(error => { console.error('[startup]', error); process.exitCode = 1; });
+
+async function shutdown() {
+  storageReady = false;
+  server.close(async () => { if (database) await database.close().catch(() => {}); process.exit(0); });
+}
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

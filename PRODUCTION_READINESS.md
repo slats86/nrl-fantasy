@@ -26,15 +26,21 @@
 
 Railway PostgreSQL has been provisioned and referenced by the app as `DATABASE_URL`.
 
-The remaining code work must be performed in a network-enabled environment:
+Completed locally:
 
-1. Install and pin `pg`.
-2. Add migrations for users, sessions, password resets, leagues, teams, picks, and scores.
-3. Import existing JSON records transactionally and record migration completion.
-4. Keep JSON as a local-development fallback only.
-5. Add PostgreSQL integration tests and failure/retry tests.
-6. Configure Railway pre-deploy migrations.
-7. Verify backup and restore procedures before disabling JSON production writes.
+1. Pinned `pg` and added schemas for users, sessions, password resets, leagues, teams, picks, and scores.
+2. Added a transactional, idempotent JSON import recorded in `schema_migrations`.
+3. Restricted JSON fallback to non-production environments; production now refuses to start without `DATABASE_URL`.
+4. Added bounded database retries, readiness state, unit failure/retry tests, and an opt-in `TEST_DATABASE_URL` integration test.
+5. Added the Railway pre-deploy migration command.
+
+Still required against Railway before deployment:
+
+1. Run `TEST_DATABASE_URL=<isolated database URL> npm test` and confirm the PostgreSQL integration test passes.
+2. Snapshot the JSON volume, run `npm run migrate`, and compare user/league/team/pick/score counts and representative records.
+3. Create a backup with `pg_dump --format=custom --no-owner --file=nrl-fantasy.dump "$DATABASE_URL"`.
+4. Restore into an isolated database with `pg_restore --clean --if-exists --no-owner --dbname="$RESTORE_DATABASE_URL" nrl-fantasy.dump`, then run the integration and logged-in browser suites against it.
+5. Retain the source JSON snapshot through the rollback window; do not point production back to JSON writes.
 
 ## Rollout requirements
 
@@ -42,3 +48,9 @@ The remaining code work must be performed in a network-enabled environment:
 - Do not deploy the hardening branch until PostgreSQL migration and logged-in browser tests pass.
 - Test at 320, 375, 390, 768, 1024, 1440, and 1920 pixel widths.
 - Test account migration, login, logout, registration, password reset, league creation/joining, pick updates, owner controls, and score administration.
+
+## Responsive browser automation
+
+`npm run test:browser` covers authenticated registration/login state, logout, league creation/joining, pick updates, owner removal controls, score administration, console errors, navigation, and horizontal overflow at 320, 375, 390, 768, 1024, 1440, and 1920 pixels.
+
+This workspace could download Chromium but could not install the host libraries (`libnspr4`, `libnss3`, and `libasound2t64`) because sudo authentication is unavailable. Install them on the browser-test runner, run the suite, and manually verify the password-reset email link before deployment.
