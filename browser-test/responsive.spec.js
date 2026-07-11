@@ -58,9 +58,17 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
 for (const width of widths) test(`responsive app shell at ${width}px`, async ({page}) => {
   await page.setViewportSize({width,height:900});
   const errors=[]; page.on('pageerror', error => errors.push(error.message));
+  const login = await page.request.post('/api/soo/login', {data:{email:'owner@example.com',password:'owner-password-123'}});
+  expect(login.status()).toBe(200);
   await page.goto('/'); await page.waitForLoadState('domcontentloaded');
+  await expect(page.getByText('Choose your look')).toBeVisible();
+  await page.getByRole('button', {name:'Modern Lime'}).click();
+  await page.getByRole('button', {name:'Skip tour'}).click();
   await expect(page).toHaveTitle('The Squad — NRL Fantasy');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
+  await page.evaluate(() => window.setPage('home'));
+  await expect(page.locator('[data-testid="dashboard-hero"]')).toBeVisible();
+  await expect(page.getByRole('button', {name:/Manage team/i})).toBeVisible();
   await page.evaluate(() => window.setPage('leagues'));
   const cardTab = page.locator('.format-tabs > div').first();
   await expect(cardTab).toHaveAttribute('role', 'button');
@@ -75,5 +83,11 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   }
   const mobileNav = await page.locator('#bottom-tabbar').evaluate(el => getComputedStyle(el).display !== 'none');
   expect(mobileNav).toBe(width <= 768);
+  if (width <= 768) {
+    await expect(page.locator('#bottom-tabbar .btab')).toHaveCount(5);
+    await page.locator('#bottom-tabbar .btab').filter({hasText:'More'}).click();
+    await expect(page.getByRole('button', {name:'State of Origin'})).toBeVisible();
+    await page.keyboard.press('Escape');
+  }
   expect(errors).toEqual([]);
 });

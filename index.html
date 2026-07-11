@@ -86,6 +86,13 @@ main{padding:18px;max-width:1280px;margin:0 auto;width:100%;box-sizing:border-bo
 .theme-option.on{border:2px solid var(--acc);padding:9px}
 .theme-swatches{display:flex;gap:4px;margin-bottom:8px}.theme-swatches span{height:14px;flex:1;border-radius:4px;border:1px solid rgba(127,127,127,.25)}
 @media(max-width:700px){.theme-options{grid-template-columns:1fr 1fr}}
+.home-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}.home-head h1{font-size:28px;letter-spacing:-.7px}.home-kicker{color:var(--acc);font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase}
+.home-hero{display:grid;grid-template-columns:minmax(250px,.75fr) minmax(440px,1.6fr);gap:14px;margin-bottom:14px}.round-hero{min-height:185px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}.round-mark{position:absolute;right:18px;top:18px;width:68px;height:68px;border:2px solid var(--acc);border-radius:16px;display:grid;place-items:center;color:var(--acc);font-size:24px;font-weight:900;background:rgba(var(--acc-rgb),.08)}
+.deadline{font-size:18px;font-weight:800;margin-top:7px}.deadline-sub{color:var(--acc);font-weight:750;margin-top:5px}.metric-panel{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;padding:0;overflow:hidden}.metric-cell{padding:21px 18px;border-right:1px solid var(--line);min-width:0}.metric-cell:last-of-type{border:0}.metric-label{color:var(--dim);font-size:10px;font-weight:750;letter-spacing:.7px;text-transform:uppercase}.metric-value{font-size:25px;font-weight:900;margin:8px 0 2px;letter-spacing:-.5px}.metric-sub{font-size:10px;color:var(--dim)}.metric-action{grid-column:1/-1;margin:0 18px 18px;padding:12px!important}
+.home-panels{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:14px}.panel-link{color:var(--acc);font-size:11px;font-weight:750;cursor:pointer}.dash-list{display:grid;gap:7px}.dash-list-item{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:9px}.dash-list-icon{width:30px;height:30px;border-radius:50%;background:rgba(var(--acc-rgb),.13);color:var(--acc);display:grid;place-items:center;flex:none}.dash-list-main{min-width:0;flex:1}.dash-list-main b{display:block;font-size:12px}.dash-list-main span{font-size:10px;color:var(--dim)}
+.home-details{margin-top:14px}.home-details summary{cursor:pointer;color:var(--dim);font-weight:700;padding:4px 0 12px}.home-details[open] summary{color:var(--txt)}
+@media(max-width:980px){.home-hero{grid-template-columns:1fr}.home-panels{grid-template-columns:1fr 1fr}.home-panels>.card:last-child{grid-column:1/-1}}
+@media(max-width:600px){.home-head h1{font-size:22px}.home-hero,.home-panels{grid-template-columns:1fr}.home-panels>.card:last-child{grid-column:auto}.round-hero{min-height:158px}.metric-panel{grid-template-columns:1fr 1fr}.metric-cell:nth-child(2){border-right:0}.metric-cell{padding:14px}.metric-value{font-size:22px}.metric-action{margin:0 14px 14px}.home-head{align-items:start}.home-head .muted{display:none}}
 .row{display:flex;gap:14px;flex-wrap:wrap}
 .row>.card{flex:1;min-width:300px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -390,20 +397,19 @@ input,select,textarea{font-size:16px!important}
   <aside id="sidebar">
     <div class="brand-row">
       <div class="brand-ball">🏉</div>
-      <div><div class="brand-name">NRL Fantasy</div><div class="brand-sub">2026 Season</div></div>
+      <div><div class="brand-name">THE SQUAD</div><div class="brand-sub">NRL Fantasy · 2026</div></div>
     </div>
     <nav id="sidebar-nav">
-      <div class="navitem" data-pg="home"><span class="ni">📈</span>Dashboard</div>
-      <div class="navitem on" data-pg="classic"><span class="ni">🏠</span>Classic</div>
-      <div class="navitem" data-pg="custom"><span class="ni">⚙️</span>Custom</div>
-      <div class="navitem" data-pg="draft"><span class="ni">📋</span>Draft</div>
+      <div class="navitem" data-pg="home"><span class="ni">⌂</span>Home</div>
+      <div class="navitem on" data-pg="classic"><span class="ni">♙</span>My Team</div>
+      <div class="navitem" data-pg="leagues"><span class="ni">♧</span>Leagues</div>
+      <div class="navitem" data-pg="players"><span class="ni">◎</span>Players</div>
+      <div class="navitem" data-pg="match"><span class="ni">◈</span>Match Centre</div>
       <div class="navsep"></div>
-      <div class="navitem" data-pg="match"><span class="ni">⚡</span>Match Centre</div>
-      <div class="navitem" data-pg="origin"><span class="ni">🦁</span>State of Origin</div>
-      <div class="navitem" data-pg="leagues"><span class="ni">🏆</span>Leagues</div>
-      <div class="navitem" data-pg="players"><span class="ni">📊</span>Players</div>
-      <div class="navsep"></div>
-      <div class="navitem" data-pg="settings"><span class="ni">📖</span>Rules &amp; FAQ</div>
+      <div class="navitem" data-pg="custom"><span class="ni">◇</span>Custom</div>
+      <div class="navitem" data-pg="draft"><span class="ni">▤</span>Draft</div>
+      <div class="navitem" data-pg="origin"><span class="ni">◆</span>State of Origin</div>
+      <div class="navitem" data-pg="settings"><span class="ni">⚙</span>Settings &amp; Help</div>
     </nav>
     <div class="navspacer"></div>
     <div class="prof-card" id="sidebar-prof" onclick="showUserMenu()"></div>
@@ -411,7 +417,7 @@ input,select,textarea{font-size:16px!important}
   <!-- Main content area -->
   <div id="main-wrap">
     <div id="topbar">
-      <span class="topbar-brand"><span class="ball">🏉</span> NRL Fantasy</span>
+      <span class="topbar-brand"><span class="ball">THE</span> SQUAD</span>
       <div class="rd-pill">
         <span class="pill" id="hdr-round">Round 1</span>
         <span class="pill" id="hdr-status" style="font-size:11px;background:var(--card2);border:1px solid var(--line);cursor:default"></span>
@@ -433,11 +439,10 @@ input,select,textarea{font-size:16px!important}
   <!-- Bottom tab bar — mobile nav -->
   <nav id="bottom-tabbar">
     <div class="btab" data-pg="home"><span class="bi">📈</span>Home</div>
-    <div class="btab on" data-pg="classic"><span class="bi">🏠</span>Classic</div>
-    <div class="btab" data-pg="match"><span class="bi">⚡</span>Match</div>
-    <div class="btab" data-pg="leagues"><span class="bi">🏆</span>Leagues</div>
-    <div class="btab" data-pg="cgames"><span class="bi">🎮</span>C.Games</div>
-    <div class="btab" data-pg="players"><span class="bi">📊</span>Stats</div>
+    <div class="btab on" data-pg="classic"><span class="bi">♙</span>Team</div>
+    <div class="btab" data-pg="leagues"><span class="bi">♧</span>Leagues</div>
+    <div class="btab" data-pg="players"><span class="bi">◎</span>Players</div>
+    <div class="btab" data-pg="more"><span class="bi">•••</span>More</div>
   </nav>
 </div>
 <div id="modal-bg" aria-hidden="true"><div id="modal" role="dialog" aria-modal="true" aria-label="Dialog" tabindex="-1"></div></div>
@@ -1376,7 +1381,7 @@ function liveScoresHTML(){
 }
 
 /* ===== HOME DASHBOARD ===== */
-function renderHome(){
+function renderHomeLegacy(){
   const el=document.getElementById('pg-home');
   const lastR=S.round-1;
   const sq=squadIds();
@@ -1489,6 +1494,50 @@ function renderHome(){
       </div>
     </div>
   </div>`;
+}
+
+function renderHome(){
+  const el=document.getElementById('pg-home'),lastR=S.round-1,sq=squadIds();
+  const score=lastR>=1&&S.classic.history[lastR]?lineupScore(S.classic.history[lastR],lastR).total:null;
+  const start=S.classic.startRound||1;
+  let seasonTotal=0;for(let r=start;r<S.round;r++)if(S.classic.history[r])seasonTotal+=lineupScore(S.classic.history[r],r).total;
+  const tradesLeft=Math.max(0,(S.settings.seasonTrades||0)-(S.classic.tradesSeason||0));
+  const hour=new Date().getHours(),greeting=hour<12?'Good morning':hour<18?'Good afternoon':'Good evening';
+  const userName=(S.sooAuth&&S.sooAuth.name)||S.user.name||'Coach';
+  const alerts=getDashNews().slice(0,3);
+  const alertHTML=alerts.length?alerts.map(n=>`<div class="dash-list-item"><div class="dash-list-icon">${n.icon}</div><div class="dash-list-main"><b>${n.title}</b><span>${n.sub}</span></div><span class="muted">›</span></div>`).join(''):'<p class="muted">No urgent alerts. Your team is ready.</p>';
+  const modes=[];
+  if(S.league)modes.push({name:S.league.name||'Classic league',type:'Classic',page:'leagues'});
+  if(S.customLeague)modes.push({name:S.customLeague.name||S.customLeague.n||'Custom league',type:'Custom',page:'custom'});
+  if(S.draft&&S.draft.league)modes.push({name:S.draft.league.name||'Draft league',type:'Draft',page:'draft'});
+  if(S.origin&&S.origin.league&&S.origin.league.code)modes.push({name:S.origin.league.name||'State of Origin league',type:'Origin',page:'origin'});
+  const leagueHTML=modes.length?modes.slice(0,4).map((x,i)=>`<div class="dash-list-item" onclick="setPage('${x.page}')"><div class="dash-list-icon">${i+1}</div><div class="dash-list-main"><b>${esc(x.name)}</b><span>${x.type} · Open competition</span></div><span class="panel-link">View ›</span></div>`).join(''):
+    `<p class="muted" style="margin-bottom:12px">You haven't joined a league yet.</p><button class="btn sec" onclick="setPage('leagues')">Create or join a league</button>`;
+  const games=(RFIX[S.round]&&RFIX[S.round].games)||[];
+  const matchHTML=games.length?games.slice(0,4).map(g=>`<div class="dash-list-item"><div class="dash-list-main"><b>${CLUBS[g[0]].s} <span class="muted">vs</span> ${CLUBS[g[1]].s}</b><span>Round ${S.round}${g[2]!=null?' · '+g[2]+'–'+g[3]:''}</span></div><span class="panel-link" onclick="setPage('match')">Details</span></div>`).join(''):'<p class="muted">Fixtures will appear when round data is available.</p>';
+  const watch=(S.watchlist||[]).filter(pid=>PLAYERS[pid]).slice(0,5);
+  const watchHTML=watch.length?watch.map(pid=>{const p=PLAYERS[pid];return `<div class="dash-list-item" onclick="showPlayer(${pid})">${avatar(p,30)}<div class="dash-list-main"><b>${esc(p.name)}</b><span>${CLUBS[p.sq].s} · ${posStr(p)} · avg ${p.avg||'–'}</span></div><b>${fmtK(price(pid))}</b></div>`}).join(''):'<p class="muted">Star players from the Players screen to track them here.</p>';
+  const byeClubs=(RFIX[S.round]&&RFIX[S.round].byes)||[],byeCount=[...sq].filter(pid=>byeClubs.includes(PLAYERS[pid].sq)).length;
+  el.innerHTML=`
+   <div class="home-head"><div><div class="home-kicker">The Squad · NRL Fantasy</div><h1>${greeting}, ${esc(userName.split(' ')[0])}</h1></div><span class="muted">2026 Season</span></div>
+   ${byeCount?`<div class="notice" style="border-color:var(--amber);margin-bottom:14px"><b>${byeCount} player${byeCount===1?' is':'s are'} on a bye in Round ${S.round}.</b> Review your team before lockout.</div>`:''}
+   <div class="home-hero" data-testid="dashboard-hero">
+    <div class="card round-hero"><div><div class="metric-label">Current round</div><div class="deadline">Round ${S.round}</div><div class="deadline-sub">${LIVE.status==='live'?'Live scoring in progress':S.round>S.settings.totalRounds?'Season complete':'Team lockout approaching'}</div></div><div class="round-mark">R${S.round}</div><div class="muted">${sq.size}/${SQUAD_N} squad places filled</div></div>
+    <div class="card metric-panel">
+      <div class="metric-cell"><div class="metric-label">Last score</div><div class="metric-value">${score==null?'—':score}</div><div class="metric-sub">Round ${lastR>0?lastR:'—'} points</div></div>
+      <div class="metric-cell"><div class="metric-label">Season total</div><div class="metric-value">${seasonTotal}</div><div class="metric-sub">From Round ${start}</div></div>
+      <div class="metric-cell"><div class="metric-label">Salary remaining</div><div class="metric-value">${fmtM(S.classic.bank||0)}</div><div class="metric-sub">Team value ${fmtM(squadValue())}</div></div>
+      <div class="metric-cell"><div class="metric-label">Trades left</div><div class="metric-value">${tradesLeft}</div><div class="metric-sub">${Math.max(0,S.settings.tradesPerRound-(S.classic.tradesRound||0))} this round</div></div>
+      <button class="btn metric-action" onclick="setPage('classic')">Manage team&nbsp; ›</button>
+    </div>
+   </div>
+   ${liveScoresHTML()}
+   <div class="home-panels">
+    <div class="card"><h3 style="justify-content:space-between">Alerts <span class="tag">${alerts.length}</span></h3><div class="dash-list">${alertHTML}</div></div>
+    <div class="card"><h3 style="justify-content:space-between">Leagues <span class="panel-link" onclick="setPage('leagues')">View all</span></h3><div class="dash-list">${leagueHTML}</div></div>
+    <div class="card"><h3 style="justify-content:space-between">Match centre <span class="panel-link" onclick="setPage('match')">Full draw</span></h3><div class="dash-list">${matchHTML}</div></div>
+   </div>
+   <details class="card home-details"><summary>Watchlist and quick actions</summary><div class="grid2"><div class="dash-list">${watchHTML}</div><div><h3>Quick actions</h3><div class="flex"><button class="btn sec" onclick="setPage('players')">Research players</button><button class="btn sec" onclick="setPage('trades')">Plan trades</button><button class="btn sec" onclick="shareTeam()">Share team</button></div></div></div></details>`;
 }
 
 /* ===== DRAFT TIMER ===== */
@@ -5144,6 +5193,14 @@ document.addEventListener('keydown',e=>{
 });
 
 function setPage(pg){
+  if(pg==='more'){
+    openModal(`<h2>More</h2><p class="muted" style="margin-bottom:14px">Game modes, match information and settings.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+       <button class="btn sec" onclick="closeModal();setPage('match')">Match Centre</button><button class="btn sec" onclick="closeModal();setPage('custom')">Custom Games</button>
+       <button class="btn sec" onclick="closeModal();setPage('draft')">Draft</button><button class="btn sec" onclick="closeModal();setPage('origin')">State of Origin</button>
+       <button class="btn sec" style="grid-column:1/-1" onclick="closeModal();setPage('settings')">Settings &amp; Help</button>
+      </div>`);return;
+  }
   if(pg==='cgames')pg=window._cgamesLastTab||'custom';
   if(['custom','draft','origin'].includes(pg))window._cgamesLastTab=pg;
   if(pg!=='match')stopMcPoll();
