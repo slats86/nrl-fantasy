@@ -43,6 +43,27 @@ test('unknown API paths return JSON 404', async () => {
   assert.match(response.headers.get('content-type'), /application\/json/);
 });
 
+test('malformed and oversized JSON requests fail safely', async () => {
+  const malformed = await fetch(`http://127.0.0.1:${port}/api/soo/create`, {
+    method: 'POST', headers: {'content-type': 'application/json'}, body: '{not-json'
+  });
+  assert.equal(malformed.status, 400);
+  assert.match(malformed.headers.get('content-type'), /application\/json/);
+  assert.ok(malformed.headers.get('x-request-id'));
+
+  const oversized = await fetch(`http://127.0.0.1:${port}/api/soo/create`, {
+    method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({value: 'x'.repeat(110000)})
+  });
+  assert.equal(oversized.status, 413);
+  assert.equal((await oversized.json()).error, 'Payload too large');
+});
+
+test('unsupported app methods advertise the allowed methods', async () => {
+  const response = await fetch(`http://127.0.0.1:${port}/`, {method: 'PUT'});
+  assert.equal(response.status, 405);
+  assert.equal(response.headers.get('allow'), 'GET, HEAD');
+});
+
 test('large frontend responses are compressed', async () => {
   const response = await fetch(`http://127.0.0.1:${port}/`, {headers: {'accept-encoding': 'br'}});
   assert.equal(response.status, 200);

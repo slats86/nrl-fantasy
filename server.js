@@ -100,16 +100,34 @@ function genCode(len) {
 
 function readBody(req, cb) {
   let body = '';
-  let tooLarge = false;
+  let size = 0;
+  let finished = false;
   const invoke = (...args) => {
+    if (finished) return;
+    finished = true;
     try { Promise.resolve(cb(...args)).catch(error => req.emit('handlerError', error)); }
     catch (error) { req.emit('handlerError', error); }
   };
-  req.on('data', d => { body += d; if (body.length > BODY_LIMIT) tooLarge = true; });
+  req.on('data', d => {
+    if (finished) return;
+    size += d.length;
+    if (size > BODY_LIMIT) {
+      invoke(Object.assign(new Error('Payload too large'), {status: 413}));
+      req.resume();
+      return;
+    }
+    body += d;
+  });
   req.on('end', () => {
-    if (tooLarge) return invoke(Object.assign(new Error('Payload too large'), {status: 413}));
     try { invoke(null, body ? JSON.parse(body) : {}); } catch(e) { invoke(e); }
   });
+  req.on('aborted', () => invoke(Object.assign(new Error('Request aborted'), {status: 400})));
+  req.on('error', () => invoke(Object.assign(new Error('Request failed'), {status: 400})));
+}
+
+function bodyError(req, res, err) {
+  const status = err && err.status === 413 ? 413 : 400;
+  jsonRes(req, res, status, {error: status === 413 ? 'Payload too large' : 'Bad request'});
 }
 
 function securityHeaders(contentType) {
@@ -317,7 +335,10 @@ function proxyNRL(req, res, nrlPath) {
       'Origin': 'https://fantasy.nrl.com'
     }
   };
+  let settled = false;
   const upstreamReq = https.request(opts, function(upstream) {
+    if (settled) { upstream.resume(); return; }
+    settled = true;
     res.writeHead(upstream.statusCode, Object.assign({}, securityHeaders('application/json; charset=utf-8'), corsHeaders(req), {
       'Content-Type': 'application/json; charset=utf-8',
       'Cache-Control': 'public, max-age=60'
@@ -325,8 +346,10 @@ function proxyNRL(req, res, nrlPath) {
     upstream.pipe(res);
   });
   upstreamReq.on('error', function(e) {
-    res.writeHead(502);
-    res.end(JSON.stringify({error: 'proxy error', detail: e.message}));
+    if (settled) return;
+    settled = true;
+    console.error('[nrl-proxy]', e.message);
+    jsonRes(req, res, 502, {error: 'NRL data is temporarily unavailable', requestId: req.id || null});
   });
   upstreamReq.setTimeout(10000, () => upstreamReq.destroy(new Error('upstream timeout')));
   upstreamReq.end();
@@ -407,7 +430,7 @@ async function handleRequest(req, res) {
   if (url === '/api/soo/login' && req.method === 'POST') {
     if (rateLimit(req, res, 'login', 10, 15 * 60 * 1000)) return;
     readBody(req, async (err, body) => {
-      if (err) return jsonRes(req, res, 400, {error: 'Bad request'});
+      if (err) return bodyError(req, res, err);
       const email = (body.email||'').trim().toLowerCase();
       const pass  = body.password||'';
       const user  = users[email];
@@ -429,7 +452,7 @@ async function handleRequest(req, res) {
   if (url === '/api/soo/forgot-password' && req.method === 'POST') {
     if (rateLimit(req, res, 'forgot', 5, 60 * 60 * 1000)) return;
     readBody(req, async (err, body) => {
-      if (err) return jsonRes(req, res, 400, {error: 'Bad request'});
+      if (err) return bodyError(req, res, err);
       const email = (body.email||'').trim().toLowerCase();
       /* Always 200 â€” never reveal whether an email is registered */
       jsonRes(req, res, 200, {ok: true});
@@ -449,7 +472,7 @@ async function handleRequest(req, res) {
   if (url === '/api/soo/reset-password' && req.method === 'POST') {
     if (rateLimit(req, res, 'reset', 10, 60 * 60 * 1000)) return;
     readBody(req, async (err, body) => {
-      if (err) return jsonRes(req, res, 400, {error: 'Bad request'});
+      if (err) return bodyError(req, res, err);
       const resetHash = tokenHash(body.token);
       const user = Object.values(users).find(candidate => candidate.resetTokenHash === resetHash);
       if (!user || !user.resetExpires || Date.now() > user.resetExpires)
@@ -496,7 +519,7 @@ async function handleRequest(req, res) {
   /* POST /api/soo/create  { name, teamName, picks, token } */
   if (url === '/api/soo/create' && req.method === 'POST') {
     readBody(req, async (err, body) => {
-      if (err) return jsonRes(req, res, 400, {error: 'bad json'});
+      if (err) return bodyError(req, res, err);
       const user = authUser(req, body);
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
       const code   = genCode(6);
@@ -522,7 +545,7 @@ async function handleRequest(req, res) {
   /* POST /api/soo/join  { code, teamName, picks, token } */
   if (url === '/api/soo/join' && req.method === 'POST') {
     readBody(req, async (err, body) => {
-      if (err) return jsonRes(req, res, 400, {error: 'bad json'});
+      if (err) return bodyError(req, res, err);
       const user = authUser(req, body);
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
       const code = String(body.code || '').trim().toUpperCase();
@@ -570,7 +593,7 @@ async function handleRequest(req, res) {
   const leaguePicks = url.match(/^\/api\/soo\/league\/([A-Z0-9]+)\/picks$/);
   if (leaguePicks && req.method === 'POST') {
     readBody(req, async (err, body) => {
-      if (err) return jsonRes(req, res, 400, {error: 'bad json'});
+      if (err) return bodyError(req, res, err);
       const lg = leagues[leaguePicks[1]];
       if (!lg) return jsonRes(req, res, 404, {error: 'Not found'});
       const user = authUser(req, body);
@@ -637,7 +660,7 @@ async function handleRequest(req, res) {
 
   if (url === '/api/soo/scores' && req.method === 'POST') {
     readBody(req, async (err, body) => {
-      if (err) return jsonRes(req, res, 400, {error: 'bad json'});
+      if (err) return bodyError(req, res, err);
       const user = authUser(req, body);
       if (!isAdmin(user)) return jsonRes(req, res, 403, {error: 'Admin access required'});
       const game = parseInt(body.game);
@@ -706,6 +729,10 @@ async function handleRequest(req, res) {
 const server = http.createServer((req, res) => {
   Promise.resolve(handleRequest(req, res)).catch(error => requestError(req, res, error));
 });
+server.requestTimeout = 15000;
+server.headersTimeout = 20000;
+server.keepAliveTimeout = 5000;
+server.maxRequestsPerSocket = 100;
 
 async function start() {
   if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL)
