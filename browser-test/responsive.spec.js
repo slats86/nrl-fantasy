@@ -8,6 +8,11 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   const register = await page.request.post('/api/soo/register', {data:{name:'Owner',email:'owner@example.com',password:'owner-password-123'}});
   expect(register.status()).toBe(201);
   expect((await page.request.get('/api/soo/me')).status()).toBe(200);
+  await page.goto('/');
+  await page.evaluate(() => window.setPage('origin'));
+  await page.locator('.soo-tab').filter({hasText:'League'}).click();
+  await expect(page.locator('#soo-league-status')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('#soo-create-submit')).toBeEnabled();
   const created = await page.request.post('/api/soo/create', {data:{name:'Origin League',teamName:'Owners',picks:{1:{FB:123}}}});
   expect(created.status()).toBe(200);
   const {code, teamId} = await created.json();
