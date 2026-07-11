@@ -49,6 +49,7 @@ const STAT_LABELS={T:'Try',TS:'Try Save',G:'Goal',FG:'Field Goal',TA:'Try Assist
 const DEFAULT_LAYOUT={HOK:1,MID:3,EDG:2,HLF:2,CTR:2,WFB:3,bench:4,res:4};
 const DEFAULT_RULES={T:8,TS:5,G:2,FG:5,TA:5,LB:4,LBA:2,TCK:1,TB:2,MT:-2,OFH:4,OFG:2,ER:-2,FTF:4,MG:0.1,KM:0.03,KD:1,PC:-2,SB:-5,SO:-10,FDO:2,TO:4,SAI:-1,EFIG:2};
 const DEFAULT_SETTINGS={
+  theme:'lime', themeChosen:false, onboardingVersion:0,
   cap:13000000, tradesPerRound:3, seasonTrades:36, captainMult:2,
   benchScores:true, scoreMode:'official',
   totalRounds:27, rules:{...DEFAULT_RULES}, layout:{...DEFAULT_LAYOUT},
@@ -268,4 +269,3 @@ function avatar(p,sz=44){
   </svg>`;
 }
 function clubDot(ci){return `<span class="dot" style="background:${CLUBS[ci].c1};border:1px solid ${CLUBS[ci].c2}"></span>`}
-
