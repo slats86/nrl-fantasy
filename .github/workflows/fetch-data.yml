@@ -161,7 +161,8 @@ jobs:
           fi
           round="$(node -e "const r=require('./public/rounds.json');const d=r.filter(x=>x.status==='complete').map(x=>x.id);console.log(Math.max(...d))")"
           git commit -m "data: embed NRL Fantasy scores Rd${round}"
-          git push --force-with-lease --set-upstream origin bot/nrl-data-refresh
+          # This fixed branch is exclusively owned by the serialized updater workflow.
+          git push --force --set-upstream origin bot/nrl-data-refresh
           pr="$(gh pr list --head bot/nrl-data-refresh --base main --state open --json number --jq '.[0].number')"
           if [ -z "$pr" ]; then
             gh pr create --base main --head bot/nrl-data-refresh \
