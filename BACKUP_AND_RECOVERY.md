@@ -15,7 +15,7 @@ The workflow creates a PostgreSQL custom-format dump, encrypts it with AES-256 t
 
 Never test a restore against production. Download an artifact from GitHub Actions and restore it only into the isolated Postgres Test service.
 
-From a trusted Linux environment with GnuPG and PostgreSQL 17 client tools:
+From a trusted Linux environment with GnuPG and PostgreSQL 18 client tools:
 
 ```bash
 sha256sum --check nrl-fantasy.dump.gpg.sha256
