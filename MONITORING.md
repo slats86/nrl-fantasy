@@ -31,3 +31,7 @@ gh run list --workflow production-monitor.yml --limit 1
 ```
 
 Run this after production deployment, domain/DNS changes, Railway configuration changes, and database maintenance.
+
+## Scheduled data updater
+
+The data updater uses GitHub's short-lived workflow token to push `bot/nrl-data-refresh`, create or update a pull request, explicitly run CI on that branch, and enable auto-merge. No long-lived bot credential is stored. Automated data changes remain subject to the same required `test` check as human changes.
