@@ -325,13 +325,13 @@ const server = http.createServer(async function(req, res) {
       await saveUsers();
       jsonRes(req, res, 201, publicUser(users[email]), {'Set-Cookie': session.cookie});
       /* Welcome email (async â€” don't block response) */
-      sendEmail(email, 'Welcome to NRL Fantasy! ðŸ‰', `
+      sendEmail(email, 'Welcome to NRL Fantasy! \u{1F3C9}', `
         <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px">
-          <h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy ðŸ‰</h2>
+          <h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy &#127945;</h2>
           <p>Hey ${escapeHtml(users[email].name)},</p>
           <p>You're all set! Head back to the app to pick your State of Origin team and compete with mates.</p>
           <a href="${APP_URL}" style="display:inline-block;background:#4ade80;color:#071d10;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">Go to NRL Fantasy</a>
-          <p style="color:#888;font-size:12px;margin-top:24px">Unofficial fan-made game Â· Not affiliated with the NRL</p>
+          <p style="color:#888;font-size:12px;margin-top:24px">Unofficial fan-made game &middot; Not affiliated with the NRL</p>
         </div>
       `).catch(() => {});
     });
@@ -374,7 +374,7 @@ const server = http.createServer(async function(req, res) {
       user.resetExpires = Date.now() + 3600000;
       await saveUsers();
       const link = APP_URL + '/?resetToken=' + tok;
-      await sendEmail(email, 'Reset your NRL Fantasy password', '<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px"><h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy ðŸ‰</h2><p>Hi ' + user.name + ',</p><p>Someone requested a password reset for your account. Click below to set a new password â€” this link expires in <strong>1 hour</strong>.</p><a href="' + link + '" style="display:inline-block;background:#4ade80;color:#071d10;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">Reset Password</a><p style="color:#888;font-size:12px">If you did not request this, you can safely ignore this email.</p><p style="color:#888;font-size:11px;word-break:break-all">Or copy this link: ' + link + '</p></div>').catch(() => {});
+      await sendEmail(email, 'Reset your NRL Fantasy password', '<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px"><h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy &#127945;</h2><p>Hi ' + escapeHtml(user.name) + ',</p><p>Someone requested a password reset for your account. Click below to set a new password &mdash; this link expires in <strong>1 hour</strong>.</p><a href="' + link + '" style="display:inline-block;background:#4ade80;color:#071d10;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">Reset Password</a><p style="color:#888;font-size:12px">If you did not request this, you can safely ignore this email.</p><p style="color:#888;font-size:11px;word-break:break-all">Or copy this link: ' + link + '</p></div>').catch(() => {});
     });
     return;
   }
