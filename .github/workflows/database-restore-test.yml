@@ -26,6 +26,9 @@ jobs:
       PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
       BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Validate restore target
         shell: bash
         run: |
