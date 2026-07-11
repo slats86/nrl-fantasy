@@ -3154,7 +3154,7 @@ async function sooDoRegister(){
     if(prevId&&prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&!S.origin.league.code){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.user.name||''};}
-    save();showApp();setPage('origin');
+    save();showApp();setPage(SOO_STANDALONE?'origin':'home');
   }catch(e){err.textContent='Network error — try again';sooSetBusy(btn,false);}
 }
 async function sooDoLogin(){
@@ -3175,7 +3175,7 @@ async function sooDoLogin(){
     if(prevId2&&prevId2!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&(!S.origin.league||!S.origin.league.code)){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.sooAuth.name||''};}
-    save();showApp();setPage('origin');
+    save();showApp();setPage(SOO_STANDALONE?'origin':'home');
   }catch(e){err.textContent='Network error — try again';sooSetBusy(btn,false);}
 }
 function sooShowAuthTab(tab){
@@ -3238,7 +3238,7 @@ async function sooDoReset(){
     /* Remove token from URL */
     window.history.replaceState({},'',window.location.pathname);
     sessionStorage.removeItem('resetToken');
-    showApp();setPage('origin');
+    showApp();setPage(SOO_STANDALONE?'origin':'home');
   }catch(e){
     if(btn){btn.disabled=false;btn.textContent='Set New Password';}
     err.textContent='Something went wrong. Try again.';
@@ -4036,7 +4036,7 @@ function renderSooLeague(){
         </div>
       </div>`;
     }
-    sooFetchLeague(false).then(()=>{renderOrigin();setTimeout(sooMaybeShowResult,400);});
+    if(!_sooLeagueFetching)sooFetchLeague(false).then(()=>{renderOrigin();setTimeout(sooMaybeShowResult,400);});
     return`<div class="card" style="text-align:center;padding:40px">
       <div class="muted" style="font-size:14px">Loading league…</div>
     </div>`;

@@ -17,6 +17,12 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   expect(created.status()).toBe(200);
   const {code, teamId} = await created.json();
   expect((await page.request.post(`/api/soo/league/${code}/picks`, {data:{teamId,teamName:'Owners Updated',picks:{1:{FB:456}}}})).status()).toBe(200);
+  await page.reload();
+  await page.evaluate(() => window.setPage('origin'));
+  await page.locator('.soo-tab').filter({hasText:'League'}).click();
+  await expect(page.getByText('Origin League', {exact:true}).first()).toBeVisible();
+  await page.evaluate(() => window.setPage('home'));
+  await expect(page.locator('#pg-home')).toHaveClass(/on/);
 
   const member = await browser.newContext({baseURL:'http://127.0.0.1:32188'});
   const memberPage = await member.newPage();
@@ -29,6 +35,11 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   expect((await page.request.delete('/api/soo/scores?game=1')).status()).toBe(200);
   expect((await page.request.post('/api/soo/logout')).status()).toBe(200);
   expect((await page.request.get('/api/soo/me')).status()).toBe(401);
+  await page.goto('/');
+  await page.locator('#soo-login-email').fill('owner@example.com');
+  await page.locator('#soo-login-pass').fill('owner-password-123');
+  await page.locator('#soo-login-submit').click();
+  await expect(page.locator('#pg-home')).toHaveClass(/on/);
   await member.close(); await owner.close();
 });
 
