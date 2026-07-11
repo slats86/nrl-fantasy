@@ -136,5 +136,13 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
     await expect(page.getByRole('button', {name:'State of Origin'})).toBeVisible();
     await page.keyboard.press('Escape');
   }
+  if(width<=600){
+    await page.evaluate(()=>window.setPage('classic'));
+    await expect(page.locator('.team-summary')).toHaveCSS('position','sticky');
+    await expect(page.getByRole('button',{name:'Find and add players'})).toBeVisible();
+    await page.getByRole('button',{name:'Find and add players'}).click();
+    await expect(page.locator('#modal #pool-card')).toBeVisible();
+    await page.keyboard.press('Escape');
+  }
   expect(errors).toEqual([]);
 });

@@ -107,6 +107,8 @@ main{padding:22px 26px;max-width:1440px;margin:0 auto;width:100%;box-sizing:bord
 @media(max-width:1100px){.team-summary{grid-template-columns:repeat(4,1fr)}.team-builder{grid-template-columns:1fr!important}.team-builder>#pool-card{position:static;max-height:none}.team-builder #pool-list{max-height:520px!important}}
 @media(max-width:600px){.home-head h1{font-size:22px}.home-hero,.home-panels{grid-template-columns:1fr}.home-panels>.card:last-child{grid-column:auto}.round-hero{min-height:158px}.metric-panel{grid-template-columns:1fr 1fr}.metric-cell:nth-child(2){border-right:0}.metric-cell{padding:14px}.metric-value{font-size:22px}.metric-action{margin:0 14px 14px}.home-head{align-items:start}.home-head .muted{display:none}}
 @media(max-width:600px){.mode-hdr{padding:13px!important}.mode-hdr>div:last-child{width:100%;justify-content:space-between!important;gap:8px!important}.mode-tabs{gap:8px!important;overflow-x:auto;flex-wrap:nowrap!important}.team-summary{display:flex!important;overflow-x:auto;padding-bottom:4px}.team-summary .stat{min-width:132px}.team-builder #pool-card{margin-top:2px}.team-builder #pool-list{max-height:58vh!important}.league-hub .format-tabs{display:flex;overflow-x:auto}.leagues-head h1{font-size:21px}}
+.mobile-player-trigger{display:none}
+@media(max-width:600px){.team-summary{position:sticky;top:58px;z-index:35;background:var(--bg);padding:7px 0!important;overflow:visible}.team-summary .stat{min-width:0!important;flex:1;padding:9px 6px!important;text-align:center}.team-summary .stat:nth-child(n+4){display:none}.team-summary .stat .v{font-size:15px}.team-summary .stat .l{font-size:8px}.team-builder>#pool-card{display:none}.mobile-player-trigger{display:flex!important;position:sticky;bottom:72px;z-index:34;width:100%;justify-content:center;box-shadow:0 8px 28px rgba(0,0,0,.35);margin:8px 0}.team-builder{display:block!important}}
 @media(max-width:600px){#pool-card table th:nth-child(3),#pool-card table td:nth-child(3),#pool-card table th:nth-child(6),#pool-card table td:nth-child(6){display:none}#pool-card td{padding:10px 6px}#pool-card td:nth-child(2){white-space:normal;min-width:128px}.pcard{border-radius:9px}.league-team-link{padding:12px}}
 @media(max-width:900px){.players-screen.page.on{display:block}.players-screen>.card:first-of-type,.match-screen>.grid2>.card:first-child{position:static;max-height:none}.players-screen>.card:last-of-type{grid-column:auto;grid-row:auto}.match-screen>.grid2{grid-template-columns:1fr}}
 @media(max-width:600px){.secondary-head{align-items:start;flex-direction:column;padding:16px}.secondary-head h1{font-size:22px}.filter-toolbar{align-items:stretch}.filter-toolbar input,.filter-toolbar select{width:100%;min-width:0}.players-screen .pl-main-table-wrap{max-height:65vh}.draft-screen .card{padding:16px!important}.draft-screen>div:first-child>.card:first-child{padding:25px 16px!important}.match-screen .grid2{gap:10px}}
@@ -1064,6 +1066,7 @@ function squadInnerHTML(){
     <button class="btn sec" onclick="clearTeam()">Clear team</button>
     <span class="muted" style="font-size:12px">Click a player for captain/trade options · C = captain (${S.settings.captainMult}x) · VC = vice</span>
   </div>
+  <button class="btn mobile-player-trigger" onclick="openMobilePlayerPicker(null)">Find and add players</button>
   <div class="grid2 team-builder">
     <div><div class="field" id="field-view">${renderField()}</div></div>
     <div class="card" id="pool-card">${renderPool()}</div>
@@ -2068,7 +2071,8 @@ function renderPool(){
   </tbody></table></div>`;
 }
 function refreshPool(){$('#pool-card').innerHTML=renderPool();const inp=$('#pool-card input');inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length)}
-function openSlotPicker(slot){S.ui.slotPick=slot;renderClassic();}
+function openMobilePlayerPicker(slot){S.ui.slotPick=slot;openModal(`<div id="pool-card"><div class="home-kicker" style="margin-bottom:8px">Team selection</div>${renderPool()}</div>`);}
+function openSlotPicker(slot){if(matchMedia('(max-width:600px)').matches){openMobilePlayerPicker(slot);return}S.ui.slotPick=slot;renderClassic();}
 function poolClick(pid){
   const T=activeTeamState();
   if(isPlayerLocked(pid)){alert(esc(PLAYERS[pid].name)+' is locked — their game has already started this round.');return;}
@@ -2089,7 +2093,7 @@ function poolClick(pid){
   /* if slot occupied, remove old */
   if(slot.pid!=null)removeFromLine(slot.pid);
   addToSlot(pid,slot);
-  S.ui.slotPick=null;save();renderClassic();
+  S.ui.slotPick=null;save();if(matchMedia('(max-width:600px)').matches)closeModal();renderClassic();
 }
 function autoComplete(){
   const rng=mulberry32(Date.now()%1e9);
@@ -3300,7 +3304,7 @@ async function sooDoRegister(){
     if(prevId&&prevId!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&!S.origin.league.code){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.user.name||''};}
-    save();showApp();setPage(SOO_STANDALONE?'origin':'home');setTimeout(maybeShowOnboarding,150);
+    window._cloudReady=false;clearTimeout(_cloudSaveTimer);save();await syncCloudState();showApp();setPage(SOO_STANDALONE?'origin':'home');setTimeout(maybeShowOnboarding,150);
   }catch(e){err.textContent='Network error — try again';sooSetBusy(btn,false);}
 }
 async function sooDoLogin(){
@@ -3321,7 +3325,7 @@ async function sooDoLogin(){
     if(prevId2&&prevId2!==d.userId){S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};_sooLeagueCache=null;}
     if(!S.origin)S.origin={picks:{1:{},2:{},3:{}},game:3,tab:'picks',league:{code:null,teamId:null,name:null,teamName:null}};
     if(d.leagueCode&&(!S.origin.league||!S.origin.league.code)){S.origin.league={code:d.leagueCode,teamId:d.teamId,name:'',teamName:S.sooAuth.name||''};}
-    save();showApp();setPage(SOO_STANDALONE?'origin':'home');setTimeout(maybeShowOnboarding,150);
+    window._cloudReady=false;clearTimeout(_cloudSaveTimer);save();await syncCloudState();showApp();setPage(SOO_STANDALONE?'origin':'home');setTimeout(maybeShowOnboarding,150);
   }catch(e){err.textContent='Network error — try again';sooSetBusy(btn,false);}
 }
 function sooShowAuthTab(tab){
