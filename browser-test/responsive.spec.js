@@ -52,6 +52,10 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   await expect(page.locator('tr').filter({hasText:'Tackle'})).toContainText('12');
   await expect(page.locator('tr').filter({hasText:'Run Metres'})).toContainText('219');
   await page.keyboard.press('Escape');
+  await page.evaluate(()=>window.setPage('players'));
+  await page.locator('#player-stats-search').fill('Holmes');
+  await page.waitForTimeout(250);
+  await expect(page.locator('#player-stats-search')).toHaveValue('Holmes');
   await page.evaluate(()=>showStatLine(0,999,true));
   await expect(page.getByText(/not available from the official feed for this game/i)).toBeVisible();
   await expect(page.getByText(/never substitutes season averages/i)).toBeVisible();
