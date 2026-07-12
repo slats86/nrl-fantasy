@@ -3081,6 +3081,29 @@ function myRoundSummary(r,isLive){
   const sc=lineupScore(S.classic.history[r],r);
   return `<span class="pill" style="background:var(--card2);border:1px solid var(--line);border-radius:18px;padding:6px 14px">My score Rd ${r}: <b class="good">${sc.total}</b></span>`;
 }
+const FOOTY_STAT_FIELDS={T:'tries',TS:'try_saves',G:'goals',FG:'field_goals',TA:'try_assists',LB:'line_breaks',
+  LBA:'line_break_assists',TCK:'tackles',TB:'tackle_breaks',MT:'missed_tackles',OFH:'off_half',
+  OFG:'off_game',ER:'errors',FTF:'forty_twenty',MG:'metres_gained',KM:'kick_metres',KD:'kick_defusals',
+  PC:'penalties_conceded',SB:'sin_bin',SO:'send_off',FDO:'forced_drop_out',TO:'forced_turn_over',
+  SAI:'sai',EFIG:'efig',TOG:'time_on_ground'};
+async function loadDetailedStats(pid){
+  try{
+    const response=await fetch('/api/player-stats/'+FEEDIDS[pid]);
+    if(!response.ok)throw new Error('Detailed stats request failed ('+response.status+')');
+    const payload=await response.json();
+    if(!Array.isArray(payload.stats))return 0;
+    const games=payload.stats.filter(x=>+x.year===new Date().getFullYear()&&x.match_type==='nrl');
+    if(!RST[pid])RST[pid]={};
+    S.dataPatch=S.dataPatch||{};S.dataPatch.st=S.dataPatch.st||{};
+    S.dataPatch.st[pid]=S.dataPatch.st[pid]||{};
+    games.forEach(game=>{
+      const st=STAT_KEYS.concat(['TOG']).map(k=>+(game[FOOTY_STAT_FIELDS[k]]||0));
+      RST[pid][+game.round_id]=st;S.dataPatch.st[pid][+game.round_id]=st;
+    });
+    if(games.length)save();
+    return games.length;
+  }catch(e){console.warn('Detailed player stats unavailable',e);return 0}
+}
 async function showStatLine(pid,r,skipFetch=false){
   const p=PLAYERS[pid];
   let st=RST[pid]&&RST[pid][r];
@@ -3088,27 +3111,7 @@ async function showStatLine(pid,r,skipFetch=false){
   const off=OFFS[pid]?OFFS[pid][r-1]:null;
   if(!st&&!skipFetch){
     openModal(`<h3>${esc(p.name)} — Round ${r}</h3><p class="muted">Loading this game's official detailed stats…</p>`);
-    try{
-      const response=await fetch('/api/player-stats/'+FEEDIDS[pid]);
-      if(!response.ok)throw new Error('Official stats request failed ('+response.status+')');
-      const payload=await response.json();
-      const game=Array.isArray(payload.stats)
-        ? payload.stats.find(x=>+x.year===new Date().getFullYear()&&+x.round_id===+r&&x.match_type==='nrl')
-        : payload[r]||payload[String(r)];
-      if(game){
-        const fields={T:'tries',TS:'try_saves',G:'goals',FG:'field_goals',TA:'try_assists',LB:'line_breaks',
-          LBA:'line_break_assists',TCK:'tackles',TB:'tackle_breaks',MT:'missed_tackles',OFH:'off_half',
-          OFG:'off_game',ER:'errors',FTF:'forty_twenty',MG:'metres_gained',KM:'kick_metres',KD:'kick_defusals',
-          PC:'penalties_conceded',SB:'sin_bin',SO:'send_off',FDO:'forced_drop_out',TO:'forced_turn_over',
-          SAI:'sai',EFIG:'efig',TOG:'time_on_ground'};
-        st=STAT_KEYS.concat(['TOG']).map(k=>+(game[fields[k]]||0));
-        if(!RST[pid])RST[pid]={};
-        RST[pid][r]=st;
-        S.dataPatch=S.dataPatch||{};S.dataPatch.st=S.dataPatch.st||{};
-        S.dataPatch.st[pid]=S.dataPatch.st[pid]||{};S.dataPatch.st[pid][r]=st;
-        save();
-      }
-    }catch(e){console.warn('Detailed player stats unavailable',e)}
+    await loadDetailedStats(pid);
     return showStatLine(pid,r,true);
   }
   let rows='';
@@ -5030,7 +5033,7 @@ function renderPlayers(){
   <div class="card">
    <h3>Player stats centre <span class="tag">${list.length} players · live prices · ✓ named to start · ✓ named on bench · click a player</span></h3>
    <div class="flex" style="margin-bottom:8px">
-     <input placeholder="Search players…" value="${esc(S.ui.plSearch||'')}" oninput="S.ui.plSearch=this.value;renderPlayers()">
+     <input id="player-stats-search" placeholder="Search players…" value="${esc(S.ui.plSearch||'')}" oninput="playerStatsSearch(this)">
      <select onchange="S.ui.plClub=+this.value;renderPlayers()"><option value="-1">All clubs</option>${CLUBS.map((c,i)=>`<option value="${i}" ${S.ui.plClub===i?'selected':''}>${c.n}</option>`).join('')}</select>
    </div>
    <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.plPos||0)===pi?'on':''}" onclick="S.ui.plPos=${pi};renderPlayers()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
@@ -5055,6 +5058,16 @@ function renderPlayers(){
    ${list.length>200?'<p class="muted" style="margin-top:8px">Showing first 200 — refine your search.</p>':''}
   </div>`;
 }
+let playerStatsSearchTimer;
+function playerStatsSearch(input){
+  S.ui.plSearch=input.value;
+  clearTimeout(playerStatsSearchTimer);
+  playerStatsSearchTimer=setTimeout(()=>{
+    renderPlayers();
+    const next=$('#player-stats-search');
+    if(next){next.focus();const end=next.value.length;next.setSelectionRange(end,end)}
+  },120);
+}
 function plSort(k){
   if(S.ui.plSort===k)S.ui.plDir*=-1;else{S.ui.plSort=k;S.ui.plDir=-1}
   renderPlayers();
@@ -5071,7 +5084,13 @@ function gameLogRows(pid){
   }
   return out;
 }
-function showPlayer(pid){
+async function showPlayer(pid){
+  const missing=Array.from({length:MAXR},(_,i)=>i+1).some(r=>playedIn(pid,r)&&!(RST[pid]&&RST[pid][r]));
+  if(missing){
+    const loadingPlayer=PLAYERS[pid];
+    openModal(`<h3>${esc(loadingPlayer.name)}</h3><p class="muted">Loading current per-game statistics…</p>`);
+    await loadDetailedStats(pid);
+  }
   const p=PLAYERS[pid];
   const log=gameLogRows(pid);
   const delta=price(pid)-basePriceR1(pid);
