@@ -18,7 +18,7 @@ async function verify(browser, viewport) {
   await page.locator('#app-shell').waitFor({state:'visible'});
   await page.evaluate(()=>{S.settings.onboardingVersion=1;S.settings.themeChosen=true;closeModal()});
   await page.waitForTimeout(250);await page.evaluate(()=>closeModal());
-  await page.evaluate(()=>autoRefresh());
+  await page.waitForFunction(()=>LIVE&&LIVE.fetched>0,{timeout:15000});
   const snapshot=await page.evaluate(round=>{
     S.ui.mcRound=round;S.ui.mcMatch=1;setPage('match');
     return{round:LIVE.round,status:LIVE.status,maxR:MAXR,text:document.querySelector('#pg-match').innerText,
