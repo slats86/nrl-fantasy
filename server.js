@@ -6,6 +6,7 @@ const path   = require('path');
 const crypto = require('crypto');
 const zlib   = require('zlib');
 const {createDatabase} = require('./db');
+const {parseInitialPlayerId, hasSeasonStats} = require('./footystatistics');
 const PORT     = process.env.PORT || 3000;
 const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
 const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@the-squad.com.au>';
@@ -367,34 +368,57 @@ function proxyNRL(req, res, nrlPath) {
   upstreamReq.end();
 }
 
-function proxyFootyStatistics(req, res, playerId) {
-  const opts = {
-    hostname: 'footystatistics.com',
-    path: '/api/player-stats?player_id=' + encodeURIComponent(playerId),
-    method: 'GET',
-    headers: {
-      'User-Agent': 'NRL-Fantasy-The-Squad/1.0',
-      'Accept': 'application/json'
+const footyStatisticsIds = new Map();
+function footyStatisticsGet(requestPath, accept) {
+  return new Promise((resolve, reject) => {
+    const upstreamReq = https.request({
+      hostname: 'footystatistics.com', path: requestPath, method: 'GET',
+      headers: {'User-Agent': 'NRL-Fantasy-The-Squad/1.0', 'Accept': accept}
+    }, upstream => {
+      const chunks = []; let size = 0;
+      upstream.on('data', chunk => {
+        size += chunk.length;
+        if (size > 3 * 1024 * 1024) return upstream.destroy(new Error('upstream response too large'));
+        chunks.push(chunk);
+      });
+      upstream.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        if (upstream.statusCode < 200 || upstream.statusCode >= 300)
+          return reject(new Error('upstream returned ' + upstream.statusCode));
+        resolve(body);
+      });
+      upstream.on('error', reject);
+    });
+    upstreamReq.on('error', reject);
+    upstreamReq.setTimeout(10000, () => upstreamReq.destroy(new Error('upstream timeout')));
+    upstreamReq.end();
+  });
+}
+
+async function footyStatisticsPayload(playerId) {
+  const body = await footyStatisticsGet('/api/player-stats?player_id=' + encodeURIComponent(playerId), 'application/json');
+  return JSON.parse(body);
+}
+
+async function proxyFootyStatistics(req, res, playerId, slug) {
+  try {
+    const year = new Date().getFullYear();
+    let resolvedId = footyStatisticsIds.get(playerId) || playerId;
+    let payload = await footyStatisticsPayload(resolvedId);
+    if (!hasSeasonStats(payload, year) && slug) {
+      const profile = await footyStatisticsGet('/sti/' + encodeURIComponent(slug), 'text/html');
+      const profileId = parseInitialPlayerId(profile);
+      if (!profileId) throw new Error('current player ID was not found');
+      resolvedId = profileId;
+      payload = await footyStatisticsPayload(resolvedId);
+      if (!hasSeasonStats(payload, year)) throw new Error('current season statistics were not found');
+      footyStatisticsIds.set(playerId, resolvedId);
     }
-  };
-  let settled = false;
-  const upstreamReq = https.request(opts, function(upstream) {
-    if (settled) { upstream.resume(); return; }
-    settled = true;
-    res.writeHead(upstream.statusCode, Object.assign({}, securityHeaders('application/json; charset=utf-8'), corsHeaders(req), {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600'
-    }));
-    upstream.pipe(res);
-  });
-  upstreamReq.on('error', function(e) {
-    if (settled) return;
-    settled = true;
-    console.error('[footystatistics-proxy]', e.message);
+    jsonRes(req, res, 200, payload, {'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600'});
+  } catch (error) {
+    console.error('[footystatistics-proxy]', error.message);
     jsonRes(req, res, 502, {error: 'Detailed player statistics are temporarily unavailable', requestId: req.id || null});
-  });
-  upstreamReq.setTimeout(10000, () => upstreamReq.destroy(new Error('upstream timeout')));
-  upstreamReq.end();
+  }
 }
 
 /* â”€â”€ HTTP server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -426,7 +450,11 @@ async function handleRequest(req, res) {
   if (url === '/api/players') return serveLocal(req, res, path.join(__dirname, 'public/players.json'));
   if (url === '/api/rounds')  return serveLocal(req, res, path.join(__dirname, 'public/rounds.json'));
   const playerStats = url.match(/^\/api\/player-stats\/(\d+)$/);
-  if (playerStats && req.method === 'GET') return proxyFootyStatistics(req, res, playerStats[1]);
+  if (playerStats && req.method === 'GET') {
+    const requested = new URL(req.url, 'http://localhost');
+    const slug = requested.searchParams.get('slug') || '';
+    return proxyFootyStatistics(req, res, playerStats[1], /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) ? slug : '');
+  }
   if (url === '/manifest.webmanifest' && (req.method === 'GET' || req.method === 'HEAD'))
     return serveInstallFile(req, res, path.join(__dirname, 'public', 'manifest.webmanifest'), 'application/manifest+json; charset=utf-8');
   if (url === '/assets/app-icon.svg' && (req.method === 'GET' || req.method === 'HEAD'))

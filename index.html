@@ -3088,7 +3088,9 @@ const FOOTY_STAT_FIELDS={T:'tries',TS:'try_saves',G:'goals',FG:'field_goals',TA:
   SAI:'sai',EFIG:'efig',TOG:'time_on_ground'};
 async function loadDetailedStats(pid){
   try{
-    const response=await fetch('/api/player-stats/'+FEEDIDS[pid]);
+    const slug=PLAYERS[pid].name.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    const response=await fetch('/api/player-stats/'+FEEDIDS[pid]+'?slug='+encodeURIComponent(slug));
     if(!response.ok)throw new Error('Detailed stats request failed ('+response.status+')');
     const payload=await response.json();
     if(!Array.isArray(payload.stats))return 0;
