@@ -6,7 +6,10 @@ const path   = require('path');
 const crypto = require('crypto');
 const zlib   = require('zlib');
 const {createDatabase} = require('./db');
-const {parseInitialPlayerId, hasSeasonStats, findSearchPlayerId, buildOfficialPayload} = require('./footystatistics');
+const {
+  parseInitialPlayerId, hasSeasonStats, findSearchPlayerId, findSearchPlayerPath,
+  hasCompleteSeasonDetails, buildOfficialPayload
+} = require('./footystatistics');
 const PORT     = process.env.PORT || 3000;
 const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
 const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@the-squad.com.au>';
@@ -455,34 +458,69 @@ async function officialNrlPayload(playerId, sourcePlayerId, year) {
   return payload;
 }
 
+async function resolveFootyStatisticsId(playerId, slug) {
+  const cachedId = footyStatisticsIds.get(playerId);
+  if (cachedId) return cachedId;
+
+  let searchResults = null;
+  try {
+    const searchBody = await footyStatisticsGet('/api/search?q=' + encodeURIComponent(slug.replace(/-/g, ' ')), 'application/json');
+    searchResults = JSON.parse(searchBody);
+    const searchId = findSearchPlayerId(searchResults, slug);
+    if (searchId && searchId !== String(playerId)) {
+      footyStatisticsIds.set(playerId, searchId);
+      return searchId;
+    }
+  } catch (error) {
+    console.warn('[footystatistics-resolver] primary search failed:', error.message);
+  }
+
+  let profilePath = findSearchPlayerPath(searchResults, slug);
+  if (!profilePath) {
+    try {
+      const searchBody = await footyStatisticsGet('/api/players/search?q=' + encodeURIComponent(slug.replace(/-/g, ' ')), 'application/json');
+      profilePath = findSearchPlayerPath(JSON.parse(searchBody), slug);
+    } catch (error) {
+      console.warn('[footystatistics-resolver] profile search failed:', error.message);
+    }
+  }
+
+  const profilePaths = profilePath ? [profilePath] : ['/sti/' + encodeURIComponent(slug)];
+  for (const requestPath of profilePaths) {
+    try {
+      const profile = await footyStatisticsGet(requestPath, 'text/html');
+      const profileId = parseInitialPlayerId(profile);
+      if (profileId) {
+        footyStatisticsIds.set(playerId, profileId);
+        return profileId;
+      }
+    } catch (error) {
+      console.warn('[footystatistics-resolver] profile failed:', error.message);
+    }
+  }
+  return null;
+}
+
+async function officialPlayerScores(playerId) {
+  const {players} = await officialNrlData();
+  const player = players.find(item => Number(item.id) === Number(playerId));
+  return player && player.stats && player.stats.scores || null;
+}
+
 async function proxyFootyStatistics(req, res, playerId, slug) {
   try {
     const year = new Date().getFullYear();
-    let resolvedId = footyStatisticsIds.get(playerId) || playerId;
+    let resolvedId = slug ? await resolveFootyStatisticsId(playerId, slug) : null;
+    if (!resolvedId) resolvedId = playerId;
     let payload = null;
     try {
       payload = await footyStatisticsPayload(resolvedId);
     } catch (error) {
-      if (!slug || error.statusCode !== 404) throw error;
+      console.warn('[footystatistics-proxy] resolved payload failed:', error.message);
     }
-    if ((!payload || !hasSeasonStats(payload, year)) && slug) {
-      let profileId = null;
-      try {
-        const searchBody = await footyStatisticsGet('/api/search?q=' + encodeURIComponent(slug.replace(/-/g, ' ')), 'application/json');
-        profileId = findSearchPlayerId(JSON.parse(searchBody), slug);
-      } catch (error) {
-        if (error.statusCode !== 404) throw error;
-      }
-      if (!profileId) {
-        const profile = await footyStatisticsGet('/sti/' + encodeURIComponent(slug), 'text/html');
-        profileId = parseInitialPlayerId(profile);
-      }
-      if (!profileId) throw new Error('current player ID was not found');
-      resolvedId = profileId;
-      payload = await footyStatisticsPayload(resolvedId);
-      if (!hasSeasonStats(payload, year)) payload = await officialNrlPayload(playerId, resolvedId, year);
-      footyStatisticsIds.set(playerId, resolvedId);
-    }
+    const scores = await officialPlayerScores(playerId);
+    if (!hasCompleteSeasonDetails(payload, year, scores))
+      payload = await officialNrlPayload(playerId, resolvedId, year);
     jsonRes(req, res, 200, payload, {
       'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
       'X-FootyStatistics-Player-Id': resolvedId
