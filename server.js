@@ -6,6 +6,7 @@ const path   = require('path');
 const crypto = require('crypto');
 const zlib   = require('zlib');
 const {createDatabase} = require('./db');
+const {validateFeed} = require('./live-data');
 const {
   parseInitialPlayerId, hasSeasonStats, searchQueryVariants, searchPlayerSelection, findSearchPlayerPath,
   hasCompleteSeasonDetails, payloadMatchesPlayer, buildOfficialPayload
@@ -406,6 +407,90 @@ function serveLocal(req, res, filePath) {
   });
 }
 
+const officialFeedCache = new Map();
+const OFFICIAL_FEED_FRESH_MS = 30000;
+const OFFICIAL_FEED_RETRIES = 2;
+
+function requestOfficialJson(fileName) {
+  return new Promise((resolve, reject) => {
+    const upstreamReq = https.request({
+      hostname: 'fantasy.nrl.com', path: '/data/nrl/' + fileName + '.json', method: 'GET',
+      headers: {'User-Agent': 'NRL-Fantasy-The-Squad/1.0', 'Accept': 'application/json', 'Accept-Encoding': 'identity'}
+    }, upstream => {
+      const chunks = []; let size = 0;
+      upstream.on('data', chunk => {
+        size += chunk.length;
+        if (size > 12 * 1024 * 1024) return upstream.destroy(new Error('official NRL response too large'));
+        chunks.push(chunk);
+      });
+      upstream.on('end', () => {
+        if (upstream.statusCode < 200 || upstream.statusCode >= 300)
+          return reject(new Error('official NRL upstream returned ' + upstream.statusCode));
+        try {
+          let body = Buffer.concat(chunks);
+          const encoding = String(upstream.headers['content-encoding'] || '').toLowerCase();
+          if (encoding === 'gzip' || (body[0] === 0x1f && body[1] === 0x8b)) body = zlib.gunzipSync(body);
+          else if (encoding === 'br') body = zlib.brotliDecompressSync(body);
+          resolve(validateFeed(fileName, JSON.parse(body.toString('utf8'))));
+        } catch (error) { reject(error); }
+      });
+      upstream.on('error', reject);
+    });
+    upstreamReq.on('error', reject);
+    upstreamReq.setTimeout(8000, () => upstreamReq.destroy(new Error('official NRL upstream timeout')));
+    upstreamReq.end();
+  });
+}
+
+async function fetchOfficialJson(fileName) {
+  let lastError;
+  for (let attempt = 0; attempt < OFFICIAL_FEED_RETRIES; attempt++) {
+    try { return await requestOfficialJson(fileName); }
+    catch (error) {
+      lastError = error;
+      if (attempt + 1 < OFFICIAL_FEED_RETRIES) await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
+async function officialFeed(fileName) {
+  const now = Date.now();
+  let entry = officialFeedCache.get(fileName);
+  if (entry && entry.value && now - entry.fetchedAt < OFFICIAL_FEED_FRESH_MS)
+    return {value: entry.value, fetchedAt: entry.fetchedAt, source: 'memory', stale: false};
+  if (entry && entry.promise) return entry.promise;
+  entry = entry || {};
+  entry.promise = fetchOfficialJson(fileName).then(value => {
+    const updated = {value, fetchedAt: Date.now(), source: 'upstream', stale: false};
+    officialFeedCache.set(fileName, updated);
+    return updated;
+  }).catch(async error => {
+    console.error('[nrl-live-feed]', fileName, error.message);
+    if (entry.value) return {value: entry.value, fetchedAt: entry.fetchedAt, source: 'stale-memory', stale: true, error};
+    const value = validateFeed(fileName, JSON.parse(await fs.promises.readFile(path.join(__dirname, 'public', fileName + '.json'), 'utf8')));
+    const fallback = {value, fetchedAt: Date.now(), source: 'snapshot', stale: true};
+    officialFeedCache.set(fileName, fallback);
+    return fallback;
+  });
+  officialFeedCache.set(fileName, entry);
+  return entry.promise;
+}
+
+async function serveOfficialFeed(req, res, fileName) {
+  const feed = await officialFeed(fileName);
+  const data = Buffer.from(JSON.stringify(feed.value));
+  compressedRes(req, res, 200, data, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-cache, max-age=0, must-revalidate',
+    'ETag': contentEtag(data),
+    'X-NRL-Data-Source': feed.source,
+    'X-NRL-Data-Age': String(Math.max(0, Math.floor((Date.now() - feed.fetchedAt) / 1000))),
+    'X-NRL-Data-Stale': feed.stale ? 'true' : 'false',
+    ...(feed.stale ? {'Warning': '110 - "Response is stale"'} : {})
+  });
+}
+
 function serveAsset(req, res, fileName) {
   const allowed = new Set(['data-core.js', 'season-data.js', 'history-data.js']);
   if (!allowed.has(fileName)) return jsonRes(req, res, 404, {error: 'Asset not found'});
@@ -507,16 +592,9 @@ async function footyStatisticsPayload(playerId) {
   return JSON.parse(body);
 }
 
-let officialNrlDataPromise = null;
-function officialNrlData() {
-  if (!officialNrlDataPromise) {
-    officialNrlDataPromise = Promise.all([
-      fs.promises.readFile(path.join(__dirname, 'public/players.json'), 'utf8'),
-      fs.promises.readFile(path.join(__dirname, 'public/rounds.json'), 'utf8')
-    ]).then(([players, rounds]) => ({players: JSON.parse(players), rounds: JSON.parse(rounds)}))
-      .catch(error => { officialNrlDataPromise = null; throw error; });
-  }
-  return officialNrlDataPromise;
+async function officialNrlData() {
+  const [players, rounds] = await Promise.all([officialFeed('players'), officialFeed('rounds')]);
+  return {players: players.value, rounds: rounds.value};
 }
 
 function officialNrlPlayerDetails(playerId) {
@@ -624,7 +702,7 @@ async function proxyFootyStatistics(req, res, playerId, slug) {
     payload.resolution_status = resolution.resolved ? 'resolved' : 'official-fallback';
     payload.resolution_method = resolution.method;
     jsonRes(req, res, 200, payload, {
-      'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+      'Cache-Control': 'no-cache, max-age=0, must-revalidate',
       'X-FootyStatistics-Player-Id': resolvedId,
       'X-FootyStatistics-Resolution': payload.resolution_status,
       'X-FootyStatistics-Resolution-Method': resolution.method,
@@ -664,8 +742,8 @@ async function handleRequest(req, res) {
     jsonRes(req, res, storageReady ? 200 : 503, {ok: storageReady, storage: database ? 'postgresql' : 'json'}); return;
   }
 
-  if (url === '/api/players') return serveLocal(req, res, path.join(__dirname, 'public/players.json'));
-  if (url === '/api/rounds')  return serveLocal(req, res, path.join(__dirname, 'public/rounds.json'));
+  if (url === '/api/players' && req.method === 'GET') return serveOfficialFeed(req, res, 'players').catch(error => requestError(req, res, error));
+  if (url === '/api/rounds' && req.method === 'GET') return serveOfficialFeed(req, res, 'rounds').catch(error => requestError(req, res, error));
   const playerStats = url.match(/^\/api\/player-stats\/(\d+)$/);
   if (playerStats && req.method === 'GET') {
     const requested = new URL(req.url, 'http://localhost');

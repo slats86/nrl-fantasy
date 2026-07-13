@@ -71,7 +71,10 @@ function buildPatchFromFeeds(players,rounds){
   });
   rounds.forEach(rd=>{
     P.fix[rd.id]={byes:(rd.bye_squads||[]).map(x=>sqMap[x]).filter(x=>x!=null),
-      games:(rd.matches||[]).map(m=>[sqMap[m.home_squad_id],sqMap[m.away_squad_id],m.status==='complete'?m.home_score:null,m.status==='complete'?m.away_score:null])};
+      games:(rd.matches||[]).map(m=>{
+        const started=['active','live','in_progress','in-progress','playing','complete','completed','final'].includes(String(m.status||'').toLowerCase());
+        return[sqMap[m.home_squad_id],sqMap[m.away_squad_id],started&&m.home_score!=null?m.home_score:null,started&&m.away_score!=null?m.away_score:null];
+      })};
   });
   detectSooRounds(rounds);
   S.dataPatch=P;applyDataPatch();const _adv=autoAdvanceRounds(oldMaxBefore);save();return _adv;
@@ -130,4 +133,3 @@ async function importDataFiles(){
   buildPatchFromFeeds(players,rounds);
   closeModal();alert('Imported — real results loaded through Round '+MAXR+'.');autoRefresh();
 }
-

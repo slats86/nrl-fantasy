@@ -2,14 +2,15 @@ name: Fetch NRL Fantasy Data
 
 on:
   schedule:
-    - cron: '*/30 7-14 * * 4,5,6,0'  # Every 30min Thu-Sun during NRL hours
-    - cron: '0 */4 * * *'             # Every 4h otherwise
+    - cron: '*/10 3-13 * * 4,5,6,0' # active NRL match window (UTC / Australia east coast)
+    - cron: '0 */4 * * *'            # pre-game, corrections and off-days
   workflow_dispatch:
 
 permissions:
   actions: write
   contents: write
   pull-requests: write
+  statuses: write
 
 concurrency:
   group: nrl-data-refresh
@@ -18,157 +19,116 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
 
-      - name: Install Playwright
-        run: |
-          npm ci
-          npx playwright install chromium --with-deps
+      - run: npm ci
 
-      - name: Fetch NRL Fantasy data via browser
-        run: |
-          mkdir -p public
-          node << 'JSEOF'
-          const { chromium } = require('playwright');
-          (async () => {
-            const browser = await chromium.launch({ headless: true });
-            const ctx = await browser.newContext({
-              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-              locale: 'en-AU',
-            });
-            const page = await ctx.newPage();
+      - name: Fetch, validate and transform official NRL data
+        run: npm run fetch:nrl-data
 
-            console.log('Fetching players.json...');
-            const pRes = await page.goto('https://fantasy.nrl.com/data/nrl/players.json', { waitUntil: 'networkidle' });
-            console.log('Status:', pRes.status());
-            if (!pRes.ok()) throw new Error('players.json returned HTTP ' + pRes.status());
-            const playersText = await page.evaluate(() => document.body.innerText);
-            const players = JSON.parse(playersText);
-            if (!Array.isArray(players) || players.length < 100) throw new Error('players.json failed schema/size validation');
-            console.log('Players:', players.length);
-            require('fs').writeFileSync('public/players.json', JSON.stringify(players));
+      - name: Audit the current round pipeline
+        run: npm run audit:round-pipeline
 
-            console.log('Fetching rounds.json...');
-            const rRes = await page.goto('https://fantasy.nrl.com/data/nrl/rounds.json', { waitUntil: 'networkidle' });
-            if (!rRes.ok()) throw new Error('rounds.json returned HTTP ' + rRes.status());
-            console.log('Status:', rRes.status());
-            const roundsText = await page.evaluate(() => document.body.innerText);
-            const rounds = JSON.parse(roundsText);
-            if (!Array.isArray(rounds) || rounds.length < 20) throw new Error('rounds.json failed schema/size validation');
-            const done = rounds.filter(r => r.status === 'complete').map(r => r.id);
-            console.log('Complete rounds:', done.join(', '));
-            require('fs').writeFileSync('public/rounds.json', JSON.stringify(rounds));
-
-            await browser.close();
-            console.log('Done fetching.');
-          })().catch(e => { console.error(e); process.exit(1); });
-          JSEOF
-
-      - name: Generate data patch and embed in index.html
-        run: |
-          node << 'JSEOF'
-          const fs = require('fs');
-
-          const players = JSON.parse(fs.readFileSync('public/players.json', 'utf8'));
-          const rounds  = JSON.parse(fs.readFileSync('public/rounds.json',  'utf8'));
-
-          // Extract FEEDIDS and SQUAD_FEED_IDS from the cacheable season asset
-          const html = fs.readFileSync('index.html', 'utf8');
-          const seasonData = fs.readFileSync('public/assets/season-data.js', 'utf8');
-
-          const feedMatch = seasonData.match(/const FEEDIDS=\[([^\]]+)\]/);
-          const sqMatch   = seasonData.match(/const SQUAD_FEED_IDS=\[([^\]]+)\]/);
-          if (!feedMatch || !sqMatch) { console.error('Could not find FEEDIDS or SQUAD_FEED_IDS'); process.exit(1); }
-
-          const FEEDIDS        = JSON.parse('[' + feedMatch[1] + ']');
-          const SQUAD_FEED_IDS = JSON.parse('[' + sqMatch[1]  + ']');
-
-          const idMap = {};
-          FEEDIDS.forEach((id, i) => idMap[id] = i);
-          const sqMap = {};
-          SQUAD_FEED_IDS.forEach((id, i) => sqMap[id] = i);
-
-          const doneRounds = rounds.filter(r => r.status === 'complete').map(r => r.id);
-          const maxR = doneRounds.length ? Math.max(...doneRounds) : 0;
-          console.log('maxR =', maxR, '| complete rounds:', doneRounds.sort((a,b)=>a-b).join(', '));
-
-          const patch = { maxR, off: {}, price: {}, fix: {} };
-
-          players.forEach(p => {
-            const i = idMap[p.id];
-            if (i == null) return;
-            for (let r = 1; r <= maxR; r++) {
-              if (p.stats && p.stats.scores && p.stats.scores[r] != null) {
-                (patch.off[i] = patch.off[i] || {})[r] = p.stats.scores[r];
-              }
-              if (p.stats && p.stats.prices && p.stats.prices[r] != null) {
-                (patch.price[i] = patch.price[i] || {})[r] = Math.round(p.stats.prices[r] / 1000);
-              }
-            }
-          });
-
-          rounds.forEach(rd => {
-            const byes  = (rd.bye_squads || []).map(x => sqMap[x]).filter(x => x != null);
-            const games = (rd.matches    || []).map(m => [
-              sqMap[m.home_squad_id],
-              sqMap[m.away_squad_id],
-              m.status === 'complete' ? m.home_score : null,
-              m.status === 'complete' ? m.away_score : null
-            ]).filter(([h, a]) => h != null && a != null);
-            patch.fix[rd.id] = { byes, games };
-          });
-
-          const playerCount = Object.keys(patch.off).length;
-          console.log('Patch: ' + playerCount + ' players with scores, ' + Object.keys(patch.fix).length + ' rounds of fixtures');
-
-          // Replace the embedded data line in index.html
-          const patchJson = JSON.stringify(patch);
-          const patchPattern = /const __NRL_PATCH__=[^/]+\/\/ \[nrl-data\]/;
-          if (!patchPattern.test(html)) {
-            console.error('ERROR: Replacement pattern not found in index.html');
-            process.exit(1);
-          }
-          const updated = html.replace(
-            patchPattern,
-            'const __NRL_PATCH__=' + patchJson + ';// [nrl-data]'
-          );
-
-          if (updated === html) {
-            console.log('Embedded patch is already current');
-          } else {
-            fs.writeFileSync('index.html', updated);
-            console.log('index.html updated (patch size: ' + Math.round(patchJson.length / 1024) + ' KB)');
-          }
-          JSEOF
-
-      - name: Commit through a protected pull request
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Prepare the dedicated refresh branch
+        id: prepare
         run: |
           git config user.name "nrl-data-bot"
           git config user.email "bot@nrl-fantasy"
-          git switch -C bot/nrl-data-refresh
+          git switch -C bot/nrl-data-refresh origin/main
           git add public/players.json public/rounds.json index.html
           if git diff --staged --quiet; then
-            echo "No changes"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Official data is already current; no publish is needed."
             exit 0
           fi
-          round="$(node -e "const r=require('./public/rounds.json');const d=r.filter(x=>x.status==='complete').map(x=>x.id);console.log(Math.max(...d))")"
-          git commit -m "data: embed NRL Fantasy scores Rd${round}"
-          # This fixed branch is exclusively owned by the serialized updater workflow.
-          git push --force --set-upstream origin bot/nrl-data-refresh
-          pr="$(gh pr list --head bot/nrl-data-refresh --base main --state open --json number --jq '.[0].number')"
-          if [ -z "$pr" ]; then
-            gh pr create --base main --head bot/nrl-data-refresh \
-              --title "data: refresh NRL Fantasy scores Rd${round}" \
-              --body "Automated player, fixture, price, and score refresh. Merge is gated by the required CI check."
-            pr="$(gh pr list --head bot/nrl-data-refresh --base main --state open --json number --jq '.[0].number')"
+          round="$(node -e "const r=require('./public/rounds.json');const x=r.filter(v=>['active','complete'].includes(v.status)).sort((a,b)=>b.id-a.id)[0];console.log(x.id)")"
+          status="$(node -e "const r=require('./public/rounds.json');const x=r.filter(v=>['active','complete'].includes(v.status)).sort((a,b)=>b.id-a.id)[0];console.log(x.status)")"
+          git commit -m "data: refresh NRL Fantasy Round ${round} (${status})"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "round=$round" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Push refresh branch without stale lease races
+        if: steps.prepare.outputs.changed == 'true'
+        env:
+          BRANCH: bot/nrl-data-refresh
+        run: |
+          remote_sha="$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)"
+          if [ -n "$remote_sha" ]; then
+            git push --force-with-lease="refs/heads/$BRANCH:$remote_sha" --set-upstream origin "$BRANCH"
+          else
+            git push --set-upstream origin "$BRANCH"
           fi
+
+      - name: Close an obsolete no-change refresh pull request
+        if: steps.prepare.outputs.changed == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr="$(gh pr list --head bot/nrl-data-refresh --base main --state open --json number --jq '.[0].number')"
+          if [ -n "$pr" ]; then
+            gh pr close "$pr" --comment "The official feed now matches main; this refresh PR is obsolete."
+            remote_sha="$(git ls-remote origin refs/heads/bot/nrl-data-refresh | cut -f1)"
+            if [ -n "$remote_sha" ]; then git push origin --delete bot/nrl-data-refresh; fi
+          fi
+
+      - name: Open or update the single refresh pull request
+        if: steps.prepare.outputs.changed == 'true'
+        id: pull_request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROUND: ${{ steps.prepare.outputs.round }}
+          STATUS: ${{ steps.prepare.outputs.status }}
+        run: |
+          pr="$(gh pr list --head bot/nrl-data-refresh --base main --state open --json number --jq '.[0].number')"
+          title="data: refresh NRL Fantasy Round ${ROUND} (${STATUS})"
+          body="Automated official NRL fixture, score, price and player refresh. The workflow waits for the full CI workflow before merging."
+          if [ -z "$pr" ]; then
+            gh pr create --base main --head bot/nrl-data-refresh --title "$title" --body "$body"
+            pr="$(gh pr list --head bot/nrl-data-refresh --base main --state open --json number --jq '.[0].number')"
+          else
+            gh pr edit "$pr" --title "$title" --body "$body"
+          fi
+          echo "number=$pr" >> "$GITHUB_OUTPUT"
+
+      - name: Run required CI for the exact refresh commit
+        if: steps.prepare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.prepare.outputs.sha }}
+        run: |
+          before="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           gh workflow run ci.yml --ref bot/nrl-data-refresh
-          gh pr merge "$pr" --auto --merge --delete-branch
+          run_id=""
+          for attempt in $(seq 1 20); do
+            run_id="$(gh run list --workflow ci.yml --branch bot/nrl-data-refresh --event workflow_dispatch --commit "$SHA" --limit 1 --json databaseId,createdAt --jq 'map(select(.createdAt >= "'"$before"'"))[0].databaseId // empty')"
+            [ -n "$run_id" ] && break
+            sleep 3
+          done
+          if [ -z "$run_id" ]; then
+            echo "The required CI run did not start for $SHA" >&2
+            exit 1
+          fi
+          gh run watch "$run_id" --exit-status
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
+            -f state=success -f context=test \
+            -f description="Full CI passed for the exact data refresh commit" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+
+      - name: Merge only after CI succeeds
+        if: steps.prepare.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.pull_request.outputs.number }}
+        run: gh pr merge "$PR" --merge --delete-branch
