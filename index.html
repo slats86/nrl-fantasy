@@ -107,6 +107,7 @@ main{padding:22px 26px;max-width:1440px;margin:0 auto;width:100%;box-sizing:bord
 @media(max-width:1100px){.team-summary{grid-template-columns:repeat(4,1fr)}.team-builder{grid-template-columns:1fr!important}.team-builder>#pool-card{position:static;max-height:none}.team-builder #pool-list{max-height:520px!important}}
 @media(max-width:600px){.home-head h1{font-size:22px}.home-hero,.home-panels{grid-template-columns:1fr}.home-panels>.card:last-child{grid-column:auto}.round-hero{min-height:158px}.metric-panel{grid-template-columns:1fr 1fr}.metric-cell:nth-child(2){border-right:0}.metric-cell{padding:14px}.metric-value{font-size:22px}.metric-action{margin:0 14px 14px}.home-head{align-items:start}.home-head .muted{display:none}}
 @media(max-width:600px){.mode-hdr{padding:13px!important}.mode-hdr>div:last-child{width:100%;justify-content:space-between!important;gap:8px!important}.mode-tabs{gap:8px!important;overflow-x:auto;flex-wrap:nowrap!important}.team-summary{display:flex!important;overflow-x:auto;padding-bottom:4px}.team-summary .stat{min-width:132px}.team-builder #pool-card{margin-top:2px}.team-builder #pool-list{max-height:58vh!important}.league-hub .format-tabs{display:flex;overflow-x:auto}.leagues-head h1{font-size:21px}}
+@media(max-width:600px){button,[role="button"]{min-height:40px}input,select,textarea{min-height:42px}}
 .mobile-player-trigger{display:none}
 @media(max-width:600px){.team-summary{position:sticky;top:58px;z-index:35;background:var(--bg);padding:7px 0!important;overflow:visible}.team-summary .stat{min-width:0!important;flex:1;padding:9px 6px!important;text-align:center}.team-summary .stat:nth-child(n+4){display:none}.team-summary .stat .v{font-size:15px}.team-summary .stat .l{font-size:8px}.team-builder>#pool-card{display:none}.mobile-player-trigger{display:flex!important;position:sticky;bottom:72px;z-index:34;width:100%;justify-content:center;box-shadow:0 8px 28px rgba(0,0,0,.35);margin:8px 0}.team-builder{display:block!important}}
 @media(max-width:600px){#pool-card table th:nth-child(3),#pool-card table td:nth-child(3),#pool-card table th:nth-child(6),#pool-card table td:nth-child(6){display:none}#pool-card td{padding:10px 6px}#pool-card td:nth-child(2){white-space:normal;min-width:128px}.pcard{border-radius:9px}.league-team-link{padding:12px}}
@@ -635,8 +636,11 @@ function upsetBonus(pid,r){
   const pts=playerPts(pid,r);if(pts==null)return 0;
   return pts>=(S.settings.upsetThreshold||60)?(S.settings.upsetBonusPts||10):0;
 }
-/* helper: get chips state safely */
-function getChips(){return (S.classic&&S.classic.chips)||{active:{},used:{},injured:[]};}
+/* helper: get the chips belonging to the team currently being managed */
+function getChips(){
+  const T=activeTeamState();
+  return T.chips||(T.chips={active:{},used:{},injured:[]});
+}
 
 /* team score for a classic lineup snapshot at round r (official results) */
 function lineupScore(line,r,bestBallOverride){
@@ -781,6 +785,10 @@ function simulateRound(){
   }
   S.season.rounds[r]={fix:RFIX[r].games,byes:RFIX[r].byes,real:true};
   S.classic.history[r]=JSON.parse(JSON.stringify(S.classic.line));
+  if(S.customLeague&&S.customLeague.team){
+    const T=S.customLeague.team;
+    if(T.squad.length)T.history[r]=JSON.parse(JSON.stringify(T.line));
+  }
   if(S.league){
     S.league.history=S.league.history||{};
     S.league.history[r]=S.league.teams.map(t=>JSON.parse(JSON.stringify(t.line)));
@@ -791,10 +799,12 @@ function simulateRound(){
     S.draft.history[r]=S.draft.teams.map(t=>JSON.parse(JSON.stringify(t.line)));
   }
   S.classic.tradesRound=0;
-  if(S.customLeague)S.customLeague.tradesRound=0;
+  if(S.customLeague&&S.customLeague.team)S.customLeague.team.tradesRound=0;
   /* clear round-only chips after each round */
   const ch=S.classic.chips;
   if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
+  const customChips=S.customLeague&&S.customLeague.team&&S.customLeague.team.chips;
+  if(customChips&&customChips.active){for(const id of Object.keys(customChips.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete customChips.active[id];}}
   /* clear expired waivers — players become FA after 1 round */
   if(S.draft&&S.draft.waivers)S.draft.waivers=S.draft.waivers.filter(w=>w.round>=r);
   /* price history snapshot */
@@ -820,6 +830,9 @@ function autoAdvanceRounds(oldMax){
       if(S.league)S.league.teams[0].line=JSON.parse(JSON.stringify(S.classic.line));
       S.classic.history[r]=JSON.parse(JSON.stringify(S.classic.line));
     }
+    if(S.customLeague&&S.customLeague.team&&S.customLeague.team.squad.length&&!S.customLeague.team.history[r]){
+      S.customLeague.team.history[r]=JSON.parse(JSON.stringify(S.customLeague.team.line));
+    }
     /* league history */
     if(S.league){S.league.history=S.league.history||{};
       if(!S.league.history[r])S.league.history[r]=S.league.teams.map(t=>JSON.parse(JSON.stringify(t.line)));}
@@ -831,10 +844,12 @@ function autoAdvanceRounds(oldMax){
     }
     /* reset per-round counters */
     S.classic.tradesRound=0;
-    if(S.customLeague)S.customLeague.tradesRound=0;
+    if(S.customLeague&&S.customLeague.team)S.customLeague.team.tradesRound=0;
     /* expire round-only chips */
     const ch=S.classic.chips;
     if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
+    const customChips=S.customLeague&&S.customLeague.team&&S.customLeague.team.chips;
+    if(customChips&&customChips.active){for(const id of Object.keys(customChips.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete customChips.active[id];}}
     /* expire waivers */
     if(S.draft&&S.draft.waivers)S.draft.waivers=S.draft.waivers.filter(w=>w.round>=r);
     /* price history snapshot */
@@ -966,8 +981,8 @@ function seasonStarted(){return S.round>1}
 /* ================= CLASSIC PAGE ================= */
 /* ===== CHIPS PANEL ===== */
 function chipsHTML(){
-  const ch=getChips();const active=ch.active||{};const used=ch.used||{};
-  const injured=(ch.injured||[]).filter(pid=>S.classic.squad.includes(pid));
+  const T=activeTeamState(),ch=getChips();const active=ch.active||{};const used=ch.used||{};
+  const injured=(ch.injured||[]).filter(pid=>T.squad.includes(pid));
   const leagueCfg=(S.settings.chipRules)||{};
   const injCount=injured.length;
   let html=`<div class="card" style="margin-bottom:12px"><h3>🃏 Power Chips <span class="tag">one-round boosts</span></h3>
@@ -1005,7 +1020,7 @@ function chipsHTML(){
 }
 function activateChip(id){
   const def=CHIP_DEFS[id];if(!def)return;
-  const ch=S.classic.chips=S.classic.chips||{active:{},used:{},injured:[]};
+  const ch=getChips();
   if(id==='posCaptain'){
     const pos=prompt('Which position gets the captain bonus? Enter: 1=HOK 2=MID 3=EDG 4=HLF 5=CTR 6=WFB','4');
     const posId=parseInt(pos);if(!posId||posId<1||posId>6){alert('Invalid position.');return;}
@@ -1018,7 +1033,7 @@ function activateChip(id){
     ch.active[id]=true;
   }
   if(def.uses<999){ch.used[id]=(ch.used[id]||0)+1;}
-  save();renderClassic();
+  save();renderActiveTeamPage();
 }
 function deactivateChip(id){
   const ch=getChips();
@@ -1026,14 +1041,14 @@ function deactivateChip(id){
   // refund use if roundOnly and we cancel before round is played
   const def=CHIP_DEFS[id];
   if(def&&def.uses<999&&(ch.used[id]||0)>0)ch.used[id]--;
-  save();renderClassic();
+  save();renderActiveTeamPage();
 }
 function toggleInjured(pid){
-  if(!S.classic.chips)S.classic.chips={active:{},used:{},injured:[]};
-  const inj=S.classic.chips.injured||(S.classic.chips.injured=[]);
+  const ch=getChips();
+  const inj=ch.injured||(ch.injured=[]);
   const i=inj.indexOf(pid);
   if(i>=0)inj.splice(i,1);else inj.push(pid);
-  save();renderClassic();
+  save();renderActiveTeamPage();
 }
 
 function squadInnerHTML(){
@@ -1615,14 +1630,15 @@ function stopPickTimer(){
 function modeTradesHTML(mode){
   S.ui.trPage=mode;
   const isCustom=mode==='custom';
-  const bank=isCustom?clBank():S.classic.bank,started=seasonStarted();
+  const T=activeTeamState();
+  const bank=T.bank,started=seasonStarted();
   const tpr=isCustom?clTpr():S.settings.tradesPerRound;
   const sts=isCustom?clSts():S.settings.seasonTrades;
-  const trR=isCustom?(cl().tradesRound||0):S.classic.tradesRound;
-  const trS=isCustom?(cl().tradesSeason||0):S.classic.tradesSeason;
+  const trR=T.tradesRound||0;
+  const trS=T.tradesSeason||0;
   const sub=S.ui.trTab||'centre';
   const re=isCustom?'renderCustom()':'renderClassic()';
-  if(S.classic.squad.length===0)return `<div class="card" style="text-align:center;padding:40px">
+  if(T.squad.length===0)return `<div class="card" style="text-align:center;padding:40px">
     <p class="muted">Build your squad in My Team first.</p>
     <button class="btn" onclick="S.ui.${isCustom?'customTab':'classicTab'}='team';${re}">👥 Go to My Team</button></div>`;
   return `<div class="statbar">
@@ -1967,7 +1983,7 @@ function renderCustom(){
   </div>
   <div class="card"><h3>Game rules</h3>
    <div class="settings-grid">
-    <div class="set-item"><label>Salary cap ($)</label><input type="number" step="100000" value="${clCap()}" onchange="const d=+this.value-clCap();if(S.customLeague){if(S.customLeague.bank!=null)S.customLeague.bank+=d;S.customLeague.cap=+this.value;}save()"></div>
+    <div class="set-item"><label>Salary cap ($)</label><input type="number" step="100000" value="${clCap()}" onchange="const d=+this.value-clCap();if(S.customLeague){if(S.customLeague.team&&S.customLeague.team.bank!=null)S.customLeague.team.bank+=d;S.customLeague.cap=+this.value;}save()"></div>
     <div class="set-item"><label>Trades per round</label><input type="number" value="${clTpr()}" onchange="if(S.customLeague)S.customLeague.tradesPerRound=+this.value;save()"></div>
     <div class="set-item"><label>Season trade limit</label><input type="number" value="${clSts()}" onchange="if(S.customLeague)S.customLeague.seasonTrades=+this.value;save()"></div>
     <div class="set-item"><label>Captain multiplier</label><input type="number" step="0.5" value="${clCaptMult()}" onchange="if(S.customLeague)S.customLeague.captainMult=+this.value;S.settings.captainMult=+this.value;save()"></div>
@@ -2027,7 +2043,7 @@ function renderField(){
     const pd=priceChange(pid);const pdHtml=pd?`<span class="${pd>0?'pdelta-up':'pdelta-dn'}">${pd>0?'▲':'▼'}${fmtK(Math.abs(pd))}</span>`:'';
     return `<div class="pcard pos-${pk}" onclick="playerMenu(${pid})">
       ${L.c===pid?'<div class="badge">C</div>':L.vc===pid?'<div class="badge vc">VC</div>':''}
-      <button class="watch-btn ${isWatched(pid)?'on':''}" onclick="event.stopPropagation();toggleWatch(${pid})">★</button>
+      <button class="watch-btn ${isWatched(pid)?'on':''}" aria-label="Toggle ${esc(p.name)} watchlist" onclick="event.stopPropagation();toggleWatch(${pid})">★</button>
       ${avatar(p,40)}
       <div class="nm">${esc(p.name)}</div>
       <div class="meta">${CLUBS[p.sq].s} · <span class="posb ${pk}">${posStr(p)}</span></div>
@@ -2055,7 +2071,7 @@ function renderPool(){
   pool.sort((a,b)=>targetAvg(b)-targetAvg(a));
   const afford=T.bank!=null?T.bank:(S.ui.page==='custom'?clCap():S.settings.cap)-squadValue();
   return `<h3>${slot?`Pick: ${slot.posId?POSN[slot.posId]:slot.kind.toUpperCase()} slot <span class="tag">click player to add</span>`:'Player pool'}
-    ${slot?'<button class="btn sec" style="margin-left:auto;padding:4px 10px" onclick="S.ui.slotPick=null;renderClassic()">✕ cancel</button>':''}</h3>
+    ${slot?'<button class="btn sec" style="margin-left:auto;padding:4px 10px" onclick="S.ui.slotPick=null;renderActiveTeamPage()">✕ cancel</button>':''}</h3>
   <input placeholder="Search players…" style="width:100%" value="${esc(S.ui.plQ)}" oninput="S.ui.plQ=this.value;refreshPool()">
   <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.poolPos||0)===pi?'on':''}" onclick="S.ui.poolPos=${pi};refreshPool()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
   <div style="max-height:560px;overflow-y:auto" id="pool-list">
@@ -2066,7 +2082,7 @@ function renderPool(){
       <td>${avatar(p,26)}</td><td><b>${esc(p.name)}</b><br><span class="muted" style="font-size:11px">${CLUBS[p.sq].n}</span></td>
       <td>${p.pos.map(x=>`<span class="posb">${POSN[x]}</span>`).join('')}</td>
       <td>${fmtK(price(p.id))}</td><td><b>${p.avg||'–'}</b></td><td>${p.l3||'–'}</td>
-      <td><button class="btn sec" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();showPlayer(${p.id})">ℹ</button></td></tr>`;
+      <td><button class="btn sec" aria-label="View ${esc(p.name)} details" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();showPlayer(${p.id})">ℹ</button></td></tr>`;
   }).join('')}
   </tbody></table></div>`;
 }
@@ -2099,33 +2115,35 @@ function poolClick(pid){
   S.ui.slotPick=null;save();if(matchMedia('(max-width:600px)').matches)closeModal();renderActiveTeamPage();
 }
 function autoComplete(){
+  const T=activeTeamState();
+  const cap=S.ui.page==='custom'?clCap():S.settings.cap;
   const rng=mulberry32(Date.now()%1e9);
   /* keep current players, fill gaps */
-  if(S.classic.squad.length===0){
+  if(T.squad.length===0){
     const {squad,line}=autoPickSquad(rng,1.4);
-    S.classic.squad=squad;S.classic.line=line;
-    S.classic.bank=S.settings.cap-squadValue();
+    T.squad=squad;T.line=line;
+    T.bank=cap-squadValue();
   }else{
-    const slots=lineSlots(S.classic.line).filter(s=>s.pid==null);
+    const slots=lineSlots(T.line).filter(s=>s.pid==null);
     const minP=230000;
     for(const slot of slots){
-      let budget=S.classic.bank-(lineSlots(S.classic.line).filter(s=>s.pid==null).length-1)*minP;
+      let budget=T.bank-(lineSlots(T.line).filter(s=>s.pid==null).length-1)*minP;
       const ids=squadIds();
       let cands=PLAYERS.filter(p=>!ids.has(p.id)&&price(p.id)<=budget&&(slot.posId===0||p.pos.includes(slot.posId))).sort((a,b)=>targetAvg(b)-targetAvg(a));
       if(slot.kind==='res')cands.sort((a,b)=>price(a.id)-price(b.id)||targetAvg(b)-targetAvg(a)),cands=cands.filter(p=>price(p.id)<=300000).length?cands.filter(p=>price(p.id)<=300000):cands;
       if(cands.length)addToSlot(cands[Math.floor(Math.random()*Math.min(4,cands.length))].id,slot);
     }
   }
-  enforceCap();
-  const L=S.classic.line;
-  if(L.c==null||!S.classic.squad.includes(L.c)){const st=[];for(const[pi,]of FIELD_STRUCT)st.push(...L.starters[pi]);const best=st.filter(x=>x!=null).sort((a,b)=>targetAvg(PLAYERS[b])-targetAvg(PLAYERS[a]));L.c=best[0]??null;L.vc=best[1]??null}
-  save();renderClassic();
+  enforceCap(T);
+  const L=T.line;
+  if(L.c==null||!T.squad.includes(L.c)){const st=[];for(const[pi,]of FIELD_STRUCT)st.push(...L.starters[pi]);const best=st.filter(x=>x!=null).sort((a,b)=>targetAvg(PLAYERS[b])-targetAvg(PLAYERS[a]));L.c=best[0]??null;L.vc=best[1]??null}
+  save();renderActiveTeamPage();
 }
 /* hard guarantee: downgrade players (reserves first, then bench, then starters) until under the cap */
-function enforceCap(){
+function enforceCap(T=activeTeamState()){
   let guard=0;
-  while(S.classic.bank<0&&guard++<80){
-    const slots=lineSlots(S.classic.line).filter(s=>s.pid!=null);
+  while(T.bank<0&&guard++<80){
+    const slots=lineSlots(T.line).filter(s=>s.pid!=null);
     let done=false;
     for(const kind of ['res','bench','st']){
       const sl=slots.filter(s=>s.kind===kind).sort((a,b)=>price(b.pid)-price(a.pid));
@@ -2143,25 +2161,35 @@ function enforceCap(){
 function clearTeam(){
   if(seasonStarted()&&!confirm('Season has started — clearing your team is a full rebuild and uses no trades (sandbox). Continue?'))return;
   if(!seasonStarted()&&!confirm('Clear your whole team?'))return;
-  S.classic.squad=[];S.classic.line=emptyLine();S.classic.bank=S.settings.cap;save();renderClassic();
+  const T=activeTeamState();
+  T.squad=[];T.line=emptyLine();T.bank=S.ui.page==='custom'?clCap():S.settings.cap;
+  save();renderActiveTeamPage();
 }
 function playerMenu(pid){
-  const p=PLAYERS[pid],L=S.classic.line;
+  const p=PLAYERS[pid],L=activeTeamState().line;
   openModal(`
    <div class="flex">${avatar(p,64)}<div><h3 style="margin:0">${esc(p.name)}</h3>
    <div class="muted">${CLUBS[p.sq].n} · ${posStr(p)} · ${fmtK(price(pid))}</div></div></div>
    <div class="flex" style="margin:14px 0">
-     <button class="btn" onclick="L=S.classic.line;S.classic.line.c=${pid};if(S.classic.line.vc===${pid})S.classic.line.vc=null;save();closeModal();renderClassic()">Make Captain</button>
-     <button class="btn sec" onclick="S.classic.line.vc=${pid};if(S.classic.line.c===${pid})S.classic.line.c=null;save();closeModal();renderClassic()">Make Vice</button>
+     <button class="btn" onclick="makeCaptain(${pid})">Make Captain</button>
+     <button class="btn sec" onclick="makeViceCaptain(${pid})">Make Vice</button>
      <button class="btn danger" onclick="tradeOut(${pid})">${seasonStarted()?'Trade out':'Remove'}</button>
      <button class="btn sec" onclick="closeModal();showPlayer(${pid})">Full profile</button>
-     <button class="btn sec" style="border-color:var(--${(getChips().injured||[]).includes(pid)?'acc':'red'});color:var(--${(getChips().injured||[]).includes(pid)?'acc2':'red'})" onclick="toggleInjured(${pid});closeModal();renderClassic()">${(getChips().injured||[]).includes(pid)?'✓ Injured (unmark)':'🏥 Mark injured'}</button>
+     <button class="btn sec" style="border-color:var(--${(getChips().injured||[]).includes(pid)?'acc':'red'});color:var(--${(getChips().injured||[]).includes(pid)?'acc2':'red'})" onclick="toggleInjured(${pid});closeModal();renderActiveTeamPage()">${(getChips().injured||[]).includes(pid)?'✓ Injured (unmark)':'🏥 Mark injured'}</button>
    </div>
    ${statRow(p)}`);
 }
+function makeCaptain(pid){
+  const L=activeTeamState().line;L.c=pid;if(L.vc===pid)L.vc=null;
+  save();closeModal();renderActiveTeamPage();
+}
+function makeViceCaptain(pid){
+  const L=activeTeamState().line;L.vc=pid;if(L.c===pid)L.c=null;
+  save();closeModal();renderActiveTeamPage();
+}
 function tradeOut(pid){
   removeFromLine(pid);
-  save();closeModal();renderClassic();
+  save();closeModal();renderActiveTeamPage();
 }
 function statRow(p){
   const ppm=typeof ppmOf==='function'?ppmOf(p.id):null;
@@ -2191,10 +2219,9 @@ function draftLandingHTML(){
    <div class="home-kicker" style="margin-bottom:6px">Build your competition</div>
    <div style="font-size:48px;margin-bottom:10px">🏉</div>
    <h3 style="font-size:20px;margin-bottom:6px">Draft Leagues</h3>
-   <p class="muted" style="margin-bottom:20px">Create a league and invite mates, or enter a code to join one that's already been set up.</p>
+   <p class="muted" style="margin-bottom:20px">Create a private draft sandbox with AI opponents. Online multiplayer draft invitations are not currently offered.</p>
    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-    <button class="btn" style="padding:12px 28px;font-size:15px" onclick="S.ui.draftFlow='create';renderDraft()">＋ Create league</button>
-    <button class="btn sec" style="padding:12px 28px;font-size:15px" onclick="S.ui.draftFlow='join';renderDraft()">Enter code</button>
+    <button class="btn" style="padding:12px 28px;font-size:15px" onclick="S.ui.draftFlow='create';renderDraft()">＋ Create local draft</button>
    </div>
   </div>
   ${flow==='create'?`
@@ -2208,7 +2235,7 @@ function draftLandingHTML(){
     <div class="set-item"><label>Your draft pick position</label>
      <select id="dr-pick"><option value="-1">Random</option>${[...Array(12).keys()].map(i=>`<option value="${i}">${i+1}</option>`).join('')}</select></div>
    </div>
-   <button class="btn" onclick="createDraftLeague()">Create &amp; get code</button>
+   <button class="btn" onclick="createDraftLeague()">Create local draft</button>
   </div>`:flow==='join'?`
   <div class="card">
    <h3>Join a league</h3>
@@ -2231,16 +2258,17 @@ function createDraftLeague(){
   const size=+$('#dr-size').value;
   let myPick=+$('#dr-pick').value;
   if(myPick<0||myPick>=size)myPick=Math.floor(Math.random()*size);
-  const participants=[{name:myName,isMe:true,isAI:false}];
-  for(let i=1;i<size;i++)participants.push({name:'Open slot',isMe:false,isAI:false,isEmpty:true});
-  S.draft={phase:'lobby',league:{code:genLeagueCode(),name:lgName,size,draftDate:null,participants,isOwner:true,allowAI:false},
+  const names=AI_NAMES.slice().sort(()=>Math.random()-.5);
+  const participants=Array.from({length:size},()=>({name:names.pop()||'AI Coach',isMe:false,isAI:true}));
+  participants[myPick]={name:myName,isMe:true,isAI:false};
+  S.draft={phase:'lobby',league:{code:genLeagueCode(),name:lgName,size,draftDate:null,participants,isOwner:true,allowAI:true,localOnly:true},
     size,me:myPick,teams:null,pickNo:0,done:false,log:[],history:{}};
   S.ui.draftFlow=null;S.ui.draftLobbyTab='overview';
   save();renderDraft();
 }
 function joinDraftLeague(){
   const code=($('#dr-joincode').value||'').trim().toUpperCase();
-  if(code.length!==6){alert('Please enter a valid 6-character league code.');return}
+  if(!/^[A-Z2-9]{6}$/.test(code)){alert('Please enter a valid 6-character league code.');return}
   const myName=($('#dr-joinname').value||'').trim()||'My Team';
   const size=8;
   const myPick=Math.floor(Math.random()*size);
@@ -2356,13 +2384,7 @@ function draftLobbyHTML(){
      <h3 style="margin:0;font-size:18px">${esc(lg.name)}</h3>
      <div class="muted" style="font-size:13px">${lg.size}-team draft · ${humanCount} human${humanCount!==1?'s':''} joined</div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px">
-     <div style="background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 16px;text-align:center">
-      <div style="font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:2px">LEAGUE CODE</div>
-      <div style="font-size:24px;font-weight:800;letter-spacing:4px;font-family:monospace;color:var(--acc)">${lg.code}</div>
-     </div>
-     <button class="btn sec" style="padding:6px 12px;font-size:13px" onclick="navigator.clipboard.writeText('${lg.code}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy code',1600)})">Copy code</button>
-    </div>
+    <span class="tag">Local AI sandbox</span>
    </div>
   </div>
   <div class="tabs2" style="margin-bottom:14px">
@@ -2399,7 +2421,7 @@ function draftLobbyOverview(lg){
   </div>
   <div class="card" style="margin-top:14px">
    <h3>Ready to go?</h3>
-   <p class="muted" style="margin-bottom:14px">When everyone's ready, ${isOwner?'start the draft below.':'wait for the commissioner to start the draft.'} Any unfilled spots will be taken by AI coaches.</p>
+   <p class="muted" style="margin-bottom:14px">Start when you're ready. AI coaches control every other team.</p>
    <div style="display:flex;gap:10px;flex-wrap:wrap">
     ${isOwner?`<button class="btn" style="font-size:15px;padding:10px 28px" onclick="startDraftFromLobby()">🏉 Start Draft</button>`:''}
     <button class="btn danger" style="margin-left:auto" onclick="if(confirm('Leave this league?')){S.draft=null;save();renderDraft()}">Leave league</button>
@@ -2416,7 +2438,7 @@ function draftLobbyParticipants(lg){
    <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg2);border-radius:8px;border:1px dashed var(--line);opacity:.6">
     <div style="width:38px;height:38px;border-radius:50%;background:var(--card2);border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">?</div>
     <div style="flex:1"><div style="color:var(--dim);font-style:italic">Open slot</div>
-     <div style="font-size:12px;color:var(--dim)">Waiting for player to join with code <b>${lg.code}</b>${lg.allowAI?' · or AI will fill this spot':''}</div>
+     <div style="font-size:12px;color:var(--dim)">This local slot will be filled by an AI coach.</div>
     </div>
    </div>`:
   `<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg2);border-radius:8px;border:1px solid ${p.isMe?'var(--acc)':'var(--line)'}">
@@ -2428,7 +2450,7 @@ function draftLobbyParticipants(lg){
     ${p.isMe?`<span class="tag" style="background:#1e3a5f;color:#93c5fd">You</span>`:''}
    </div>`).join('')}
   </div>
-  ${open>0?`<div class="notice" style="margin-top:12px">Share code <b style="letter-spacing:2px;font-family:monospace">${lg.code}</b> for others to join. ${lg.isOwner?'Enable AI fill in ⚙ Settings if you want bots to take open spots.':''}</div>`:''}
+  ${open>0?`<div class="notice" style="margin-top:12px">${open} local slot${open===1?'':'s'} will be filled by AI at draft start.</div>`:''}
   </div>`;
 }
 function draftLobbySettingsHTML(lg){
@@ -2617,7 +2639,7 @@ function startDraftFromLobby(){
   const lg=S.draft.league,size=lg.size,myPick=S.draft.me;
   const openSlots=lg.participants.filter(p=>p.isEmpty).length;
   if(openSlots>0&&!lg.allowAI){
-    alert(`${openSlots} slot${openSlots>1?'s are':' is'} still open. Either share the code so others can join, or enable "Fill empty slots with AI coaches" in ⚙ Settings.`);
+    alert(`${openSlots} slot${openSlots>1?'s are':' is'} still open. Enable "Fill empty slots with AI coaches" in ⚙ Settings.`);
     return;
   }
   const names=AI_NAMES.slice().sort(()=>Math.random()-.5);
@@ -3265,7 +3287,7 @@ const APP_THEMES={
   blue:{name:'Electric Blue',dark:true,bg:'#070B16',bg2:'#0C1424',card:'#10182A',card2:'#16233A',line:'#263752',txt:'#F8FAFC',dim:'#94A3B8',acc:'#3B82F6',acc2:'#22D3EE',blue:'#22D3EE',rgb:'59,130,246',button:'#07111F',top:'#091426',bottom:'#080F1D'},
   gold:{name:'Stadium Gold',dark:true,bg:'#0D0E10',bg2:'#131518',card:'#181A1F',card2:'#22252B',line:'#343840',txt:'#FFFFFF',dim:'#A1A1AA',acc:'#F5B700',acc2:'#D99A00',blue:'#60A5FA',rgb:'245,183,0',button:'#181200',top:'#15130C',bottom:'#111214'},
   teal:{name:'Teal & Coral',dark:true,bg:'#07151A',bg2:'#0B1D23',card:'#102329',card2:'#173139',line:'#29444B',txt:'#F7F7F5',dim:'#8CA3A8',acc:'#2DD4BF',acc2:'#14B8A6',blue:'#FB7185',rgb:'45,212,191',button:'#06201D',top:'#092128',bottom:'#08191E'},
-  light:{name:'Light Editorial',dark:false,bg:'#F4F5F7',bg2:'#E9EDF2',card:'#FFFFFF',card2:'#F7F8FA',line:'#DDE2E8',txt:'#142033',dim:'#64748B',acc:'#6D4AFF',acc2:'#5533DD',blue:'#6D4AFF',rgb:'109,74,255',button:'#FFFFFF',top:'#FFFFFF',bottom:'#FFFFFF'}
+  light:{name:'Light Editorial',dark:false,bg:'#F4F5F7',bg2:'#E9EDF2',card:'#FFFFFF',card2:'#F7F8FA',line:'#DDE2E8',txt:'#142033',dim:'#58677A',acc:'#6D4AFF',acc2:'#5533DD',blue:'#6D4AFF',rgb:'109,74,255',button:'#FFFFFF',top:'#FFFFFF',bottom:'#FFFFFF'}
 };
 function applyTheme(id,persist=false){
   const key=APP_THEMES[id]?id:'lime',t=APP_THEMES[key],root=document.documentElement;
@@ -3436,7 +3458,7 @@ async function sooSignOut(){
   _sooMyLeagueFetched=false;
   S.sooAuth=null;S.user=null;
   save();
-  showApp();
+  showApp();sooShowAuthTab('login');
 }
 
 function sooConfirmDeleteAccount(){
@@ -3832,7 +3854,7 @@ async function sooCreateLeague(){
     });
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'Failed');
-    S.origin.league={code:d.code,teamId:d.teamId,name:lname,teamName:tname};
+    S.origin.league={code:d.code,teamId:d.teamId,name:lname,teamName:tname,teamVersion:Number(d.version)||0};
     save();renderOrigin();
   }catch(e){sooSetBusy(btn,false);sooSetStatus('soo-league-status',e.message||'Could not create the league. Try again.');}
 }
@@ -3852,11 +3874,12 @@ async function sooJoinLeague(){
     const d=await r.json();
     if(r.status===409&&d.teamId){
       /* already in league — reconnect to existing team */
-      S.origin.league={code,teamId:d.teamId,name:d.league.name,teamName:tname};
+      const team=d.league.teams&&d.league.teams.find(item=>item.id===d.teamId);
+      S.origin.league={code,teamId:d.teamId,name:d.league.name,teamName:tname,teamVersion:Number(team&&team.version)||0};
       save();_sooLeagueCache=d.league;renderOrigin();return;
     }
     if(!r.ok)throw new Error(d.error||'Not found');
-    S.origin.league={code,teamId:d.teamId,name:d.league.name,teamName:tname};
+    S.origin.league={code,teamId:d.teamId,name:d.league.name,teamName:tname,teamVersion:Number(d.version)||0};
     save();
     _sooLeagueCache=d.league;
     renderOrigin();
@@ -3867,11 +3890,21 @@ async function sooSyncPicks(){
   const lg=S.origin.league;
   if(!lg||!lg.code||!lg.teamId)return;
   try{
-    await fetch(SOO_API+'/league/'+lg.code+'/picks',{
+    const r=await fetch(SOO_API+'/league/'+lg.code+'/picks',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({teamId:lg.teamId,picks:S.origin.picks,teamName:lg.teamName})
+      body:JSON.stringify({teamId:lg.teamId,picks:S.origin.picks,teamName:lg.teamName,baseVersion:Number(lg.teamVersion)||0})
     });
-  }catch(e){}
+    const d=await r.json().catch(()=>({}));
+    if(r.status===409&&d.team){
+      lg.teamVersion=Number(d.version)||0;
+      [1,2,3].forEach(g=>{S.origin.picks[g]=d.team.picks[g]||d.team.picks[String(g)]||{}});
+      save();
+      openModal(`<h2>Team updated elsewhere</h2><p>A newer version of this State of Origin team was saved on another device. The newer picks have been restored.</p><button class="btn" onclick="closeModal();renderOrigin()">Continue</button>`);
+      return;
+    }
+    if(!r.ok)throw new Error(d.error||'Team save failed');
+    lg.teamVersion=Number(d.version)||lg.teamVersion||0;save();
+  }catch(e){console.warn('League team save unavailable',e.message||e);}
 }
 
 let _sooLeagueCache=null;
@@ -3900,10 +3933,8 @@ async function sooFetchLeague(forceRefresh){
       if(myTeam&&myTeam.picks){
         /* Server has picks → sync down to client */
         sooInitState();
-        [1,2,3].forEach(g=>{
-          const gPicks=myTeam.picks[g]||myTeam.picks[String(g)]||{};
-          if(Object.keys(gPicks).length>0)S.origin.picks[g]=gPicks;
-        });
+        lg.teamVersion=Number(myTeam.version)||0;
+        [1,2,3].forEach(g=>{S.origin.picks[g]=myTeam.picks[g]||myTeam.picks[String(g)]||{}});
         save();
       } else if(myTeam){
         /* Server has no picks for this user → push local picks up */
@@ -3913,7 +3944,7 @@ async function sooFetchLeague(forceRefresh){
           try{
             await fetch(SOO_API+'/league/'+lg.code+'/picks',{
               method:'POST',headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({teamId:lg.teamId,picks:localPicks,teamName:lg.teamName})
+              body:JSON.stringify({teamId:lg.teamId,picks:localPicks,teamName:lg.teamName,baseVersion:Number(lg.teamVersion)||0})
             });
             const r2=await fetch(SOO_API+'/league/'+lg.code);
             if(r2.ok)_sooLeagueCache=await r2.json();
@@ -4172,16 +4203,13 @@ function renderSooLeague(){
         .then(r=>r.ok?r.json():null)
         .then(d=>{
           if(d&&d.leagueCode){
-            S.origin.league={code:d.leagueCode,teamId:d.teamId,name:d.league.name,teamName:S.sooAuth.name||''};
+            const myTeam=d.league&&d.league.teams&&d.league.teams.find(t=>t.id===d.teamId);
+            S.origin.league={code:d.leagueCode,teamId:d.teamId,name:d.league.name,teamName:S.sooAuth.name||'',teamVersion:Number(myTeam&&myTeam.version)||0};
             _sooLeagueCache=d.league;
             /* Restore user's own picks from server — server is source of truth */
-            const myTeam=d.league&&d.league.teams&&d.league.teams.find(t=>t.id===d.teamId);
             if(myTeam&&myTeam.picks){
               sooInitState();
-              [1,2,3].forEach(g=>{
-                const gPicks=myTeam.picks[g]||myTeam.picks[String(g)]||{};
-                if(Object.keys(gPicks).length>0)S.origin.picks[g]=gPicks;
-              });
+              [1,2,3].forEach(g=>{S.origin.picks[g]=myTeam.picks[g]||myTeam.picks[String(g)]||{}});
             }
             save();
           }
@@ -4332,7 +4360,7 @@ function renderSooLeague(){
       <div style="padding:12px 0 0">
         ${canScore?`<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)">
           <div style="font-weight:700;font-size:13px;margin-bottom:4px">📊 Enter Game 3 Scores</div>
-          <p class="muted" style="font-size:12px;margin:0 0 10px">Enter each player's NRL Fantasy score from Game 3. Find scores at <a href="https://nrlfantasystats.com/origin-fantasy" target="_blank" style="color:var(--acc)">nrlfantasystats.com</a> or the NRL Fantasy app.</p>
+          <p class="muted" style="font-size:12px;margin:0 0 10px">Enter each player's NRL Fantasy score from Game 3. Find scores at <a href="https://nrlfantasystats.com/origin-fantasy" target="_blank" rel="noopener noreferrer" style="color:var(--acc)">nrlfantasystats.com</a> or the NRL Fantasy app.</p>
           <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">
             ${(()=>{
               const myTeam=data.teams.find(t=>t.id===lg.teamId);
@@ -4493,7 +4521,7 @@ function leagueRulesHTML(mode){
      <div class="set-item"><label>Roster size</label><b>${dl.rosterSize||17} players</b></div>
      <div class="set-item"><label>Scoring</label><b>Official NRL Fantasy</b></div>
      <div class="set-item"><label>AI fill empty slots</label><b>${dl.allowAI?'Yes':'No'}</b></div>
-     <div class="set-item"><label>League code</label><b style="font-family:monospace;letter-spacing:2px">${dl.code||'—'}</b></div>
+     <div class="set-item"><label>Availability</label><b>${dl.localOnly?'Local AI sandbox':'Legacy local draft'}</b></div>
     </div>`;
   }
   return '';
@@ -4693,7 +4721,7 @@ function byesUntil(sq,from,to){
 function byePlan(r){
   const byes=RFIX[r]?RFIX[r].byes:[];
   const onBye=pid=>byes.includes(PLAYERS[pid].sq);
-  const L=S.classic.line;
+  const T=activeTeamState(),L=T.line;
   const resPool=L.res.filter(x=>x!=null&&!onBye(x));
   const used=new Set();
   const rows=[];let fielded=0;
@@ -4709,7 +4737,7 @@ function byePlan(r){
     }
   }
   const benchAvail=L.bench.filter(x=>x!=null&&!onBye(x)).length;
-  const myByes=S.classic.squad.filter(onBye);
+  const myByes=T.squad.filter(onBye);
   return {byes,rows,fielded,benchAvail,myByes};
 }
 
@@ -4748,8 +4776,9 @@ function clCap(){return cl().cap??S.settings.cap}
 function clTpr(){return cl().tradesPerRound??S.settings.tradesPerRound}
 function clSts(){return cl().seasonTrades??S.settings.seasonTrades}
 function clBank(){
-  if(cl().bank==null&&S.customLeague){S.customLeague.bank=clCap()-squadValue();}
-  return cl().bank??S.classic.bank;
+  const T=S.customLeague&&S.customLeague.team;
+  if(T&&T.bank==null)T.bank=clCap()-T.squad.reduce((sum,pid)=>sum+price(pid),0);
+  return T&&T.bank!=null?T.bank:S.classic.bank;
 }
 function clCaptMult(){return cl().captainMult??S.settings.captainMult??2}
 function clBenchScores(){return cl().benchScores??S.settings.benchScores}
@@ -4761,12 +4790,13 @@ function refreshTrades(){
   else renderClassic();
 }
 function tradeCentreHTML(){
+  const T=activeTeamState();
   const outPid=S.ui.trOut;
   return `<div class="grid2">
    <div class="card"><h3>My squad <span class="tag">click a player to trade out</span></h3>
     <div style="overflow-x:auto;max-height:620px;overflow-y:auto">
     <table><thead><tr><th></th><th>Player</th><th>Price</th><th>Avg</th><th>L3</th><th>L5</th><th>Gms</th><th>Next bye</th></tr></thead><tbody>
-    ${lineSlots(S.classic.line).filter(s=>s.pid!=null).map(s=>{
+    ${lineSlots(T.line).filter(s=>s.pid!=null).map(s=>{
       const p=PLAYERS[s.pid],st=seasonStats(s.pid),nb=nextBye(p.sq);
       const delta=price(s.pid)-basePriceR1(s.pid);
       const kindLbl=s.kind==='st'?POSN[s.posId]:s.kind==='bench'?'INT':'RES';
@@ -4783,12 +4813,13 @@ function tradeCentreHTML(){
   </div>`;
 }
 function tradeInHTML(){
+  const T=activeTeamState();
   const outPid=S.ui.trOut;
   if(outPid==null)return `<h3>Trade in</h3><p class="muted" style="padding:20px 4px">⬅ Select a player from your squad to see trade-in options with full stats, price difference and bye coverage.</p>
   <p class="tooltip">Tip: open the Bye Planner tab to spot rounds where you can't field 13 — then trade for players whose clubs don't share those byes.</p>`;
   const out=PLAYERS[outPid];
-  const slot=lineSlots(S.classic.line).find(s=>s.pid===outPid);
-  const budget=S.classic.bank+price(outPid);
+  const slot=lineSlots(T.line).find(s=>s.pid===outPid);
+  const budget=T.bank+price(outPid);
   let pool=PLAYERS.filter(p=>!squadIds().has(p.id)&&(slot.posId===0||p.pos.some(x=>x===slot.posId||out.pos.includes(x)&&slot.posId===0)));
   if(slot.kind==='st')pool=pool.filter(p=>p.pos.includes(slot.posId));
   if(S.ui.trQ)pool=pool.filter(p=>p.name.toLowerCase().includes(S.ui.trQ.toLowerCase()));
@@ -4815,37 +4846,33 @@ function tradeInHTML(){
 function execTrade(outPid,inPid){
   if(isPlayerLocked(outPid)){alert(esc(PLAYERS[outPid].name)+' is locked — their game has already started this round.');return;}
   if(isPlayerLocked(inPid)){alert(esc(PLAYERS[inPid].name)+' is locked — their game has already started this round.');return;}
-  const slot=lineSlots(S.classic.line).find(s=>s.pid===outPid);
+  const T=activeTeamState();
+  const slot=lineSlots(T.line).find(s=>s.pid===outPid);
   if(!slot)return;
   const trMode=S.ui.trPage||'classic';
   const isCustomMode=trMode==='custom';
   /* use the mode-appropriate bank for the affordability check */
-  const availBank=isCustomMode?clBank():S.classic.bank;
+  const availBank=T.bank;
   const cost=price(inPid)-price(outPid);
   if(cost>availBank){alert('Not enough salary. Bank: '+fmtM(availBank)+', Cost: '+fmtM(cost));return}
   const injWild=!!(getChips().active||{}).injuryWildcard;
   if(seasonStarted()&&!injWild){
     if(isCustomMode){
       const tpr=clTpr(),sts=clSts();
-      if((cl().tradesRound||0)>=tpr){alert('No custom league trades left this round.');return}
-      if((cl().tradesSeason||0)>=sts){alert('No custom league season trades left.');return}
-      if(!S.customLeague.tradesRound)S.customLeague.tradesRound=0;
-      if(!S.customLeague.tradesSeason)S.customLeague.tradesSeason=0;
-      S.customLeague.tradesRound++;S.customLeague.tradesSeason++;
+      if((T.tradesRound||0)>=tpr){alert('No custom league trades left this round.');return}
+      if((T.tradesSeason||0)>=sts){alert('No custom league season trades left.');return}
+      T.tradesRound=(T.tradesRound||0)+1;T.tradesSeason=(T.tradesSeason||0)+1;
     }else{
       if(S.classic.tradesRound>=S.settings.tradesPerRound){alert('No trades left this round. Use the Injury Wildcard chip if 3+ of your players are injured.');return}
       if(S.classic.tradesSeason>=S.settings.seasonTrades){alert('No season trades left.');return}
       S.classic.tradesRound++;S.classic.tradesSeason++;
     }
   }
-  const wasC=S.classic.line.c===outPid,wasVC=S.classic.line.vc===outPid;
+  const wasC=T.line.c===outPid,wasVC=T.line.vc===outPid;
   removeFromLine(outPid);
   addToSlot(inPid,slot);
-  if(wasC)S.classic.line.c=inPid;
-  if(wasVC)S.classic.line.vc=inPid;
-  /* update bank — squad is shared so update both; custom has its own separate balance */
-  if(S.classic.bank!=null)S.classic.bank-=cost;
-  if(S.customLeague&&S.customLeague.bank!=null)S.customLeague.bank-=cost;
+  if(wasC)T.line.c=inPid;
+  if(wasVC)T.line.vc=inPid;
   S.ui.trOut=null;
   save();refreshTrades();
 }
@@ -5036,7 +5063,7 @@ function renderPlayers(){
    <h3>Player stats centre <span class="tag">${list.length} players · live prices · ✓ named to start · ✓ named on bench · click a player</span></h3>
    <div class="flex" style="margin-bottom:8px">
      <input id="player-stats-search" placeholder="Search players…" value="${esc(S.ui.plSearch||'')}" oninput="playerStatsSearch(this)">
-     <select onchange="S.ui.plClub=+this.value;renderPlayers()"><option value="-1">All clubs</option>${CLUBS.map((c,i)=>`<option value="${i}" ${S.ui.plClub===i?'selected':''}>${c.n}</option>`).join('')}</select>
+     <select aria-label="Filter by club" onchange="S.ui.plClub=+this.value;renderPlayers()"><option value="-1">All clubs</option>${CLUBS.map((c,i)=>`<option value="${i}" ${S.ui.plClub===i?'selected':''}>${c.n}</option>`).join('')}</select>
    </div>
    <div class="pos-filter">${[0,...POS_IDS].map(pi=>`<button class="${(S.ui.plPos||0)===pi?'on':''}" onclick="S.ui.plPos=${pi};renderPlayers()">${pi===0?'ALL':POSN[pi]}</button>`).join('')}</div>
    <div class="pl-main-table-wrap"><table class="pl-main-table">
@@ -5047,14 +5074,14 @@ function renderPlayers(){
      const t=trendOf(p.id),sv=starterValue(p.id);
      return `<tr style="cursor:pointer" onclick="showPlayer(${p.id})">
      <td>${avatar(p,28)}</td><td>
-       <button class="watch-btn" style="position:static;font-size:16px;padding:0 4px 0 0;${isWatched(p.id)?'text-shadow:0 0 0 var(--amber)':'text-shadow:0 0 0 var(--dim)'}" onclick="event.stopPropagation();toggleWatch(${p.id});renderPlayers()">★</button>
+       <button class="watch-btn" aria-label="Toggle ${esc(p.name)} watchlist" style="position:static;font-size:16px;padding:0 4px 0 0;${isWatched(p.id)?'text-shadow:0 0 0 var(--amber)':'text-shadow:0 0 0 var(--dim)'}" onclick="event.stopPropagation();toggleWatch(${p.id});renderPlayers()">★</button>
        ${namedTick(p.id)}<b>${esc(p.name)}</b>${sv?' <span title="Starter value: named to start; averages '+sv.sAvg+' when starting (+'+sv.uplift+' uplift)">🔥</span>':''}
      </td>
      <td><span class="clubb">${clubDot(p.sq)} ${CLUBS[p.sq].s}</span></td>
      <td>${p.pos.map(x=>`<span class="posb">${POSN[x]}</span>`).join('')}</td>
      <td>${fmtK(price(p.id))} ${delta?`<span class="${delta>0?'good':'bad'}" style="font-size:10px">${delta>0?'▲':'▼'}${fmtK(Math.abs(delta))}</span>`:''}</td>
      <td><b>${p.avg||'–'}</b></td><td>${p.l3||'–'}</td><td>${ppmC[p.id]!=null?ppmC[p.id].toFixed(2):'–'}</td><td>${trendIcon(t)}</td><td>${p.gp}</td><td>${p.hi}</td><td>${p.own}%</td>
-     <td><button class="btn" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();openComparison(${p.id})">⇔</button></td></tr>`;
+     <td><button class="btn" aria-label="Compare ${esc(p.name)}" style="padding:2px 7px;font-size:11px" onclick="event.stopPropagation();openComparison(${p.id})">⇔</button></td></tr>`;
    }).join('')}
    </tbody></table></div>
    ${list.length>200?'<p class="muted" style="margin-top:8px">Showing first 200 — refine your search.</p>':''}
@@ -5157,7 +5184,7 @@ function renderSettings(){
   const st=S.settings;
   el.innerHTML=`
   <div class="card"><h3>Appearance</h3>
-   <p class="muted">Choose a colour scheme. Changes apply immediately and are saved on this device.</p>
+   <p class="muted">Choose a colour scheme. Changes apply immediately and sync to this account across devices.</p>
    <div class="theme-options">${Object.entries(APP_THEMES).map(([id,t])=>`<button class="theme-option ${st.theme===id?'on':''}" aria-pressed="${st.theme===id}" onclick="setTheme('${id}')">
     <span class="theme-swatches"><span style="background:${t.bg}"></span><span style="background:${t.card}"></span><span style="background:${t.acc}"></span></span><b>${t.name}</b>
    </button>`).join('')}</div>
@@ -5280,8 +5307,21 @@ function enhanceClickTargets(root=document){
     if(!el.hasAttribute('tabindex'))el.tabIndex=0;
   });
 }
+function enhanceFormLabels(root=document){
+  const fields=[];
+  if(root.nodeType===1&&root.matches('input,select,textarea'))fields.push(root);
+  if(root.querySelectorAll)fields.push(...root.querySelectorAll('input,select,textarea'));
+  fields.forEach(field=>{
+    if(field.hasAttribute('aria-label')||field.hasAttribute('aria-labelledby'))return;
+    if(field.id&&document.querySelector(`label[for="${CSS.escape(field.id)}"]`))return;
+    const item=field.closest('.set-item'),label=item&&item.querySelector('label');
+    if(label&&label.textContent.trim())field.setAttribute('aria-label',label.textContent.trim());
+    else if(field.getAttribute('placeholder'))field.setAttribute('aria-label',field.getAttribute('placeholder'));
+  });
+}
 enhanceClickTargets();
-new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(enhanceClickTargets)))
+enhanceFormLabels();
+new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{enhanceClickTargets(node);enhanceFormLabels(node);})))
   .observe(document.body,{childList:true,subtree:true});
 document.addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ')return;
@@ -5369,6 +5409,20 @@ if(S.classic.bank==null)S.classic.bank=S.settings.cap-squadValue(); /* migrate: 
 if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};
 window._cloudReady=false;
 let _cloudSaveTimer=null;
+let _cloudVersion=0;
+let _cloudSaveChain=Promise.resolve();
+let _cloudConflictShown=false;
+function showCloudSaveError(){
+  let el=document.getElementById('cloud-sync-error');
+  if(!el){
+    el=document.createElement('div');el.id='cloud-sync-error';el.setAttribute('role','alert');
+    el.style.cssText='position:fixed;right:14px;bottom:76px;z-index:120;max-width:340px;padding:12px 14px;border:1px solid var(--red);border-radius:10px;background:var(--card);box-shadow:0 8px 28px rgba(0,0,0,.35);font-size:13px';
+    el.innerHTML='<b>Cloud save interrupted</b><div class="muted" style="margin:4px 0 8px">Your changes are safe on this device. Retry to sync them to your account.</div><button class="btn sec" style="padding:5px 10px" onclick="queueCloudSave()">Retry sync</button>';
+    document.body.appendChild(el);
+  }
+  el.style.display='block';
+}
+function clearCloudSaveError(){const el=document.getElementById('cloud-sync-error');if(el)el.style.display='none';}
 function cloudPayload(){
   const keys=['classic','customLeague','league','draft','settings','watchlist','corrections','origin','priceHistory','round','season'];
   return Object.fromEntries(keys.filter(k=>S[k]!==undefined).map(k=>[k,S[k]]));
@@ -5376,22 +5430,43 @@ function cloudPayload(){
 function hasLocalGameData(){return !!(S.classic&&S.classic.squad&&S.classic.squad.length||S.customLeague||S.league||S.draft);}
 window.queueCloudSave=function(){
   clearTimeout(_cloudSaveTimer);
-  _cloudSaveTimer=setTimeout(async()=>{
-    try{const r=await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:cloudPayload()})});if(!r.ok)console.warn('Cloud save failed',r.status);}
-    catch(e){console.warn('Cloud save unavailable',e);}
+  _cloudSaveTimer=setTimeout(()=>{
+    const state=cloudPayload();
+    _cloudSaveChain=_cloudSaveChain.then(async()=>{
+      try{
+        const r=await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({state,baseVersion:_cloudVersion})});
+        const d=await r.json().catch(()=>({}));
+        if(r.status===409){
+          _cloudVersion=Number(d.version)||_cloudVersion;window._cloudReady=false;
+          if(!_cloudConflictShown){
+            _cloudConflictShown=true;
+            openModal(`<h2>Newer changes found</h2><p>Another device saved this account after this page loaded. Your older browser state was not allowed to overwrite it.</p>
+              <p class="muted">Reload to use the newest saved team and settings.</p><button class="btn" onclick="location.reload()">Reload newest version</button>`);
+          }
+          return;
+        }
+        if(!r.ok)throw new Error('Cloud save returned '+r.status);
+        _cloudVersion=Number(d.version)||_cloudVersion;_cloudConflictShown=false;clearCloudSaveError();
+      }catch(e){console.warn('Cloud save unavailable',e.message||e);showCloudSaveError();}
+    });
   },900);
 };
 async function syncCloudState(){
   try{
     const r=await fetch('/api/app-state');if(!r.ok)return;
     const d=await r.json();
+    _cloudVersion=Number(d.version)||0;
     if(d.state&&typeof d.state==='object'){
       const auth=S.sooAuth,user=S.user,ui=S.ui,dataPatch=S.dataPatch;
       Object.assign(S,d.state);S.sooAuth=auth;S.user=user;S.ui=ui||S.ui;S.dataPatch=dataPatch||S.dataPatch;
       applyTheme((S.settings&&S.settings.theme)||'lime',false);applyLayout();
       localStorage.setItem(STORE_KEY,JSON.stringify(S));
     }else if(hasLocalGameData()){
-      await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:cloudPayload()})});
+      const created=await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({state:cloudPayload(),baseVersion:_cloudVersion})});
+      const saved=await created.json().catch(()=>({}));
+      if(created.ok)_cloudVersion=Number(saved.version)||_cloudVersion;
     }
     window._cloudReady=true;
   }catch(e){console.warn('Cloud sync unavailable',e);}

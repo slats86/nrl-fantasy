@@ -28,7 +28,8 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   const created = await page.request.post('/api/soo/create', {data:{name:'Origin League',teamName:'Owners',picks:{1:{FB:123}}}});
   expect(created.status()).toBe(200);
   const {code, teamId} = await created.json();
-  expect((await page.request.post(`/api/soo/league/${code}/picks`, {data:{teamId,teamName:'Owners Updated',picks:{1:{FB:456}}}})).status()).toBe(200);
+  expect((await page.request.post(`/api/soo/league/${code}/picks`, {data:{teamId,teamName:'Owners Updated',baseVersion:0,picks:{1:{FB:456}}}})).status()).toBe(423);
+  expect((await page.request.post(`/api/soo/league/${code}/picks`, {data:{teamId,teamName:'Owners Updated',baseVersion:0,picks:{}}})).status()).toBe(200);
   await page.reload();
   await page.evaluate(() => window.setPage('origin'));
   await page.locator('.soo-tab').filter({hasText:'League'}).click();
@@ -84,9 +85,29 @@ test('authenticated account, league, picks, owner and score flows', async ({brow
   const member = await browser.newContext({baseURL:'http://127.0.0.1:32188'});
   const memberPage = await member.newPage();
   expect((await memberPage.request.post('/api/soo/register', {data:{name:'Member',email:'member@example.com',password:'member-password-123'}})).status()).toBe(201);
-  const joined = await memberPage.request.post('/api/soo/join', {data:{code,teamName:'Members',picks:{}}});
-  expect(joined.status()).toBe(200);
-  const memberTeam = (await joined.json()).teamId;
+  await memberPage.goto('/');await memberPage.waitForTimeout(250);
+  if(await memberPage.getByText('Choose your look').isVisible().catch(()=>false)){
+    await memberPage.getByRole('button',{name:'Modern Lime'}).click();await memberPage.getByRole('button',{name:'Skip tour'}).click();
+  }
+  await memberPage.evaluate(()=>setPage('origin'));
+  await memberPage.locator('.soo-tab').filter({hasText:'League'}).click();
+  await memberPage.locator('#soo-join-code').waitFor({state:'visible'});
+  await memberPage.locator('#soo-join-code').fill('BAD!');await memberPage.locator('#soo-join-submit').click();
+  await expect(memberPage.locator('#soo-league-status')).toContainText(/invalid league code/i);
+  await memberPage.locator('#soo-join-code').fill(code);await memberPage.locator('#soo-join-tname').fill('Members');
+  await memberPage.locator('#soo-join-submit').click();
+  await expect.poll(()=>memberPage.evaluate(()=>S.origin.league&&S.origin.league.teamId)).toBeTruthy();
+  const memberTeam = await memberPage.evaluate(()=>S.origin.league.teamId);
+  const simultaneous=await Promise.all([
+    page.request.post(`/api/soo/league/${code}/picks`,{data:{teamId,teamName:'Owners Concurrent',baseVersion:1,picks:{}}}),
+    memberPage.request.post(`/api/soo/league/${code}/picks`,{data:{teamId:memberTeam,teamName:'Members Concurrent',baseVersion:0,picks:{}}})
+  ]);
+  expect(simultaneous.map(response=>response.status())).toEqual([200,200]);
+  const concurrentLeague=await (await page.request.get(`/api/soo/league/${code}`)).json();
+  expect(concurrentLeague.teams.filter(team=>team.id===teamId)).toHaveLength(1);
+  expect(concurrentLeague.teams.filter(team=>team.id===memberTeam)).toHaveLength(1);
+  expect(concurrentLeague.teams.find(team=>team.id===teamId).name).toBe('Owners Concurrent');
+  expect(concurrentLeague.teams.find(team=>team.id===memberTeam).name).toBe('Members Concurrent');
   expect((await page.request.delete(`/api/soo/league/${code}/team/${memberTeam}`)).status()).toBe(200);
   expect((await page.request.post('/api/soo/scores', {data:{game:1,scores:{456:88}}})).status()).toBe(200);
   expect((await page.request.delete('/api/soo/scores?game=1')).status()).toBe(200);
@@ -116,6 +137,30 @@ test('classic and custom state sync across devices', async ({browser}) => {
   await phone.goto('/');await phone.waitForLoadState('domcontentloaded');await phone.waitForTimeout(300);
   const synced=await phone.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague&&S.customLeague.name}));
   expect(synced).toEqual({classic:[0],custom:'Synced Custom'});
+  await phone.evaluate(()=>{
+    const classicPid=PLAYERS.find(p=>p.id!==0&&p.pos.includes(2))?.id;
+    S.classic.squad=[classicPid];S.classic.line=emptyLine();S.classic.line.starters[2][0]=classicPid;
+    const customPid=PLAYERS.find(p=>p.id!==classicPid&&p.pos.includes(1))?.id;
+    S.customLeague.team.squad=[customPid];S.customLeague.team.line=emptyLine();S.customLeague.team.line.starters[1][0]=customPid;
+    save();
+  });
+  await phone.waitForTimeout(1300);
+  await page.reload();await page.waitForLoadState('domcontentloaded');await page.waitForTimeout(450);
+  const reverseSynced=await page.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague.team.squad.slice()}));
+  expect(reverseSynced.classic).toHaveLength(1);expect(reverseSynced.custom).toHaveLength(1);
+  expect(reverseSynced.classic[0]).not.toBe(reverseSynced.custom[0]);
+
+  await phone.reload();await page.reload();await Promise.all([phone.waitForTimeout(500),page.waitForTimeout(500)]);
+  await Promise.all([
+    phone.evaluate(()=>{S.watchlist=[1];save()}),
+    page.evaluate(()=>{S.watchlist=[2];save()})
+  ]);
+  await Promise.all([phone.waitForTimeout(1500),page.waitForTimeout(1500)]);
+  const conflicts=(await Promise.all([phone.getByText('Newer changes found').isVisible().catch(()=>false),page.getByText('Newer changes found').isVisible().catch(()=>false)])).filter(Boolean).length;
+  expect(conflicts).toBe(1);
+  await phone.request.post('/api/soo/logout');
+  expect((await phone.request.get('/api/soo/me')).status()).toBe(401);
+  expect((await page.request.get('/api/soo/me')).status()).toBe(200);
   await second.close();await first.close();
 });
 
@@ -170,6 +215,17 @@ for (const width of [375, 1440]) test(`detailed statistics UI, search and filter
   const roundRow=page.locator('#modal .gamelog tbody tr').filter({has:page.locator('td:first-child b', {hasText:String(player.round)})}).first();
   await expect(roundRow).toContainText('31');
   await expect(roundRow).toContainText('176');
+  if(width===1440){
+    await page.keyboard.press('Escape');
+    await page.evaluate(()=>{S.ui.plSearch='';S.ui.plClub=-1;S.ui.plPos=0;setPage('players');});
+    await page.locator('#pg-players th').filter({hasText:'Avg'}).first().click();
+    expect(await page.evaluate(()=>S.ui.plSort)).toBe('avg');
+    const compareButtons=page.locator('#pg-players .pl-main-table tbody tr td:last-child button');
+    await compareButtons.nth(0).click();await page.locator('#modal button').filter({hasText:/^OK$/}).click();
+    await compareButtons.nth(1).click();
+    await expect(page.locator('#modal')).toContainText(/Player Comparison/i);
+    await page.keyboard.press('Escape');
+  }
   await context.close();
 });
 

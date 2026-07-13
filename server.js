@@ -1,4 +1,4 @@
-﻿/* Static server + NRL Fantasy data proxy â€” Railway compatible */
+﻿/* Static server + NRL Fantasy data proxy — Railway compatible */
 const http   = require('http');
 const https  = require('https');
 const fs     = require('fs');
@@ -14,9 +14,10 @@ const PORT     = process.env.PORT || 3000;
 const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
 const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@the-squad.com.au>';
 const RESEND_KEY = process.env.RESEND_API_KEY || '';
+const EMAIL_CAPTURE_FILE = process.env.NODE_ENV !== 'production' ? process.env.EMAIL_CAPTURE_FILE || '' : '';
 const ADMIN_EMAILS = new Set((process.env.ADMIN_EMAILS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean));
 const ALLOWED_ORIGIN = new URL(APP_URL).origin;
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const SESSION_TTL_MS = Math.max(1000, Number(process.env.SESSION_TTL_MS) || 30 * 24 * 60 * 60 * 1000);
 const COOKIE_SECURE = process.env.NODE_ENV === 'production' || APP_URL.startsWith('https://');
 const BODY_LIMIT = 100000;
 const rateBuckets = new Map();
@@ -25,11 +26,18 @@ setInterval(() => {
   for (const [key, bucket] of rateBuckets) if (bucket.reset <= now) rateBuckets.delete(key);
 }, 10 * 60 * 1000).unref();
 
-/* â”€â”€ Email via Resend API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Email via Resend API */
 function sendEmail(to, subject, html) {
   return new Promise((resolve) => {
+    if (EMAIL_CAPTURE_FILE) {
+      const temporary = EMAIL_CAPTURE_FILE + '.' + crypto.randomBytes(6).toString('hex') + '.tmp';
+      fs.promises.writeFile(temporary, JSON.stringify({to, subject, html}), {mode: 0o600})
+        .then(() => fs.promises.rename(temporary, EMAIL_CAPTURE_FILE))
+        .then(resolve, error => { console.error('[email] test capture failed:', error.message); resolve(); });
+      return;
+    }
     if (!RESEND_KEY) {
-      console.log('[email] RESEND_API_KEY not set â€” skipping:', subject, 'â†’', to);
+      console.log('[email] RESEND_API_KEY not set — skipping:', subject, '→', to);
       return resolve();
     }
     const body = JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html });
@@ -48,8 +56,8 @@ function sendEmail(to, subject, html) {
       r.on('end', () => {
         let result = d;
         try { result = JSON.parse(d); } catch (_) {}
-        if (r.statusCode >= 200 && r.statusCode < 300) console.log('[email] accepted:', subject, 'â†’', to, result.id || 'ok');
-        else console.error('[email] rejected:', r.statusCode, subject, 'â†’', to);
+        if (r.statusCode >= 200 && r.statusCode < 300) console.log('[email] accepted:', subject, '→', to, result.id || 'ok');
+        else console.error('[email] rejected:', r.statusCode, subject, '→', to);
         resolve();
       });
     });
@@ -59,25 +67,34 @@ function sendEmail(to, subject, html) {
   });
 }
 
-/* â”€â”€ Data storage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Data storage */
 const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, 'data');
 const LEAGUE_FILE = path.join(DATA_DIR, 'soo-leagues.json');
 const USERS_FILE  = path.join(DATA_DIR, 'soo-users.json');
 const SCORES_FILE = path.join(DATA_DIR, 'soo-scores.json');
 let leagues = {};
 let users   = {};  /* keyed by email (lowercase) */
-let tokens  = {};  /* token â†’ email */
+let tokens  = {};  /* hashed token -> email */
+const pendingRegistrations = new Set();
 /* sooScores: { "gameNum:playerId": points }  e.g. { "3:1234": 87 } */
 let sooScores = {};
 let database = null;
 let storageReady = false;
+let storageMutation = Promise.resolve();
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e) {}
 try { leagues = JSON.parse(fs.readFileSync(LEAGUE_FILE, 'utf8')); } catch(e) {}
 try { sooScores = JSON.parse(fs.readFileSync(SCORES_FILE, 'utf8')); } catch(e) {}
 try {
   users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-  Object.values(users).forEach(u => { if(u.tokenHash) tokens[u.tokenHash] = u.email; else if(u.token) tokens[u.token] = u.email; });
+  Object.values(users).forEach(user => {
+    if (!Array.isArray(user.sessions)) user.sessions = [];
+    const legacyHash = user.tokenHash || (user.token ? tokenHash(user.token) : null);
+    if (legacyHash && user.tokenExpires && !user.sessions.some(session => session.hash === legacyHash))
+      user.sessions.push({hash: legacyHash, expires: user.tokenExpires});
+    delete user.token; delete user.tokenHash; delete user.tokenExpires;
+    user.sessions.forEach(session => { if (session.hash && session.expires > Date.now()) tokens[session.hash] = user.email; });
+  });
 } catch(e) {}
 
 function atomicSave(file, value) {
@@ -85,12 +102,42 @@ function atomicSave(file, value) {
   fs.writeFileSync(tmp, JSON.stringify(value));
   fs.renameSync(tmp, file);
 }
-async function saveLeagues() { if (database) return database.saveLeagues(leagues); try { atomicSave(LEAGUE_FILE, leagues); } catch(e) { console.error('[storage] leagues:', e.message); throw e; } }
-async function saveUsers()   { if (database) return database.saveUsers(users); try { atomicSave(USERS_FILE, users); } catch(e) { console.error('[storage] users:', e.message); throw e; } }
-async function saveScores()  { if (database) return database.saveScores(sooScores); try { atomicSave(SCORES_FILE, sooScores); } catch(e) { console.error('[storage] scores:', e.message); throw e; } }
+function queuedStorage(operation) {
+  const pending = storageMutation.then(operation);
+  storageMutation = pending.catch(() => {});
+  return pending;
+}
+async function saveLeagues() {
+  const snapshot = structuredClone(leagues);
+  return queuedStorage(async () => { if (database) return database.saveLeagues(snapshot);
+    try { atomicSave(LEAGUE_FILE, snapshot); } catch(e) { console.error('[storage] leagues:', e.message); throw e; } });
+}
+async function saveUsers() {
+  const snapshot = structuredClone(users);
+  return queuedStorage(async () => { if (database) return database.saveUsers(snapshot);
+    try { atomicSave(USERS_FILE, snapshot); } catch(e) { console.error('[storage] users:', e.message); throw e; } });
+}
+async function saveScores() {
+  const snapshot = structuredClone(sooScores);
+  return queuedStorage(async () => { if (database) return database.saveScores(snapshot);
+    try { atomicSave(SCORES_FILE, snapshot); } catch(e) { console.error('[storage] scores:', e.message); throw e; } });
+}
 async function saveAccountState() {
-  if (database) return database.saveAccountState(users, leagues);
-  await saveLeagues(); await saveUsers();
+  const userSnapshot = structuredClone(users), leagueSnapshot = structuredClone(leagues);
+  return queuedStorage(async () => {
+    if (database) return database.saveAccountState(userSnapshot, leagueSnapshot);
+    atomicSave(LEAGUE_FILE, leagueSnapshot); atomicSave(USERS_FILE, userSnapshot);
+  });
+}
+function rebuildTokenIndex() {
+  tokens = {};
+  Object.values(users).forEach(user => (user.sessions || []).forEach(session => {
+    if (session.hash && session.expires > Date.now()) tokens[session.hash] = user.email;
+  }));
+}
+async function saveAccountStateOrRollback(previousUsers, previousLeagues) {
+  try { return await saveAccountState(); }
+  catch (error) { users = previousUsers; leagues = previousLeagues; rebuildTokenIndex(); throw error; }
 }
 
 function hashPwd(password, salt, iterations) {
@@ -179,7 +226,8 @@ function requestError(req, res, error) {
 }
 
 function clientIp(req) {
-  return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',').map(value => value.trim()).filter(Boolean);
+  return forwarded.length ? forwarded[forwarded.length - 1] : String(req.socket.remoteAddress || '').trim();
 }
 
 function rateLimit(req, res, scope, limit, windowMs) {
@@ -204,22 +252,58 @@ function isAdmin(user) { return !!(user && ADMIN_EMAILS.has(user.email)); }
 
 function cleanPicks(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const allowedPositions = new Set(['FB','WG','CTR','HLF','EDG','MID','HOK']);
+  const playerCount = officialPlayerCount();
   const out = {};
   for (const [game, picks] of Object.entries(value).slice(0, 3)) {
     if (!/^[123]$/.test(game) || !picks || typeof picks !== 'object' || Array.isArray(picks)) continue;
     out[game] = {};
+    const selected = new Set();
     for (const [position, playerId] of Object.entries(picks).slice(0, 20)) {
-      if (/^[A-Z0-9_-]{1,12}$/i.test(position) && Number.isSafeInteger(Number(playerId))) out[game][position] = Number(playerId);
+      const id = Number(playerId);
+      if (allowedPositions.has(position) && Number.isSafeInteger(id) && id >= 0 && id < playerCount && !selected.has(id)) {
+        out[game][position] = id; selected.add(id);
+      }
     }
   }
   return out;
+}
+
+let _officialPlayerCount;
+function officialPlayerCount() {
+  if (_officialPlayerCount == null) {
+    try { _officialPlayerCount = JSON.parse(fs.readFileSync(path.join(__dirname, 'public/players.json'), 'utf8')).length; }
+    catch { _officialPlayerCount = 0; }
+  }
+  return _officialPlayerCount;
+}
+
+const LOCKED_SOO_GAMES = new Set(['1','2','3']);
+function withoutLockedPicks(picks) {
+  return Object.fromEntries(Object.entries(picks).filter(([game]) => !LOCKED_SOO_GAMES.has(game)));
+}
+function changesLockedPicks(current, proposed) {
+  return [...LOCKED_SOO_GAMES].some(game => JSON.stringify(current && current[game] || {}) !== JSON.stringify(proposed && proposed[game] || {}));
 }
 
 const APP_STATE_KEYS = new Set(['classic','customLeague','league','draft','settings','watchlist','corrections','origin','priceHistory','round','season']);
 function cleanAppState(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const clean = {};
-  for (const [key, item] of Object.entries(value)) if (APP_STATE_KEYS.has(key)) clean[key] = item;
+  const records = new Set(['classic','customLeague','league','draft','settings','corrections','origin','priceHistory','season']);
+  for (const [key, item] of Object.entries(value)) {
+    if (!APP_STATE_KEYS.has(key)) continue;
+    if (key === 'watchlist') {
+      if (!Array.isArray(item) || item.length > 1000 || item.some(id => !Number.isSafeInteger(Number(id)))) return null;
+      clean[key] = item.map(Number); continue;
+    }
+    if (key === 'round') {
+      if (!Number.isSafeInteger(Number(item)) || Number(item) < 1 || Number(item) > 100) return null;
+      clean[key] = Number(item); continue;
+    }
+    if (records.has(key) && item !== null && (typeof item !== 'object' || Array.isArray(item))) return null;
+    clean[key] = item;
+  }
   return clean;
 }
 
@@ -270,21 +354,38 @@ function authUser(req, body) {
   const email = tokens[hash] || tokens[tok];
   const user = email ? users[email] : null;
   if (!user) return null;
-  if (user.tokenExpires && user.tokenExpires < Date.now()) {
-    delete tokens[hash]; delete tokens[tok]; delete user.token; delete user.tokenHash; delete user.tokenExpires; saveUsers().catch(e => console.error('[storage] expired session:', e.message)); return null;
+  const sessions = Array.isArray(user.sessions) ? user.sessions : [];
+  const session = sessions.find(item => item.hash === hash || item.hash === tok);
+  if (!session || session.expires < Date.now()) {
+    delete tokens[hash]; delete tokens[tok];
+    user.sessions = sessions.filter(item => item !== session && item.expires >= Date.now());
+    saveUsers().catch(e => console.error('[storage] expired session:', e.message)); return null;
   }
   return user;
 }
 
 function issueSession(user) {
   const token = genToken();
-  if (user.token) delete tokens[user.token];
-  if (user.tokenHash) delete tokens[user.tokenHash];
-  delete user.token;
-  user.tokenHash = tokenHash(token);
-  user.tokenExpires = Date.now() + SESSION_TTL_MS;
-  tokens[user.tokenHash] = user.email;
+  const hash = tokenHash(token), expires = Date.now() + SESSION_TTL_MS;
+  user.sessions = (Array.isArray(user.sessions) ? user.sessions : []).filter(session => session.expires >= Date.now());
+  user.sessions.push({hash, expires});
+  tokens[hash] = user.email;
   return {token, cookie: 'session=' + encodeURIComponent(token) + '; Path=/; HttpOnly' + (COOKIE_SECURE ? '; Secure' : '') + '; SameSite=Lax; Max-Age=' + Math.floor(SESSION_TTL_MS / 1000)};
+}
+
+function revokeSession(req, body, user) {
+  const raw = parseCookies(req).session || String(req.headers.authorization || '').replace(/^Bearer\s+/i, '') || body && body.token || '';
+  const hash = tokenHash(raw);
+  delete tokens[hash]; delete tokens[raw];
+  if (user) user.sessions = (user.sessions || []).filter(session => session.hash !== hash && session.hash !== raw);
+}
+
+function revokeAllSessions(user) {
+  for (const session of user.sessions || []) delete tokens[session.hash];
+  if (user.tokenHash) delete tokens[user.tokenHash];
+  if (user.token) delete tokens[user.token];
+  user.sessions = [];
+  delete user.token; delete user.tokenHash; delete user.tokenExpires;
 }
 
 function publicUser(user) {
@@ -292,7 +393,7 @@ function publicUser(user) {
     teamId: user.teamId || null, isAdmin: isAdmin(user)};
 }
 
-/* â”€â”€ Static file helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Static file helpers */
 function serveLocal(req, res, filePath) {
   fs.readFile(filePath, function(err, data) {
     if (err) return proxyNRL(req, res, path.basename(filePath).replace('.json', '') === 'players'
@@ -537,7 +638,7 @@ async function proxyFootyStatistics(req, res, playerId, slug) {
   }
 }
 
-/* â”€â”€ HTTP server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* HTTP server */
 async function handleRequest(req, res) {
   req.id = crypto.randomUUID();
   req.once('handlerError', error => requestError(req, res, error));
@@ -579,7 +680,7 @@ async function handleRequest(req, res) {
   if (asset && (req.method === 'GET' || req.method === 'HEAD')) return serveAsset(req, res, asset[1] + '.js');
   if (url.startsWith('/assets/')) return jsonRes(req, res, 404, {error: 'Asset not found'});
 
-  /* â”€â”€ Auth â”€â”€ */
+  /* Auth */
 
   if (url === '/api/soo/register' && req.method === 'POST') {
     if (rateLimit(req, res, 'register', 5, 15 * 60 * 1000)) return;
@@ -592,25 +693,31 @@ async function handleRequest(req, res) {
         return jsonRes(req, res, 400, {error: 'Name, email and password (12-128 chars) required'});
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return jsonRes(req, res, 400, {error: 'Invalid email'});
-      if (users[email])
+      if (users[email] || pendingRegistrations.has(email))
         return jsonRes(req, res, 409, {error: 'Email already registered'});
-      const salt   = crypto.randomBytes(16).toString('hex');
-      const token  = genToken();
-      const userId = genCode(10);
-      users[email] = { userId, name: safeName(name, 'Player', 40), email, salt, iterations: 310000, hash: await hashPwd(pass, salt, 310000) };
-      const session = issueSession(users[email]);
-      await saveUsers();
-      jsonRes(req, res, 201, publicUser(users[email]), {'Set-Cookie': session.cookie});
-      /* Welcome email (async â€” don't block response) */
-      sendEmail(email, 'Welcome to NRL Fantasy! \u{1F3C9}', `
-        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px">
-          <h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy &#127945;</h2>
-          <p>Hey ${escapeHtml(users[email].name)},</p>
-          <p>You're all set! Head back to the app to pick your State of Origin team and compete with mates.</p>
-          <a href="${APP_URL}" style="display:inline-block;background:#4ade80;color:#071d10;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">Go to NRL Fantasy</a>
-          <p style="color:#888;font-size:12px;margin-top:24px">Unofficial fan-made game &middot; Not affiliated with the NRL</p>
-        </div>
-      `).catch(() => {});
+      pendingRegistrations.add(email);
+      try {
+        const salt   = crypto.randomBytes(16).toString('hex');
+        const userId = genCode(10);
+        users[email] = { userId, name: safeName(name, 'Player', 40), email, salt, iterations: 310000,
+          hash: await hashPwd(pass, salt, 310000), sessions: [], appStateVersion: 0 };
+        const session = issueSession(users[email]);
+        await saveUsers();
+        jsonRes(req, res, 201, publicUser(users[email]), {'Set-Cookie': session.cookie});
+        /* Welcome email is asynchronous and does not block the response. */
+        sendEmail(email, 'Welcome to NRL Fantasy! \u{1F3C9}', `
+          <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px">
+            <h2 style="color:#4ade80;margin-bottom:4px">NRL Fantasy &#127945;</h2>
+            <p>Hey ${escapeHtml(users[email].name)},</p>
+            <p>You're all set! Head back to the app to pick your State of Origin team and compete with mates.</p>
+            <a href="${APP_URL}" style="display:inline-block;background:#4ade80;color:#071d10;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:16px 0">Go to NRL Fantasy</a>
+            <p style="color:#888;font-size:12px;margin-top:24px">Unofficial fan-made game &middot; Not affiliated with the NRL</p>
+          </div>
+        `).catch(() => {});
+      } catch (error) {
+        if (users[email]) { revokeAllSessions(users[email]); delete users[email]; }
+        throw error;
+      } finally { pendingRegistrations.delete(email); }
     });
     return;
   }
@@ -642,7 +749,7 @@ async function handleRequest(req, res) {
     readBody(req, async (err, body) => {
       if (err) return bodyError(req, res, err);
       const email = (body.email||'').trim().toLowerCase();
-      /* Always 200 â€” never reveal whether an email is registered */
+      /* Always 200 — never reveal whether an email is registered. */
       jsonRes(req, res, 200, {ok: true});
       const user = users[email];
       if (!user) return;
@@ -671,6 +778,7 @@ async function handleRequest(req, res) {
       user.salt = salt;
       user.iterations = 310000;
       user.hash = await hashPwd(body.password, salt, user.iterations);
+      revokeAllSessions(user);
       const session = issueSession(user);
       delete user.resetTokenHash; delete user.resetExpires;
       await saveUsers();
@@ -682,9 +790,8 @@ async function handleRequest(req, res) {
   if (url === '/api/soo/logout' && req.method === 'POST') {
     const user = authUser(req, {});
     if (user) {
-      if (user.token) delete tokens[user.token];
-      if (user.tokenHash) delete tokens[user.tokenHash];
-      delete user.token; delete user.tokenHash; delete user.tokenExpires; saveUsers().catch(e => console.error('[storage] logout:', e.message));
+      revokeSession(req, {}, user);
+      saveUsers().catch(e => console.error('[storage] logout:', e.message));
     }
     jsonRes(req, res, 200, {ok: true}, {'Set-Cookie': 'session=; Path=/; HttpOnly' + (COOKIE_SECURE ? '; Secure' : '') + '; SameSite=Lax; Max-Age=0'});
     return;
@@ -700,6 +807,7 @@ async function handleRequest(req, res) {
       if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected))
         return jsonRes(req, res, 403, {error: 'Incorrect password'});
 
+      const previousUsers = structuredClone(users), previousLeagues = structuredClone(leagues);
       for (const [code, league] of Object.entries(leagues)) {
         league.teams = (league.teams || []).filter(team => team.userId !== user.userId);
         if (league.ownerId === user.userId) {
@@ -707,10 +815,9 @@ async function handleRequest(req, res) {
           else delete leagues[code];
         }
       }
-      if (user.tokenHash) delete tokens[user.tokenHash];
-      if (user.token) delete tokens[user.token];
+      revokeAllSessions(user);
       delete users[user.email];
-      await saveAccountState();
+      await saveAccountStateOrRollback(previousUsers, previousLeagues);
       jsonRes(req, res, 200, {ok: true}, {'Set-Cookie': 'session=; Path=/; HttpOnly' + (COOKIE_SECURE ? '; Secure' : '') + '; SameSite=Lax; Max-Age=0'});
     });
     return;
@@ -731,7 +838,8 @@ async function handleRequest(req, res) {
   if (url === '/api/app-state' && req.method === 'GET') {
     const user = authUser(req, {});
     if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
-    return jsonRes(req, res, 200, {state: user.appState || null, updatedAt: user.appStateUpdated || null});
+    return jsonRes(req, res, 200, {state: user.appState || null, updatedAt: user.appStateUpdated || null,
+      version: Number(user.appStateVersion) || 0});
   }
 
   if (url === '/api/app-state' && req.method === 'PUT') {
@@ -741,14 +849,25 @@ async function handleRequest(req, res) {
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
       const state = cleanAppState(body.state);
       if (!state) return jsonRes(req, res, 400, {error: 'Invalid app state'});
-      user.appState = state; user.appStateUpdated = Date.now();
-      if (database) await database.saveAppState(user.email, state); else await saveUsers();
-      jsonRes(req, res, 200, {ok:true, updatedAt:user.appStateUpdated});
+      const baseVersion = Number(body.baseVersion);
+      const currentVersion = Number(user.appStateVersion) || 0;
+      if (!Number.isSafeInteger(baseVersion) || baseVersion < 0)
+        return jsonRes(req, res, 428, {error: 'A valid baseVersion is required', version: currentVersion});
+      let result;
+      if (database) result = await queuedStorage(() => database.saveAppState(user.email, state, baseVersion));
+      else if (baseVersion !== currentVersion) result = {ok:false, version:currentVersion,
+        state:user.appState || null, updatedAt:user.appStateUpdated || null};
+      else result = {ok:true, version:currentVersion + 1, updatedAt:Date.now()};
+      if (!result.ok) return jsonRes(req, res, 409, {error: 'Cloud state changed on another device',
+        version: result.version, updatedAt: result.updatedAt, state: result.state});
+      user.appState = state; user.appStateUpdated = result.updatedAt; user.appStateVersion = result.version;
+      if (!database) await saveUsers();
+      jsonRes(req, res, 200, {ok:true, updatedAt:user.appStateUpdated, version:user.appStateVersion});
     }, 1000000);
     return;
   }
 
-  /* â”€â”€ League API (all require auth) â”€â”€ */
+  /* League API (all require authentication) */
 
   /* POST /api/soo/create  { name, teamName, picks, token } */
   if (url === '/api/soo/create' && req.method === 'POST') {
@@ -756,8 +875,14 @@ async function handleRequest(req, res) {
       if (err) return bodyError(req, res, err);
       const user = authUser(req, body);
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
+      if (user.leagueCode && leagues[user.leagueCode]) {
+        const existing = leagues[user.leagueCode].teams.find(team => team.userId === user.userId);
+        return jsonRes(req, res, 409, {error: 'You already belong to a league', code: user.leagueCode,
+          teamId: existing && existing.id || user.teamId});
+      }
       const code   = genCode(6);
       const teamId = genCode(10);
+      const previousUsers = structuredClone(users), previousLeagues = structuredClone(leagues);
       leagues[code] = {
         name: safeName(body.name, 'SoO League', 40),
         ownerId: user.userId,
@@ -766,12 +891,12 @@ async function handleRequest(req, res) {
           id: teamId,
           userId: user.userId,
           name: safeName(body.teamName || user.name, 'My Team', 30),
-          picks: cleanPicks(body.picks)
+          picks: withoutLockedPicks(cleanPicks(body.picks)), version: 0
         }]
       };
-      user.leagueCode = code; user.teamId = teamId; await saveUsers();
-      await saveLeagues();
-      jsonRes(req, res, 200, { code, teamId });
+      user.leagueCode = code; user.teamId = teamId;
+      await saveAccountStateOrRollback(previousUsers, previousLeagues);
+      jsonRes(req, res, 200, { code, teamId, version: 0 });
     });
     return;
   }
@@ -783,21 +908,26 @@ async function handleRequest(req, res) {
       const user = authUser(req, body);
       if (!user) return jsonRes(req, res, 401, {error: 'Login required'});
       const code = String(body.code || '').trim().toUpperCase();
+      if (!/^[A-Z2-9]{6}$/.test(code)) return jsonRes(req, res, 400, {error: 'Invalid league code'});
       const lg = leagues[code];
       if (!lg) return jsonRes(req, res, 404, {error: 'League not found'});
       if (lg.teams.length >= 30) return jsonRes(req, res, 400, {error: 'League full'});
       const existing = lg.teams.find(t => t.userId === user.userId);
       if (existing) return jsonRes(req, res, 409, {error: 'You already have a team in this league', teamId: existing.id, league: {name: lg.name, code: body.code, teams: lg.teams, ownerId: lg.ownerId}});
+      if (user.leagueCode && leagues[user.leagueCode])
+        return jsonRes(req, res, 409, {error: 'Leave your current league before joining another'});
+      const previousUsers = structuredClone(users), previousLeagues = structuredClone(leagues);
       const teamId = genCode(10);
       lg.teams.push({
         id: teamId,
         userId: user.userId,
         name: safeName(body.teamName || user.name, 'New Team', 30),
-        picks: cleanPicks(body.picks)
+        picks: withoutLockedPicks(cleanPicks(body.picks)), version: 0
       });
-      user.leagueCode = code; user.teamId = teamId; await saveUsers();
-      await saveLeagues();
-      jsonRes(req, res, 200, { teamId, league: { name: lg.name, code: body.code, teams: lg.teams, ownerId: lg.ownerId } });
+      user.leagueCode = code; user.teamId = teamId;
+      await saveAccountStateOrRollback(previousUsers, previousLeagues);
+      jsonRes(req, res, 200, { teamId, version: 0,
+        league: { name: lg.name, code: body.code, teams: lg.teams, ownerId: lg.ownerId } });
     });
     return;
   }
@@ -835,10 +965,20 @@ async function handleRequest(req, res) {
       const team = lg.teams.find(t => t.id === body.teamId);
       if (!team) return jsonRes(req, res, 404, {error: 'Team not found'});
       if (team.userId !== user.userId) return jsonRes(req, res, 403, {error: 'You can only update your own team'});
-      team.picks = cleanPicks(body.picks);
+      const baseVersion = Number(body.baseVersion);
+      if (!Number.isSafeInteger(baseVersion) || baseVersion < 0)
+        return jsonRes(req, res, 428, {error: 'A valid baseVersion is required', version: Number(team.version) || 0});
+      if (baseVersion !== (Number(team.version) || 0))
+        return jsonRes(req, res, 409, {error: 'Team changed on another device', version: Number(team.version) || 0, team});
+      const nextPicks = cleanPicks(body.picks);
+      if (changesLockedPicks(team.picks, nextPicks))
+        return jsonRes(req, res, 423, {error: 'Picks for completed State of Origin games are locked', version: Number(team.version) || 0});
+      const previousTeam = structuredClone(team);
+      team.picks = nextPicks;
       if (body.teamName) team.name = safeName(body.teamName, team.name, 30);
-      await saveLeagues();
-      jsonRes(req, res, 200, { ok: true });
+      team.version = (Number(team.version) || 0) + 1;
+      try { await saveLeagues(); } catch (error) { Object.keys(team).forEach(key => delete team[key]); Object.assign(team, previousTeam); throw error; }
+      jsonRes(req, res, 200, { ok: true, version: team.version });
     });
     return;
   }
@@ -856,11 +996,12 @@ async function handleRequest(req, res) {
       const removed = lg.teams.find(t => t.id === teamDel[2]);
       if (removed && removed.userId === lg.ownerId) return jsonRes(req, res, 400, {error: 'The league owner cannot be removed'});
       const before = lg.teams.length;
+      const previousUsers = structuredClone(users), previousLeagues = structuredClone(leagues);
       lg.teams = lg.teams.filter(t => t.id !== teamDel[2]);
       if (lg.teams.length === before) return jsonRes(req, res, 404, {error: 'Team not found'});
       const removedUser = Object.values(users).find(u => removed && u.userId === removed.userId);
-      if (removedUser) { delete removedUser.leagueCode; delete removedUser.teamId; await saveUsers(); }
-      await saveLeagues();
+      if (removedUser) { delete removedUser.leagueCode; delete removedUser.teamId; }
+      await saveAccountStateOrRollback(previousUsers, previousLeagues);
       jsonRes(req, res, 200, { ok: true, teams: lg.teams });
     });
     return;
@@ -876,16 +1017,16 @@ async function handleRequest(req, res) {
       const lg = leagues[leagueDel[1]];
       if (!lg) return jsonRes(req, res, 404, {error: 'League not found'});
       if (lg.ownerId && lg.ownerId !== user.userId) return jsonRes(req, res, 403, {error: 'Only the league owner can delete this league'});
+      const previousUsers = structuredClone(users), previousLeagues = structuredClone(leagues);
       delete leagues[leagueDel[1]];
       Object.values(users).forEach(u => { if (u.leagueCode === leagueDel[1]) { delete u.leagueCode; delete u.teamId; } });
-      await saveUsers();
-      await saveLeagues();
+      await saveAccountStateOrRollback(previousUsers, previousLeagues);
       jsonRes(req, res, 200, { ok: true });
     });
     return;
   }
 
-  /* â”€â”€ SoO Scores API â”€â”€ */
+  /* State of Origin scores API */
 
   if (url === '/api/soo/scores' && req.method === 'GET') {
     jsonRes(req, res, 200, sooScores);
@@ -976,7 +1117,10 @@ async function start() {
     await database.migrate();
     const loaded = await database.load();
     users = loaded.users; leagues = loaded.leagues; sooScores = loaded.scores; tokens = {};
-    Object.values(users).forEach(user => { if (user.tokenHash) tokens[user.tokenHash] = user.email; });
+    Object.values(users).forEach(user => {
+      user.sessions = (user.sessions || []).filter(session => session.expires >= Date.now());
+      user.sessions.forEach(session => { tokens[session.hash] = user.email; });
+    });
   }
   storageReady = true;
   server.listen(PORT, function() { console.log('NRL Fantasy on :' + PORT + ' using ' + (database ? 'PostgreSQL' : 'local JSON')); });

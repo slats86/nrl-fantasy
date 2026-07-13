@@ -193,6 +193,11 @@ test('unexpected async storage errors return a traceable 500 without crashing', 
     const body = await response.json();
     assert.equal(body.error, 'Internal server error');
     assert.match(body.requestId, /^[0-9a-f-]{36}$/i);
+    const retry = await fetch(`http://127.0.0.1:${failurePort}/api/soo/register`, {
+      method: 'POST', headers: {'content-type': 'application/json'},
+      body: JSON.stringify({name: 'Failure Test', email: 'failure@example.com', password: 'a-long-test-password'})
+    });
+    assert.equal(retry.status, 500, 'failed persistence must roll back the in-memory registration');
     assert.equal((await fetch(`http://127.0.0.1:${failurePort}/health`)).status, 200);
   } finally {
     child.kill();
