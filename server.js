@@ -6,7 +6,7 @@ const path   = require('path');
 const crypto = require('crypto');
 const zlib   = require('zlib');
 const {createDatabase} = require('./db');
-const {parseInitialPlayerId, hasSeasonStats} = require('./footystatistics');
+const {parseInitialPlayerId, hasSeasonStats, findSearchPlayerId} = require('./footystatistics');
 const PORT     = process.env.PORT || 3000;
 const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
 const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@the-squad.com.au>';
@@ -406,8 +406,12 @@ async function proxyFootyStatistics(req, res, playerId, slug) {
     let resolvedId = footyStatisticsIds.get(playerId) || playerId;
     let payload = await footyStatisticsPayload(resolvedId);
     if (!hasSeasonStats(payload, year) && slug) {
-      const profile = await footyStatisticsGet('/sti/' + encodeURIComponent(slug), 'text/html');
-      const profileId = parseInitialPlayerId(profile);
+      const searchBody = await footyStatisticsGet('/api/search?q=' + encodeURIComponent(slug.replace(/-/g, ' ')), 'application/json');
+      let profileId = findSearchPlayerId(JSON.parse(searchBody), slug);
+      if (!profileId) {
+        const profile = await footyStatisticsGet('/sti/' + encodeURIComponent(slug), 'text/html');
+        profileId = parseInitialPlayerId(profile);
+      }
       if (!profileId) throw new Error('current player ID was not found');
       resolvedId = profileId;
       payload = await footyStatisticsPayload(resolvedId);
