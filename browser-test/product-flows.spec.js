@@ -177,8 +177,8 @@ test('navigation, internal links, dialogs and failed requests remain usable', as
   feedRounds.forEach(round=>{if(round.status==='active')round.status='complete';});
   liveRound.status='active';
   if(!liveRound.matches||!liveRound.matches.length)liveRound.matches=[{home_squad_id:liveFixture.squadId,away_squad_id:999999,start_time:new Date(Date.now()-60000).toISOString()}];
-  await page.route('https://fantasy.nrl.com/data/nrl/players.json',route=>route.fulfill({json:feedPlayers}));
-  await page.route('https://fantasy.nrl.com/data/nrl/rounds.json',route=>route.fulfill({json:feedRounds}));
+  await page.route('**/api/players',route=>route.fulfill({json:feedPlayers}));
+  await page.route('**/api/rounds',route=>route.fulfill({json:feedRounds}));
   await page.evaluate(()=>autoRefresh());
   expect(await page.evaluate(()=>({status:LIVE.status,score:LIVE.scores[0]}))).toEqual({status:'live',score:57});
   await expect(page.locator('#hdr-status')).toContainText('LIVE');
@@ -236,4 +236,66 @@ test('navigation, internal links, dialogs and failed requests remain usable', as
   await expect(login.locator('#soo-auth-err')).toContainText('Temporarily unavailable');
   await expect(login.locator('#soo-login-submit')).toBeEnabled();
   await failed.close();
+});
+
+test('Match Centre advances generically, refreshes live scores/components, pauses hidden and recovers', async ({browser}) => {
+  const context=await isolatedContext(browser,{width:1440,height:900}),page=await context.newPage();
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  expect((await context.request.post('/api/soo/register',{data:{name:'Live Pipeline',email:`live-${Date.now()}@example.com`,password:'live-pipeline-password'}})).status()).toBe(201);
+  const sourcePlayers=await (await context.request.get('/api/players')).json();
+  const sourceRounds=await (await context.request.get('/api/rounds')).json();
+  const player=sourcePlayers[0],home=player.squad_id;
+  const away=sourceRounds.flatMap(round=>round.matches||[]).flatMap(match=>[match.home_squad_id,match.away_squad_id]).find(id=>id!==home);
+  player.stats=player.stats||{};player.stats.scores=player.stats.scores||{};player.stats.scores[19]=61;
+  const round18=sourceRounds.find(round=>round.id===18),round19=sourceRounds.find(round=>round.id===19),round20=sourceRounds.find(round=>round.id===20);
+  sourceRounds.forEach(round=>round.status='scheduled');round18.status='complete';
+  round19.status='active';round19.start=new Date(Date.now()-3600000).toISOString();round19.end=new Date(Date.now()+3600000).toISOString();
+  round19.matches=[{id:1901,round:19,status:'active',home_squad_id:home,away_squad_id:away,home_score:12,away_score:8,date:new Date(Date.now()-1800000).toISOString()}];
+  let playersBody=sourcePlayers,roundsBody=sourceRounds,fail=false,playerRequests=0,roundRequests=0;
+  await page.route('**/api/players',async route=>{playerRequests++;if(fail)return route.abort('timedout');await route.fulfill({json:playersBody});});
+  await page.route('**/api/rounds',async route=>{roundRequests++;if(fail)return route.abort('timedout');await route.fulfill({json:roundsBody});});
+  await page.route('**/api/player-stats/*',route=>route.fulfill({json:{stats:[{year:2026,match_type:'nrl',round_id:19,
+    fantasy_points:61,tackles:17,metres_gained:123,tries:1,goals:2,time_on_ground:80}]}}));
+  await page.goto('/');await finishOnboarding(page);await page.evaluate(()=>_refreshInFlight);
+  playerRequests=0;roundRequests=0;
+  await page.evaluate(()=>Promise.all([autoRefresh(),autoRefresh(),autoRefresh()]));
+  expect({playerRequests,roundRequests}).toEqual({playerRequests:1,roundRequests:1});
+  expect(await page.evaluate(()=>({round:LIVE.round,status:LIVE.status,score:LIVE.scores[0],fixture:RFIX[19].games[0].slice(2)})))
+    .toEqual({round:19,status:'live',score:61,fixture:[12,8]});
+  await page.evaluate(()=>{S.ui.mcRound=19;S.ui.mcMatch=0;setPage('match');});
+  await expect(page.locator('#pg-match')).toContainText('Round 19');
+  await expect(page.locator('#pg-match')).toContainText('12 – 8');
+  await expect(page.locator('#pg-match')).toContainText('61');
+  await page.locator('#pg-match tbody tr').filter({hasText:player.first_name+' '+player.last_name}).first().click();
+  await expect(page.locator('#modal')).toContainText('Tackle');
+  await expect(page.locator('#modal')).toContainText('123');
+
+  player.stats.scores[19]=64;round19.matches[0].home_score=14;
+  await page.evaluate(()=>autoRefresh());
+  expect(await page.evaluate(()=>({score:LIVE.scores[0],fixture:RFIX[19].games[0].slice(2)}))).toEqual({score:64,fixture:[14,8]});
+
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});
+  expect(await page.evaluate(()=>_refreshTimer)).toBeNull();
+  const beforeResume=playerRequests;
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});document.dispatchEvent(new Event('visibilitychange'));});
+  await expect.poll(()=>playerRequests).toBeGreaterThan(beforeResume);
+
+  fail=true;await page.evaluate(()=>autoRefresh());
+  await expect(page.locator('#hdr-updated')).toContainText('Data may be stale');
+  expect(await page.evaluate(()=>LIVE.scores[0])).toBe(64);
+  fail=false;await page.evaluate(()=>autoRefresh());
+  await expect(page.locator('#hdr-updated')).toContainText('Updated');
+
+  round19.status='complete';round19.matches[0].status='complete';
+  round20.status='active';round20.start=new Date(Date.now()-60000).toISOString();round20.end=new Date(Date.now()+3600000).toISOString();
+  round20.matches=[{id:2001,round:20,status:'active',home_squad_id:home,away_squad_id:away,home_score:4,away_score:0,date:new Date().toISOString()}];
+  player.stats.scores[20]=22;
+  await page.evaluate(()=>autoRefresh());
+  expect(await page.evaluate(()=>({round:LIVE.round,status:LIVE.status,score:LIVE.scores[0]}))).toEqual({round:20,status:'live',score:22});
+  await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>{S.ui.mcRound=20;S.ui.mcMatch=0;setPage('match');});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  await expect(page.locator('#pg-match')).toContainText('Round 20');
+  expect(errors).toEqual([]);
+  await context.close();
 });

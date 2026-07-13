@@ -76,6 +76,11 @@ test('HTML and data support conditional requests without retransferring bodies',
     assert.equal(initial.status, 200);
     const etag = initial.headers.get('etag');
     assert.match(etag, /^W\/"[A-Za-z0-9_-]+"$/);
+    if (requestPath === '/api/players') {
+      assert.equal(initial.headers.get('cache-control'), 'no-cache, max-age=0, must-revalidate');
+      assert.ok(initial.headers.get('x-nrl-data-source'));
+      assert.match(initial.headers.get('x-nrl-data-stale'), /^(true|false)$/);
+    }
     const conditional = await fetch(`http://127.0.0.1:${port}${requestPath}`, {headers: {'if-none-match': etag}});
     assert.equal(conditional.status, 304);
     assert.equal((await conditional.arrayBuffer()).byteLength, 0);

@@ -1,7 +1,37 @@
 # Product test report
 
 Date: 13 July 2026
-Branch: `agent/comprehensive-product-audit`
+Branch: `agent/round19-live-data-pipeline`
+
+## Round 19 live-data incident (13 July 2026)
+
+### Root cause and pipeline evidence
+
+The official NRL Fantasy feeds were current: Round 19 was `complete`, all seven final NRL scores were present, 238 players had non-zero Round 19 Fantasy scores, and the official per-player detail feed contained match components. The application and production API were stale after the first game: Round 19 remained `active`, six matches remained `scheduled` at 0-0, and player Round 19 scores were absent.
+
+The scheduled **Fetch NRL Fantasy Data** workflow was running and reporting success. Its latest run generated commit `b09b646` on `bot/nrl-data-refresh` with complete Round 19 data, but PR #22 had been open since 11 July with auto-merge enabled and no attached status checks. Bot pushes made with `GITHUB_TOKEN` do not trigger another `pull_request` workflow, while `gh workflow run ci.yml` produced a detached workflow-dispatch check. Branch protection therefore kept the PR permanently blocked while every scheduled fetch still appeared successful.
+
+Two runtime defects compounded that publishing failure:
+
+- `/api/players` and `/api/rounds` served deploy-time files with `max-age=300, stale-while-revalidate=3600`; browser polling could only re-read stale deployed assets and intermediary caches could retain them for an hour.
+- Both the scheduled transformer and browser transformer discarded team scores until a match was marked `complete`, so provisional live NRL team scores could never appear.
+
+### Fix and controlled refresh design
+
+- The server now reads the validated official NRL feed through a 30-second shared in-memory cache with overlapping-request deduplication, 8-second upstream timeouts, two bounded attempts, schema/size validation, explicit source/age/stale headers, and a deploy snapshot fallback carrying an HTTP `Warning`. Client-facing feed responses use `no-cache, max-age=0, must-revalidate`.
+- The browser uses only same-origin feed routes, deduplicates refresh calls, times each request out after eight seconds, retries once, and retains the last usable state with a visible recoverable stale-data warning.
+- Polling runs every 30 seconds only while a match is live, every 30 seconds in the final ten minutes before kickoff, at a reduced cadence between games, and every 15 minutes after all games are final. Hidden pages stop their timer; returning pages refresh immediately.
+- The Match Centre preserves live team scores, round-wide player scores and individual match state. Official corrections replace provisional values on the next poll. Detailed current-round components are revalidated after five minutes instead of being cached forever in browser state.
+- A subtle last-updated time is shown without blocking navigation or disabling the Match Centre during background refresh.
+- Fetching, transformation and auditing moved into locally runnable scripts. The workflow now runs every ten minutes across the full east-coast NRL match window, updates one dedicated branch/PR using an exact force-with-lease, waits for full CI on the exact bot commit, and merges only after CI succeeds. A no-change fetch is explicitly successful; invalid or more-than-one-round-behind data fails.
+
+### Exact Round 19 local verification
+
+The focused audit checked all seven fixtures and the top scorer from every participating club against the official source. It found 238/238 Round 19 scorers with non-zero scores and 14/14 club detail samples with non-empty components. Examples include Nicholas Hynes (107 points; 17 tackles, 83 metres, two tries, 11 goals), Zac Hosking (83; 28 tackles, 124 metres, three tries), and Haumole Olakau'atu (62; 26 tackles, 145 metres, one try).
+
+The real local application endpoint returned Round 19 complete with final scores `6-32`, `0-66`, `16-40`, `28-12`, `26-24`, `18-19`, and `22-18`. `/api/player-stats/502490?slug=nicholas-hynes` resolved Nicholas Hynes dynamically to FootyStatistics ID 1606 and returned the official Round 19 fallback with the same 107-point detailed components above.
+
+Production verification will be appended after CI, merge and Railway deployment; no production user, league or team data is used for this read-only verification.
 
 ## Scope and environments
 
@@ -72,8 +102,14 @@ Match Centre modals and Player profile game logs passed for all three players on
 - `npm run check`
 - `PGSSL=disable TEST_DATABASE_URL="$TEST_DATABASE_URL" node --test test/postgres.integration.test.js`
 - `npm run test:browser`
+- `npm run fetch:nrl-data`
+- `npm run audit:round-pipeline`
+- `npm run audit:round-pipeline:details`
+- `npm run smoke:round-ui -- http://127.0.0.1:32189 --round=19`
 - `npm run audit:player-stats`
 - `npm run smoke:player-ui -- --base-url=http://127.0.0.1:32290`
+
+Round 19 gate results: 34 core/unit/API tests passed with one PostgreSQL test skipped by the generic command; the isolated PostgreSQL invocation passed 1/1; the complete Playwright suite passed 15/15 across 320, 375, 390, 768, 1024, 1440 and 1920 pixel coverage; the read-only real-feed Round 19 UI smoke passed at 1440 and 390 pixels with no browser errors.
 
 ## Remaining risks and manual checks
 

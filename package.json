@@ -8,6 +8,10 @@
     "smoke:production": "node scripts/smoke-production.js",
     "smoke:player-ui": "node scripts/verify-player-ui.js",
     "audit:player-stats": "node scripts/audit-player-stats.js",
+    "fetch:nrl-data": "node scripts/fetch-nrl-data.js && node scripts/update-nrl-data.js",
+    "audit:round-pipeline": "node scripts/audit-round-pipeline.js",
+    "audit:round-pipeline:details": "node scripts/audit-round-pipeline.js --details",
+    "smoke:round-ui": "node scripts/verify-round-ui.js",
     "test:browser": "playwright test",
     "check": "node --check server.js && node scripts/check-html.js && node --test",
     "test": "node --test"
