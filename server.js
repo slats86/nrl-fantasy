@@ -742,8 +742,10 @@ async function handleRequest(req, res) {
     jsonRes(req, res, storageReady ? 200 : 503, {ok: storageReady, storage: database ? 'postgresql' : 'json'}); return;
   }
 
-  if (url === '/api/players' && req.method === 'GET') return serveOfficialFeed(req, res, 'players').catch(error => requestError(req, res, error));
-  if (url === '/api/rounds' && req.method === 'GET') return serveOfficialFeed(req, res, 'rounds').catch(error => requestError(req, res, error));
+  if (url === '/api/players' && (req.method === 'GET' || req.method === 'HEAD'))
+    return serveOfficialFeed(req, res, 'players').catch(error => requestError(req, res, error));
+  if (url === '/api/rounds' && (req.method === 'GET' || req.method === 'HEAD'))
+    return serveOfficialFeed(req, res, 'rounds').catch(error => requestError(req, res, error));
   const playerStats = url.match(/^\/api\/player-stats\/(\d+)$/);
   if (playerStats && req.method === 'GET') {
     const requested = new URL(req.url, 'http://localhost');

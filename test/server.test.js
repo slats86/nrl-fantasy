@@ -87,6 +87,16 @@ test('HTML and data support conditional requests without retransferring bodies',
   }
 });
 
+test('live feed routes support cache-safe HEAD requests', async () => {
+  for (const requestPath of ['/api/players', '/api/rounds']) {
+    const response = await fetch(`http://127.0.0.1:${port}${requestPath}`, {method: 'HEAD'});
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'no-cache, max-age=0, must-revalidate');
+    assert.ok(response.headers.get('etag'));
+    assert.equal((await response.arrayBuffer()).byteLength, 0);
+  }
+});
+
 test('cacheable data assets are JavaScript and unknown assets are unavailable', async () => {
   const asset = await fetch(`http://127.0.0.1:${port}/assets/data-core.js`);
   assert.equal(asset.status, 200);

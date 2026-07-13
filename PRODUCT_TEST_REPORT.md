@@ -33,6 +33,8 @@ The real local application endpoint returned Round 19 complete with final scores
 
 Production verification will be appended after CI, merge and Railway deployment; no production user, league or team data is used for this read-only verification.
 
+The first post-deploy cache-header probe found `HEAD /api/rounds` returning 404 because the new live routes admitted only GET. GET data and health were correct, but this cache-validation regression was fixed immediately by admitting GET and HEAD and adding an empty-body/ETag/cache-header server test before final production sign-off.
+
 ## Scope and environments
 
 The application was tested back to front with disposable accounts and isolated storage. Local HTTP/API tests use temporary JSON directories. PostgreSQL tests refuse to run unless the database name contains `test`; the audit used the disposable `nrl_fantasy_test` database on a local PostgreSQL instance. No production user, league, team, or database data was modified.
