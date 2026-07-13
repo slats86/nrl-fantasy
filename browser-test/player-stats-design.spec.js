@@ -4,8 +4,11 @@ const {test,expect}=require('@playwright/test');
 const baseURL='http://127.0.0.1:32188';
 let authState;
 test.beforeAll(async({request})=>{
-  const response=await request.post('/api/soo/register',{data:{name:'Player Design',email:'player-design@example.com',password:'player-design-password'}});
-  expect(response.status()).toBe(201);authState=await request.storageState();
+  const credentials={email:'player-design@example.com',password:'player-design-password'};
+  const response=await request.post('/api/soo/register',{data:{name:'Player Design',...credentials}});
+  if(response.status()===409)expect((await request.post('/api/soo/login',{data:credentials})).status()).toBe(200);
+  else expect(response.status()).toBe(201);
+  authState=await request.storageState();
 });
 async function openAccount(browser,width,label){
   const context=await browser.newContext({baseURL,viewport:{width,height:900},storageState:authState}),page=await context.newPage();
@@ -73,8 +76,10 @@ test('themes, byes, long names and unavailable match details remain honest',asyn
 
 for(const width of [375,1440])test(`approved Player Stats visual at ${width}px`,async({browser})=>{
   const {context,page,errors}=await openAccount(browser,width,`visual-${width}`);
-  await page.evaluate(()=>{const p=PLAYERS.find(item=>item.name==='Jayden Campbell')||PLAYERS[0];setPage('players');showPlayer(p.id)});
+  await page.route('**/api/player-stats/*',route=>route.fulfill({json:{stats:[]}}));
+  await page.evaluate(async()=>{const p=PLAYERS.find(item=>item.name==='Jayden Campbell')||PLAYERS[0];setPage('players');await showPlayer(p.id)});
   await expect(page.locator('.player-profile')).toBeVisible();
+  await expect(page.getByText('Loading current detailed match statistics…')).toBeHidden();
   // Playwright's Chromium is fixed, but Linux font rasterization still differs
   // by host image. Keep strict, readable baselines for both supported runners.
   const runner=process.env.CI?'ci':'local';
