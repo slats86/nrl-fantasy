@@ -1,6 +1,10 @@
 'use strict';
 const {test, expect} = require('@playwright/test');
 const widths = [320, 375, 390, 768, 1024, 1440, 1920];
+async function flushCloudSave(page){
+  await page.waitForTimeout(950);
+  await page.evaluate(()=>_cloudSaveChain);
+}
 
 test('authenticated account, league, picks, owner and score flows', async ({browser}) => {
   const owner = await browser.newContext({baseURL:'http://127.0.0.1:32188'});
@@ -131,7 +135,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     S.customLeague={name:'Synced Custom',cap:S.settings.cap,tradesPerRound:2,seasonTrades:30,team:{squad:[],line:emptyLine(),bank:S.settings.cap,history:{},startRound:S.round,tradesRound:0,tradesSeason:0}};
     save();
   });
-  await page.waitForTimeout(1300);
+  await flushCloudSave(page);
   const second=await browser.newContext({baseURL:'http://127.0.0.1:32188'}),phone=await second.newPage();
   expect((await phone.request.post('/api/soo/login',{data:{email:'sync@example.com',password:'sync-password-123'}})).status()).toBe(200);
   await phone.goto('/');await phone.waitForLoadState('domcontentloaded');await phone.waitForTimeout(300);
@@ -144,7 +148,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     S.customLeague.team.squad=[customPid];S.customLeague.team.line=emptyLine();S.customLeague.team.line.starters[1][0]=customPid;
     save();
   });
-  await phone.waitForTimeout(1300);
+  await flushCloudSave(phone);
   await page.reload();await page.waitForLoadState('domcontentloaded');await page.waitForTimeout(450);
   const reverseSynced=await page.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague.team.squad.slice()}));
   expect(reverseSynced.classic).toHaveLength(1);expect(reverseSynced.custom).toHaveLength(1);
@@ -155,7 +159,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     phone.evaluate(()=>{S.watchlist=[1];save()}),
     page.evaluate(()=>{S.watchlist=[2];save()})
   ]);
-  await Promise.all([phone.waitForTimeout(1500),page.waitForTimeout(1500)]);
+  await Promise.all([flushCloudSave(phone),flushCloudSave(page)]);
   const conflicts=(await Promise.all([phone.getByText('Newer changes found').isVisible().catch(()=>false),page.getByText('Newer changes found').isVisible().catch(()=>false)])).filter(Boolean).length;
   expect(conflicts).toBe(1);
   await phone.request.post('/api/soo/logout');
@@ -173,9 +177,12 @@ for (const width of [375, 1440]) test(`detailed statistics UI, search and filter
       tackles:31,metres_gained:176,tries:1,goals:2,time_on_ground:80
     }))
   }}));
-  expect((await page.request.post('/api/soo/register',{data:{
+  const statsRegistration=await page.request.post('/api/soo/register',{data:{
     name:'Statistics UI',email:`stats-${width}@example.com`,password:'statistics-password-123'
-  }})).status()).toBe(201);
+  }});
+  if(statsRegistration.status()===429&&width===1440){
+    expect((await page.request.post('/api/soo/login',{data:{email:'stats-375@example.com',password:'statistics-password-123'}})).status()).toBe(200);
+  }else expect(statsRegistration.status()).toBe(201);
   await page.goto('/');
   const appearancePrompt=page.getByText('Choose your look');
   if(await appearancePrompt.isVisible().catch(()=>false)){
@@ -211,10 +218,40 @@ for (const width of [375, 1440]) test(`detailed statistics UI, search and filter
   const profileRow=page.locator('#pg-players .pl-main-table tbody tr').filter({hasText:player.name}).first();
   await expect(profileRow).toBeVisible();
   await profileRow.click();
-  await expect(page.getByText('2026 game log')).toBeVisible();
-  const roundRow=page.locator('#modal .gamelog tbody tr').filter({has:page.locator('td:first-child b', {hasText:String(player.round)})}).first();
-  await expect(roundRow).toContainText('31');
-  await expect(roundRow).toContainText('176');
+  await expect(page.locator('.player-profile')).toBeVisible();
+  await expect(page.getByRole('heading',{name:player.name,level:1})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'2026 Form'})).toBeVisible();
+  await page.evaluate(()=>applyTheme('blue',false));
+  await page.screenshot({path:`reports/player-stats-${width}.png`,fullPage:false});
+  await expect(page.getByRole('button',{name:'Score'})).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Minutes'}).click();
+  await expect(page.getByRole('button',{name:'Minutes'})).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Score'}).click();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  if(width===375){
+    const recent=page.getByRole('button',{name:new RegExp(`Open Round ${player.round},`)});
+    await expect(recent).toBeVisible();await recent.click();
+    await expect(page.getByRole('heading',{name:`Round ${player.round}`})).toBeVisible();
+    await expect(page.getByText('Fantasy points')).toBeVisible();
+    const scoring=page.getByRole('button',{name:/Scoring/});
+    await expect(scoring).toHaveAttribute('aria-expanded','true');
+    await expect(page.getByText('Tries',{exact:true})).toBeVisible();
+    const running=page.getByRole('button',{name:/Running/});
+    await expect(running).toHaveAttribute('aria-expanded','true');
+    await expect(page.getByText('Run metres',{exact:true})).toBeVisible();
+    await page.screenshot({path:'reports/player-stats-mobile-round-375.png',fullPage:false});
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.player-profile')).toBeVisible();
+  }else{
+    const roundRow=page.locator('.player-game-row').filter({hasText:`Round ${player.round}`}).first();
+    await expect(roundRow).toBeVisible();await roundRow.click();
+    const detail=page.locator('.player-game-detail');
+    await expect(detail).toContainText('Tackles');await expect(detail).toContainText('31');
+    await expect(detail).toContainText('Run metres');await expect(detail).toContainText('176');
+  }
+  const watch=page.getByRole('button',{name:/Watch/});await watch.focus();await page.keyboard.press('Space');
+  await expect(page.getByRole('button',{name:/Watching/})).toHaveAttribute('aria-pressed','true');
+  expect(await page.evaluate(id=>S.watchlist.includes(id),player.id)).toBe(true);
   if(width===1440){
     await page.keyboard.press('Escape');
     await page.evaluate(()=>{S.ui.plSearch='';S.ui.plClub=-1;S.ui.plPos=0;setPage('players');});

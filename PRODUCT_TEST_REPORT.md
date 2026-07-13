@@ -1,7 +1,35 @@
 # Product test report
 
-Date: 13 July 2026
-Branches: `agent/round19-live-data-pipeline` plus production-verification follow-ups
+Date: 14 July 2026
+Branches: `agent/round19-live-data-pipeline`, production-verification follow-ups, and `agent/player-stats-approved-design`
+
+## Approved Player Stats redesign (14 July 2026)
+
+### Areas and scenarios tested
+
+The supplied `design/player-stats-approved-concept.png` was treated as the visual authority. The player directory continues to use its existing search, club/position filters, sorting and comparison flow; selecting any player now opens a dedicated Player Stats screen rather than the oversized generic modal.
+
+Desktop coverage verifies the compact identity/status/action header, six-metric strip, Score/Price/Minutes/PPM form chart, accessible round values, explicit BYE/DNP gaps, season reference line, role/minutes visual, real future opponents, and expandable grouped game rows. Mobile coverage verifies the Player Stats app bar, two-column metrics, persistent Watch/Compare actions, compact chart, horizontal recent-round strip, dedicated full-screen match breakdown, Back/Close/Escape behavior, bottom navigation, safe-area spacing and no horizontal overflow.
+
+All seven required widths (320, 375, 390, 768, 1024, 1440 and 1920) are exercised. State coverage includes long real player names, multi-position eligibility, players with byes, non-playing rounds, complete match components, and a Fantasy score whose detailed components are genuinely unavailable. The unavailable state explicitly says that no averages were substituted. Electric Blue visual baselines are stored for 375px and 1440px; refreshed comparison captures are in `reports/player-stats-375.png`, `reports/player-stats-1440.png`, and `reports/player-stats-mobile-round-375.png`.
+
+Every existing colour scheme remains driven by the shared theme tokens: Modern Lime, Electric Blue, Stadium Gold, Teal & Coral and Light Editorial. Availability remains the restrained lime status highlight while chart selections follow the chosen scheme. Watchlist changes still use the persisted application state, Compare uses the existing comparison flow, and detailed stats continue through the universal player-ID resolver and post-Round-14 data path.
+
+### Issues found, root cause and fix
+
+| Severity | Issue and root cause | Fix applied | Regression coverage |
+|---|---|---|---|
+| High | Player profiles were rendered inside one oversized generic modal, producing a cramped mobile spreadsheet and no structured desktop hierarchy. | Added one universal profile renderer with responsive overview, chart, role, fixtures, expandable game log and mobile round screen. | Structural and visual Playwright coverage at every supported width. |
+| Medium | A stale or mismatched upstream stat row could appear as a game even when the player’s club had a bye. | Fixture identity and bye state now take precedence; impossible bye appearances are rejected and displayed as BYE gaps. | Bye chart/recent-round assertions and disabled non-game controls. |
+| Medium | The existing global `.watch-btn` positioning rule pulled the new Watch action out of the profile header. | Scoped a static profile action override while retaining card-star behavior elsewhere. | Desktop/mobile screenshots plus persisted Watch keyboard interaction. |
+| Medium | Returning from the mobile match breakdown preserved a deep scroll position, which could hide the compact profile header. | Restored the overview at the top and moved mobile Back/Player Stats/Close behavior into the app-level and round-level headers. | Escape/back assertions and 375px visual baseline. |
+| Medium | Adding new disposable-account browser tests exceeded the application’s intentional registration rate limit during the older suite. | Reused one isolated authenticated test state and allowed the pre-existing 1440px test to log into its earlier disposable account when the registration ceiling is reached. Production rate limiting was not weakened. | Complete Playwright suite under the real rate-limit configuration. |
+| Low | Visual baselines inherited the host operating system’s font rasterizer, producing different desktop text pixels between local Linux and GitHub’s Ubuntu image. | Maintain separate full, readable local/CI baselines selected explicitly by environment; production typography and the strict 1.2% pixel-difference tolerance remain unchanged. CI uploads failure evidence for review. | Local and CI 375px/1440px baselines. |
+| Low | A cross-device test used a fixed delay only 400ms longer than the intentional cloud-save debounce, which could reload before a queued save completed on a busy CI runner. | Await the application’s real queued cloud-save promise after its debounce instead of increasing an arbitrary sleep. | Cross-device Classic/Custom persistence and concurrent conflict test. |
+| Low | The password-reset test accepted the earlier welcome-email capture based only on its recipient, then sometimes inspected it before the reset email arrived. | Poll for the recipient and reset-token content together, proving the reset message itself is ready. | Complete registration/reset/session-revocation/account-deletion flow. |
+| Low | The first CI visual artifact captured an async detailed-stat loading state, and its worker restart retried registration for the same disposable account. | Await the profile load with a stable visual-test detail response and reuse the disposable login after an expected duplicate registration. | Stable full-screen local/CI baselines after worker restarts. |
+
+No real data was replaced by mock values in application code. Break-even remains present as a metric but shows an honest unavailable state because the current application feeds do not supply a trustworthy break-even value. Per-match position uses the player’s real eligible primary position because the current detailed feed does not provide a reliable game-specific position field.
 
 ## Round 19 live-data incident (13 July 2026)
 
@@ -122,6 +150,8 @@ Match Centre modals and Player profile game logs passed for all three players on
 - `npm run smoke:player-ui -- --base-url=http://127.0.0.1:32290`
 
 Round 19 gate results: 35 core/unit/API tests passed with one PostgreSQL test skipped by the generic command; the isolated PostgreSQL invocation passed 1/1; the complete Playwright suite passed 15/15 across 320, 375, 390, 768, 1024, 1440 and 1920 pixel coverage; the read-only real-feed Round 19 UI smoke passed at 1440 and 390 pixels with no browser errors.
+
+Player Stats redesign gate results: `npm run check` passed 35/35 executed core/unit/API tests (with the isolated PostgreSQL case intentionally skipped by that generic command); the explicit disposable PostgreSQL suite passed 1/1; and the complete Playwright suite passed 19/19. The browser run includes the seven viewport widths, cross-device/product flows, both approved visual baselines, mobile round selection, all themes, unavailable components, no unexpected console errors, and horizontal-overflow checks.
 
 ## Remaining risks and manual checks
 

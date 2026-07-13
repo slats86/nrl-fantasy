@@ -5092,12 +5092,92 @@ function byePlannerHTML(){
 @media(max-width:767px){
   .soo-slots-grid{display:flex;flex-direction:column}
 }
+
+/* ── Approved Player Stats experience ───────────────────── */
+.players-screen.profile-mode.page.on{display:block;max-width:1500px}
+.player-profile{--profile-radius:10px;display:grid;gap:12px;font-variant-numeric:tabular-nums}
+.player-profile button{font:inherit}
+.player-profile-card{background:var(--card);border:1px solid var(--line);border-radius:var(--profile-radius)}
+.player-profile-top{display:flex;align-items:center;gap:14px;padding:14px 16px}
+.player-profile-back,.player-round-nav button{width:40px;height:40px;min-width:40px;display:grid;place-items:center;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.player-profile-identity{display:flex;align-items:center;gap:13px;min-width:0;flex:1}
+.player-profile-identity h1{font-size:22px;line-height:1.1;letter-spacing:-.45px;margin-bottom:5px;overflow-wrap:anywhere}
+.player-profile-meta{display:flex;align-items:center;gap:6px 9px;flex-wrap:wrap;color:var(--dim);font-size:11px}
+.player-profile-status{display:inline-flex;align-items:center;gap:5px;color:#a3e635;font-size:10px;font-weight:850;letter-spacing:.55px;text-transform:uppercase}
+html[style*="color-scheme: light"] .player-profile-status{color:#4d7c0f}
+.player-profile-status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.player-profile-actions{display:flex;gap:8px;margin-left:auto}
+.player-profile-action{min-height:38px;padding:0 13px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:12px;font-weight:800;cursor:pointer}
+.player-profile .watch-btn{position:static;inset:auto;color:inherit;text-shadow:none;font-size:12px;line-height:normal;z-index:auto;padding:0 13px}
+.player-profile-action.primary{border-color:rgba(var(--acc-rgb),.6);background:rgba(var(--acc-rgb),.12);color:var(--acc)}
+.player-profile-action[aria-pressed="true"]{background:var(--acc);color:var(--button-fg);border-color:var(--acc)}
+.player-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.player-metric{padding:12px 13px;min-height:76px;background:var(--card);border:1px solid var(--line);border-radius:var(--profile-radius)}
+.player-metric-label,.player-section-label{color:var(--dim);font-size:9px;font-weight:850;letter-spacing:1.15px;text-transform:uppercase}
+.player-metric-value{font-size:21px;font-weight:900;line-height:1;margin:10px 0 4px;letter-spacing:-.35px}
+.player-metric-sub{color:var(--dim);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-profile-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(250px,.55fr);gap:12px;align-items:stretch}
+.player-chart-card{padding:15px 16px;min-width:0}
+.player-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.player-section-head h2{font-size:12px;font-weight:900;letter-spacing:.85px;text-transform:uppercase}
+.player-chart-tabs{display:flex;gap:3px;padding:3px;background:var(--card2);border:1px solid var(--line);border-radius:8px}
+.player-chart-tab{min-height:30px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--dim);font-size:10px;font-weight:800;cursor:pointer}
+.player-chart-tab.on{background:var(--acc);color:var(--button-fg)}
+.player-chart{width:100%;min-height:250px;display:block;overflow:visible}
+.player-chart .grid-line{stroke:var(--line);stroke-width:1}.player-chart .avg-line{stroke:var(--dim);stroke-width:1;stroke-dasharray:5 5;opacity:.8}.player-chart .form-line{fill:none;stroke:var(--acc);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.player-chart .form-area{fill:rgba(var(--acc-rgb),.09)}
+.player-chart .point{fill:var(--card);stroke:var(--acc);stroke-width:2;cursor:pointer}.player-chart .point.selected{fill:var(--acc);stroke:var(--txt);stroke-width:3}.player-chart text{fill:var(--dim);font-size:9px}.player-chart .chart-value{fill:var(--txt);font-size:11px;font-weight:900}.player-chart .gap-label{fill:var(--dim);font-size:7.5px;font-weight:800}
+.player-chart-summary{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.player-side-stack{display:grid;gap:12px}
+.player-role-card,.player-next-card{padding:12px}
+.player-role-main{display:grid;grid-template-columns:70px 1fr;gap:11px;align-items:center;margin-top:10px}
+.player-minutes-ring{width:70px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--acc) var(--mins),var(--card2) 0);font-size:17px;font-weight:900}
+.player-minutes-ring:before{content:"";position:absolute;inset:8px;background:var(--card);border-radius:50%}.player-minutes-ring span{position:relative}.player-minutes-ring small{display:block;color:var(--dim);font-size:8px;font-weight:700;text-align:center}
+.player-role-list{display:grid;gap:8px}.player-role-row{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--dim)}.player-role-row b{color:var(--txt);font-size:11px}
+.player-role-name{margin-top:10px;padding-top:9px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--dim)}.player-role-name b{color:var(--txt)}
+.player-opponents{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.player-opponent{padding:9px 5px;text-align:center;background:var(--card2);border:1px solid var(--line);border-radius:8px;min-width:0}.player-opponent .round{font-size:8px;color:var(--dim);text-transform:uppercase}.player-opponent b{display:block;font-size:11px;margin:6px 0 2px}.player-opponent small{font-size:8px;color:var(--dim)}
+.player-log-card{overflow:hidden}.player-log-head{padding:14px 16px;border-bottom:1px solid var(--line)}
+.player-game-log{width:100%;border-collapse:collapse}.player-game-log th{padding:8px 13px;background:var(--card2);color:var(--dim);font-size:8px;letter-spacing:.75px;text-transform:uppercase;text-align:left}.player-game-log th.num,.player-game-log td.num{text-align:right}.player-game-log td{padding:10px 13px;border-top:1px solid var(--line);font-size:11px}.player-game-log tbody:first-of-type tr:first-child td{border-top:0}.player-game-row{cursor:pointer}.player-game-row:hover td{background:rgba(var(--acc-rgb),.055)}.player-game-row.selected td{background:rgba(var(--acc-rgb),.08)}.player-game-score{font-size:15px;font-weight:900}.player-game-state{color:var(--dim);font-weight:800;font-size:10px}.player-expand-button{width:30px;height:30px;min-height:30px;border:0;background:transparent;color:var(--dim);cursor:pointer;border-radius:6px}.player-expand-button[aria-expanded="true"]{color:var(--acc);transform:rotate(180deg)}
+.player-game-detail td{padding:0;background:var(--bg2)}.player-stat-groups{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:12px 13px}.player-stat-group{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px}.player-stat-group h3{font-size:8px;letter-spacing:.8px;text-transform:uppercase;color:var(--acc);margin-bottom:8px}.player-stat-item{display:flex;justify-content:space-between;gap:6px;padding:3px 0;color:var(--dim);font-size:9px}.player-stat-item b{color:var(--txt);font-size:10px}.player-stat-unavailable{grid-column:1/-1;padding:12px;color:var(--dim);font-size:11px;text-align:center}
+.player-recent{display:none}
+.player-round-screen{display:none}
+@media(max-width:1024px){.player-profile-grid{grid-template-columns:minmax(0,1fr) 290px}.player-metrics{grid-template-columns:repeat(3,1fr)}.player-stat-groups{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:768px){
+  #pg-players.profile-mode{margin:-12px -10px 0;width:calc(100% + 20px)}
+  body.player-profile-active .topbar-brand{font-size:0;font-style:normal}body.player-profile-active .topbar-brand:after{content:'PLAYER STATS';font-size:14px;font-weight:850;letter-spacing:.5px}body.player-profile-active .topbar-brand .ball{display:none}
+  body.player-profile-active .mobile-menu-btn{font-size:0}body.player-profile-active .mobile-menu-btn:after{content:'←';font-size:22px}
+  body.player-profile-active .topbar-alert{font-size:0;border:0}body.player-profile-active .topbar-alert:after{content:'•••';font-size:16px;letter-spacing:2px}
+  body.player-round-active #topbar{display:none}
+  .player-profile{gap:9px;padding:0 10px calc(80px + env(safe-area-inset-bottom))}
+  .player-profile-top{align-items:flex-start;padding:12px}.player-profile-back{display:none}
+  .player-profile-identity{align-items:flex-start}.player-profile-identity h1{font-size:19px}.player-profile-identity .jersey{width:58px!important;height:58px!important}
+  .player-profile-top{flex-wrap:wrap}.player-profile-actions{width:100%;margin:3px 0 0}.player-profile-action{flex:1;min-height:42px}
+  .player-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.player-metric{min-height:70px;padding:11px}.player-metric-value{font-size:20px}
+  .player-profile-grid{display:block}.player-side-stack{display:none}.player-chart-card{padding:13px 10px}.player-section-head{align-items:flex-start;flex-direction:column}.player-chart-tabs{width:100%}.player-chart-tab{flex:1;padding:0 5px}.player-chart{min-height:0;height:auto}
+  .player-recent{display:block;padding:13px 0 13px 10px;overflow:hidden}.player-recent .player-section-label{padding-right:10px}.player-recent-strip{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:10px 10px 2px 0;scroll-snap-type:x proximity}.player-recent-strip::-webkit-scrollbar{display:none}.player-recent-round{flex:0 0 70px;min-height:67px;padding:8px 5px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--txt);text-align:center;cursor:pointer;scroll-snap-align:start}.player-recent-round.on{border-color:var(--acc);background:rgba(var(--acc-rgb),.12)}.player-recent-round span{display:block;color:var(--dim);font-size:8px;text-transform:uppercase}.player-recent-round b{display:block;font-size:18px;margin:5px 0 1px}.player-recent-round small{font-size:8px;color:var(--dim)}
+  .player-log-card{display:none}
+  .player-round-screen{display:block;min-height:calc(100dvh - 54px);padding:0 10px calc(82px + env(safe-area-inset-bottom));font-variant-numeric:tabular-nums}
+  .player-round-nav{height:52px;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:7px}.player-round-nav h1{text-align:center;font-size:14px}.player-round-nav button{width:40px;height:40px;background:transparent;border:0}.player-round-nav button:last-child{font-size:19px}
+  .player-round-hero{padding:13px;margin-bottom:9px}.player-round-opponent{display:flex;align-items:center;gap:11px}.player-round-opponent h2{font-size:16px;margin-bottom:4px}.player-round-opponent p{font-size:10px;color:var(--dim)}
+  .player-round-score{margin:12px 0 0;padding:16px;text-align:center;border:1px solid rgba(var(--acc-rgb),.48);border-radius:9px;background:rgba(var(--acc-rgb),.09)}.player-round-score b{display:block;font-size:42px;line-height:1;color:var(--acc)}.player-round-score span{display:block;margin-top:5px;color:var(--dim);font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+  .player-round-facts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}.player-round-fact{padding:11px;background:var(--card);border:1px solid var(--line);border-radius:8px}.player-round-fact span{display:block;color:var(--dim);font-size:8px;text-transform:uppercase}.player-round-fact b{display:block;margin-top:6px;font-size:14px}
+  .player-round-accordions{display:grid;gap:7px}.player-round-accordion{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}.player-round-accordion>button{width:100%;min-height:48px;padding:0 13px;display:flex;align-items:center;justify-content:space-between;background:transparent;border:0;color:var(--txt);font-size:11px;font-weight:850;letter-spacing:.5px;text-transform:uppercase;cursor:pointer}.player-round-accordion>button span:last-child{color:var(--acc)}.player-round-accordion-body{padding:0 13px 10px;border-top:1px solid var(--line)}.player-round-accordion .player-stat-item{font-size:11px;padding:9px 0;border-bottom:1px solid var(--line)}.player-round-accordion .player-stat-item:last-child{border-bottom:0}.player-round-accordion .player-stat-item b{font-size:12px}
+}
+@media(max-width:360px){.player-profile{padding-left:7px;padding-right:7px}.player-profile-identity{gap:8px}.player-profile-identity h1{font-size:17px}.player-profile-meta{font-size:9px}.player-chart-card{padding-left:7px;padding-right:7px}.player-chart-tab{font-size:9px}.player-metric-value{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.player-profile *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style>
 <script>
 /* ================= PLAYERS PAGE ================= */
 function renderPlayers(){
   const el=$('#pg-players');
   el.classList.add('secondary-screen','players-screen');
+  if(Number.isInteger(S.ui.playerProfilePid)){
+    el.classList.add('profile-mode');
+    renderPlayerProfile(el,S.ui.playerProfilePid);
+    return;
+  }
+  setPlayerShell(false);
+  el.classList.remove('profile-mode');
   let list=PLAYERS.slice();
   if(S.ui.plSearch)list=list.filter(p=>p.name.toLowerCase().includes(S.ui.plSearch.toLowerCase()));
   if(S.ui.plPos)list=list.filter(p=>p.pos.includes(S.ui.plPos));
@@ -5246,6 +5326,209 @@ async function showPlayer(pid){
    <h3 style="font-size:13px;margin-top:14px">Previous seasons — minutes &amp; fantasy by position</h3>
    ${histHTML}`);
 }
+/* Dedicated Player Stats profile. The legacy renderer above remains as historical
+   context while this universal renderer owns every player profile entry point. */
+const PLAYER_STAT_GROUPS=[
+  {id:'scoring',label:'Scoring',keys:['T','TS','G','FG','TA','LB','LBA']},
+  {id:'running',label:'Running',keys:['MG','TB','OFH','OFG']},
+  {id:'defence',label:'Defence',keys:['TCK','MT','KD','TO']},
+  {id:'discipline',label:'Discipline',keys:['ER','PC','SB','SO','SAI']},
+  {id:'kicking',label:'Kicking',keys:['KM','FTF','FDO','EFIG']}
+];
+const PLAYER_STAT_NAMES={T:'Tries',TS:'Try saves',G:'Goals',FG:'Field goals',TA:'Try assists',LB:'Line breaks',LBA:'Line-break assists',MG:'Run metres',TB:'Tackle breaks',OFH:'Offloads to hand',OFG:'Offloads to ground',TCK:'Tackles',MT:'Missed tackles',KD:'Kick defusals',TO:'Turnovers won',ER:'Errors',PC:'Penalties conceded',SB:'Sin bins',SO:'Send offs',SAI:'Six-again infringements',KM:'Kick metres',FTF:'40/20 kicks',FDO:'Forced drop-outs',EFIG:'Effective kick-in-goal'};
+const _playerProfileLoads=new Set();
+
+function playerRoundRows(pid){
+  const p=PLAYERS[pid],out=[];
+  for(let r=1;r<=MAXR;r++){
+    const fixture=RFIX[r],gm=fixture&&fixture.games.find(g=>g[0]===p.sq||g[1]===p.sq);
+    const bye=!!(fixture&&fixture.byes&&fixture.byes.includes(p.sq));
+    if(!gm&&!bye)continue;
+    /* A bye always wins over a stray upstream score/stat row. Treating an
+       impossible bye appearance as played would conceal stale identity data. */
+    const played=!bye&&!!gm&&playedIn(pid,r),home=gm?gm[0]===p.sq:null;
+    const oppId=gm?(home?gm[1]:gm[0]):null;
+    out.push({r,gm,bye,played,home,oppId,opp:oppId==null?'—':CLUBS[oppId].s,st:RST[pid]&&RST[pid][r],pts:played?playerPts(pid,r):null});
+  }
+  return out;
+}
+function playerStatGroups(st){
+  if(!st)return [];
+  return PLAYER_STAT_GROUPS.map(group=>({
+    ...group,
+    items:group.keys.map(key=>({key,label:PLAYER_STAT_NAMES[key]||STAT_LABELS[key],value:st[STAT_KEYS.indexOf(key)]||0})).filter(item=>item.value!==0)
+  })).filter(group=>group.items.length);
+}
+function playerStatus(pid){
+  if(NAMED[pid]===1)return 'Named to start';
+  if(NAMED[pid]===2)return 'Named on bench';
+  return 'Available';
+}
+function playerProfileMetrics(pid,rows){
+  const p=PLAYERS[pid],ppm=ppmOf(pid),delta=price(pid)-basePriceR1(pid);
+  return [
+    ['Price',fmtK(price(pid)),delta?`${delta>0?'▲':'▼'} ${fmtK(Math.abs(delta))} since Round 1`:'No price change'],
+    ['Average',p.avg?p.avg.toFixed(1):'—',p.gp?`${p.gp} games`:'No appearances'],
+    ['Last 3',p.l3?p.l3.toFixed(1):'—','Fantasy points'],
+    ['Break-even','—','Not supplied by current feed'],
+    ['PPM',ppm==null?'—':ppm.toFixed(2),'Points per minute'],
+    ['Ownership',`${p.own}%`,'Fantasy ownership']
+  ];
+}
+function playerChartValue(pid,row,metric){
+  if(!row.played)return null;
+  if(metric==='score')return row.pts;
+  if(metric==='price'){const value=RPRICE[pid]&&RPRICE[pid][row.r-1];return value==null?null:value*1000}
+  const mins=row.st&&row.st[STAT_KEYS.length];
+  if(metric==='minutes')return mins||null;
+  if(metric==='ppm')return mins&&row.pts!=null?row.pts/mins:null;
+  return null;
+}
+function playerChartFormat(value,metric){
+  if(value==null)return '—';
+  if(metric==='price')return fmtK(value);
+  if(metric==='ppm')return value.toFixed(2);
+  return String(Math.round(value*10)/10);
+}
+function renderPlayerChart(pid,rows){
+  const metric=S.ui.playerChartMetric||'score',values=rows.map(row=>playerChartValue(pid,row,metric));
+  const valid=values.filter(value=>value!=null),minRaw=valid.length?Math.min(...valid):0,maxRaw=valid.length?Math.max(...valid):100;
+  const pad=Math.max(5,(maxRaw-minRaw)*.18),min=Math.max(0,minRaw-pad),max=Math.max(min+1,maxRaw+pad);
+  const n=Math.max(2,rows.length),x=index=>42+index*(604/(n-1)),y=value=>218-(value-min)/(max-min)*170;
+  const segments=[];let current=[];
+  values.forEach((value,index)=>{if(value==null){if(current.length)segments.push(current);current=[]}else current.push([x(index),y(value)])});
+  if(current.length)segments.push(current);
+  const average=valid.length?valid.reduce((sum,value)=>sum+value,0)/valid.length:null;
+  let selected=+S.ui.playerSelectedRound;
+  if(!rows.some(row=>row.r===selected&&playerChartValue(pid,row,metric)!=null))selected=[...rows].reverse().find(row=>playerChartValue(pid,row,metric)!=null)?.r||null;
+  const selectedIndex=rows.findIndex(row=>row.r===selected),selectedValue=selectedIndex>=0?values[selectedIndex]:null;
+  const summary=rows.map((row,index)=>`Round ${row.r}: ${row.bye?'bye':row.played?playerChartFormat(values[index],metric):'did not play'}`).join('; ');
+  return `<div class="player-chart-card player-profile-card">
+    <div class="player-section-head"><h2>2026 Form</h2><div class="player-chart-tabs" role="group" aria-label="Chart metric">
+      ${[['score','Score'],['price','Price'],['minutes','Minutes'],['ppm','PPM']].map(([id,label])=>`<button class="player-chart-tab ${metric===id?'on':''}" aria-pressed="${metric===id}" onclick="setPlayerChartMetric('${id}')">${label}</button>`).join('')}
+    </div></div>
+    <div style="position:relative"><svg class="player-chart" viewBox="0 0 680 250" role="img" aria-labelledby="player-chart-title player-chart-desc">
+      <title id="player-chart-title">${esc(PLAYERS[pid].name)} 2026 ${metric} by round</title><desc id="player-chart-desc">${esc(summary)}</desc>
+      ${[0,.25,.5,.75,1].map(step=>`<line class="grid-line" x1="42" x2="646" y1="${218-step*170}" y2="${218-step*170}"/><text x="4" y="${221-step*170}">${playerChartFormat(min+step*(max-min),metric)}</text>`).join('')}
+      ${average==null?'':`<line class="avg-line" x1="42" x2="646" y1="${y(average)}" y2="${y(average)}"/><text x="570" y="${y(average)-5}">AVG ${playerChartFormat(average,metric)}</text>`}
+      ${segments.map(points=>`<polyline class="form-line" points="${points.map(point=>point.join(',')).join(' ')}"/>`).join('')}
+      ${rows.map((row,index)=>values[index]==null
+        ?`<text class="gap-label" x="${x(index)}" y="207" text-anchor="middle">${row.bye?'BYE':'DNP'}</text>`
+        :`<circle class="point ${row.r===selected?'selected':''}" cx="${x(index)}" cy="${y(values[index])}" r="${row.r===selected?5:3.5}" tabindex="0" role="button" aria-label="Round ${row.r}, ${playerChartFormat(values[index],metric)}" onclick="selectPlayerRound(${row.r})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectPlayerRound(${row.r})}"><title>Round ${row.r}: ${playerChartFormat(values[index],metric)}</title></circle>`).join('')}
+      ${rows.map((row,index)=>`<text x="${x(index)}" y="238" text-anchor="middle">${row.r}</text>`).join('')}
+      ${selectedValue==null?'':`<text class="chart-value" x="${x(selectedIndex)}" y="${Math.max(15,y(selectedValue)-13)}" text-anchor="middle">${playerChartFormat(selectedValue,metric)}</text>`}
+    </svg><p class="player-chart-summary">${esc(summary)}</p></div>
+  </div>`;
+}
+function renderPlayerRole(pid,rows){
+  const p=PLAYERS[pid],played=rows.filter(row=>row.played),minutes=played.map(row=>row.st&&row.st[STAT_KEYS.length]).filter(Boolean);
+  const avgMinutes=minutes.length?Math.round(minutes.reduce((a,b)=>a+b,0)/minutes.length):null;
+  const role=NAMED[pid]===2?'Interchange':p.pos.map(pos=>POSN[pos]).join(' / ');
+  return `<div class="player-role-card player-profile-card"><div class="player-section-label">Role &amp; Minutes</div><div class="player-role-main">
+    <div class="player-minutes-ring" style="--mins:${Math.min(100,(avgMinutes||0)/80*100)}%"><span>${avgMinutes??'—'}<small>AVG MIN</small></span></div>
+    <div class="player-role-list"><div class="player-role-row"><span>Games played</span><b>${played.length}</b></div><div class="player-role-row"><span>Average minutes</span><b>${avgMinutes??'—'}</b></div><div class="player-role-row"><span>Average fantasy</span><b>${p.avg?p.avg.toFixed(1):'—'}</b></div></div>
+  </div><div class="player-role-name"><span>Starting role</span><b>${esc(role)}</b></div></div>`;
+}
+function playerUpcoming(pid){
+  const p=PLAYERS[pid],out=[];
+  for(let r=MAXR+1;r<=27&&out.length<3;r++){
+    const fixture=RFIX[r];if(!fixture)continue;
+    if(fixture.byes&&fixture.byes.includes(p.sq)){out.push({r,bye:true});continue}
+    const gm=fixture.games.find(game=>game[0]===p.sq||game[1]===p.sq);if(!gm)continue;
+    const home=gm[0]===p.sq,oppId=home?gm[1]:gm[0];out.push({r,oppId,home});
+  }
+  return out;
+}
+function renderNextOpponents(pid){
+  const upcoming=playerUpcoming(pid);
+  return `<div class="player-next-card player-profile-card"><div class="player-section-label">Next Opponents</div><div class="player-opponents">${upcoming.length?upcoming.map(item=>item.bye
+    ?`<div class="player-opponent"><span class="round">Round ${item.r}</span><b>BYE</b><small>No fixture</small></div>`
+    :`<div class="player-opponent"><span class="round">Round ${item.r}</span><b>${clubDot(item.oppId)} ${CLUBS[item.oppId].s}</b><small>${item.home?'Home':'Away'}</small></div>`).join('')
+    :'<div class="player-stat-unavailable">Upcoming fixtures are not available.</div>'}</div></div>`;
+}
+function renderStatGroups(st){
+  const groups=playerStatGroups(st);
+  if(!groups.length)return '<div class="player-stat-unavailable">Detailed components are unavailable for this match. The Fantasy score is shown without substituting averages.</div>';
+  return groups.map(group=>`<section class="player-stat-group" aria-label="${group.label}"><h3>${group.label}</h3>${group.items.map(item=>`<div class="player-stat-item"><span>${item.label}</span><b>${item.value}</b></div>`).join('')}</section>`).join('');
+}
+function renderPlayerGameLog(pid,rows){
+  const p=PLAYERS[pid],display=[...rows].reverse();
+  return `<section class="player-log-card player-profile-card"><div class="player-log-head player-section-head"><h2>Game Log</h2><span class="player-section-label">Official match statistics</span></div>
+    <table class="player-game-log"><thead><tr><th>Round</th><th>Opponent</th><th>Position</th><th class="num">Minutes</th><th class="num">Fantasy points</th><th><span class="player-chart-summary">Expand</span></th></tr></thead>
+    ${display.map(row=>{const expanded=S.ui.playerExpandedRound===row.r,minutes=row.st&&row.st[STAT_KEYS.length];return `<tbody><tr class="player-game-row ${expanded?'selected':''}" onclick="openPlayerRound(${pid},${row.r})">
+      <td><b>Round ${row.r}</b></td><td>${row.bye?'BYE':`${row.home?'v':'@'} ${row.opp}`}</td><td>${row.played?POSN[p.pos[0]]:'—'}</td><td class="num">${row.played?(minutes||'—'):'—'}</td><td class="num">${row.played?`<span class="player-game-score">${row.pts}</span>`:`<span class="player-game-state">${row.bye?'BYE':'DNP'}</span>`}</td><td><button class="player-expand-button" aria-label="${expanded?'Collapse':'Expand'} Round ${row.r}" aria-expanded="${expanded}" ${row.played?'':'disabled'} onclick="event.stopPropagation();openPlayerRound(${pid},${row.r})">⌄</button></td></tr>
+      ${expanded&&row.played?`<tr class="player-game-detail"><td colspan="6"><div class="player-stat-groups">${renderStatGroups(row.st)}</div></td></tr>`:''}</tbody>`}).join('')}</table></section>`;
+}
+function renderPlayerRecent(pid,rows){
+  return `<section class="player-recent player-profile-card"><div class="player-section-label">Recent Rounds</div><div class="player-recent-strip">${[...rows].reverse().map(row=>`<button class="player-recent-round ${S.ui.playerSelectedRound===row.r?'on':''}" ${row.played?'':'disabled'} onclick="openPlayerRound(${pid},${row.r})" aria-label="${row.played?`Open Round ${row.r}, ${row.pts} Fantasy points`:`Round ${row.r}, ${row.bye?'bye':'did not play'}`}"><span>Round ${row.r}</span><b>${row.played?row.pts:row.bye?'BYE':'DNP'}</b><small>${row.played?row.opp:'—'}</small></button>`).join('')}</div></section>`;
+}
+function renderPlayerProfile(el,pid){
+  const p=PLAYERS[pid];if(!p){closePlayerProfile();return}
+  const rows=playerRoundRows(pid);
+  setPlayerShell(true,Number.isInteger(S.ui.playerRound));
+  if(Number.isInteger(S.ui.playerRound)){el.innerHTML=renderPlayerRoundScreen(pid,S.ui.playerRound,rows);return}
+  const metrics=playerProfileMetrics(pid,rows),loading=_playerProfileLoads.has(pid);
+  el.innerHTML=`<article class="player-profile" aria-labelledby="player-profile-name">
+    <header class="player-profile-top player-profile-card"><button class="player-profile-back" aria-label="Back to players" onclick="closePlayerProfile()">←</button>
+      <div class="player-profile-identity">${avatar(p,64)}<div><h1 id="player-profile-name">${esc(p.name)}</h1><div class="player-profile-meta"><span>${clubDot(p.sq)} ${CLUBS[p.sq].n}</span><span>${posStr(p)}</span><span class="player-profile-status">${playerStatus(pid)}</span>${KICKERS.has(pid)?'<span>Goal kicker</span>':''}</div></div></div>
+      <div class="player-profile-actions"><button class="player-profile-action primary watch-btn" data-wid="${pid}" aria-pressed="${isWatched(pid)}" onclick="toggleProfileWatch(${pid})">${isWatched(pid)?'★ Watching':'☆ Watch'}</button><button class="player-profile-action" onclick="openComparison(${pid})">⇔ Compare</button></div>
+    </header>
+    <div class="player-metrics">${metrics.map(([label,value,sub])=>`<div class="player-metric"><div class="player-metric-label">${label}</div><div class="player-metric-value">${value}</div><div class="player-metric-sub">${sub}</div></div>`).join('')}</div>
+    ${loading?'<p role="status" aria-live="polite" class="muted">Loading current detailed match statistics…</p>':''}
+    <div class="player-profile-grid">${renderPlayerChart(pid,rows)}<aside class="player-side-stack">${renderPlayerRole(pid,rows)}${renderNextOpponents(pid)}</aside></div>
+    ${renderPlayerRecent(pid,rows)}${renderPlayerGameLog(pid,rows)}
+  </article>`;
+}
+async function showPlayer(pid){
+  if(!PLAYERS[pid])return;
+  S.ui.playerProfilePid=pid;S.ui.playerRound=null;S.ui.playerExpandedRound=null;S.ui.playerSelectedRound=null;S.ui.playerChartMetric='score';
+  window.scrollTo({top:0,behavior:'instant'});renderPlayers();
+  const heading=$('#player-profile-name');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}
+  const missing=Array.from({length:MAXR},(_,i)=>i+1).some(r=>playedIn(pid,r)&&!(RST[pid]&&RST[pid][r]));
+  if(missing&&!_playerProfileLoads.has(pid)){
+    _playerProfileLoads.add(pid);renderPlayers();await loadDetailedStats(pid);_playerProfileLoads.delete(pid);
+    if(S.ui.playerProfilePid===pid)renderPlayers();
+  }
+}
+function closePlayerProfile(){
+  S.ui.playerProfilePid=null;S.ui.playerRound=null;S.ui.playerExpandedRound=null;setPlayerShell(false);renderPlayers();
+  requestAnimationFrame(()=>{$('#player-stats-search')?.focus()});
+}
+function toggleProfileWatch(pid){toggleWatch(pid);renderPlayers()}
+function setPlayerChartMetric(metric){S.ui.playerChartMetric=metric;renderPlayers()}
+function selectPlayerRound(round){
+  if(matchMedia('(max-width:768px)').matches&&Number.isInteger(S.ui.playerProfilePid)){openPlayerRound(S.ui.playerProfilePid,round);return}
+  S.ui.playerSelectedRound=round;renderPlayers();
+}
+function openPlayerRound(pid,round){
+  const row=playerRoundRows(pid).find(item=>item.r===round);if(!row||!row.played)return;
+  S.ui.playerSelectedRound=round;
+  if(matchMedia('(max-width:768px)').matches){S.ui.playerRound=round;S.ui.playerOpenGroups={scoring:true,running:true};renderPlayers();requestAnimationFrame(()=>$('.player-round-nav h1')?.focus())}
+  else{S.ui.playerExpandedRound=S.ui.playerExpandedRound===round?null:round;renderPlayers()}
+}
+function closePlayerRound(){S.ui.playerRound=null;window.scrollTo({top:0,behavior:'instant'});renderPlayers();requestAnimationFrame(()=>$('#player-profile-name')?.focus({preventScroll:true}))}
+function togglePlayerStatGroup(id){S.ui.playerOpenGroups=S.ui.playerOpenGroups||{};S.ui.playerOpenGroups[id]=!S.ui.playerOpenGroups[id];renderPlayers()}
+function renderPlayerRoundScreen(pid,round,rows){
+  const p=PLAYERS[pid],row=rows.find(item=>item.r===round);if(!row||!row.played){S.ui.playerRound=null;return '<p class="empty-state">This match is unavailable.</p>'}
+  const groups=playerStatGroups(row.st),minutes=row.st&&row.st[STAT_KEYS.length];
+  return `<article class="player-round-screen" aria-labelledby="player-round-title"><nav class="player-round-nav" aria-label="Round breakdown"><button aria-label="Back to player overview" onclick="closePlayerRound()">←</button><h1 id="player-round-title" tabindex="-1">Round ${round}</h1><button aria-label="Close player statistics" onclick="closePlayerProfile()">×</button></nav>
+    <section class="player-round-hero player-profile-card"><div class="player-round-opponent"><div>${row.oppId==null?'':avatar({sq:row.oppId,name:CLUBS[row.oppId].s},38)}</div><div><h2>${row.home?'Home v':'Away @'} ${row.oppId==null?'Opponent unavailable':CLUBS[row.oppId].n}</h2><p>${CLUBS[p.sq].n} · Round ${round}</p></div></div><div class="player-round-score"><b>${row.pts}</b><span>Fantasy points</span></div></section>
+    <div class="player-round-facts"><div class="player-round-fact"><span>Position</span><b>${POSN[p.pos[0]]}</b></div><div class="player-round-fact"><span>Minutes</span><b>${minutes||'—'}</b></div></div>
+    <div class="player-round-accordions">${groups.length?groups.map(group=>{const open=!!(S.ui.playerOpenGroups&&S.ui.playerOpenGroups[group.id]);return `<section class="player-round-accordion"><button aria-expanded="${open}" aria-controls="player-group-${group.id}" onclick="togglePlayerStatGroup('${group.id}')"><span>${group.label}</span><span>${open?'−':'+'}</span></button>${open?`<div class="player-round-accordion-body" id="player-group-${group.id}">${group.items.map(item=>`<div class="player-stat-item"><span>${item.label}</span><b>${item.value}</b></div>`).join('')}</div>`:''}</section>`}).join(''):'<div class="player-stat-unavailable player-profile-card" role="status">Detailed components are not available from the official feed for this match. No averages have been substituted.</div>'}</div>
+  </article>`;
+}
+document.addEventListener('keydown',event=>{
+  if(event.key!=='Escape'||!S||!Number.isInteger(S.ui.playerProfilePid)||$('#modal-bg')?.classList.contains('on'))return;
+  if(Number.isInteger(S.ui.playerRound)){event.preventDefault();closePlayerRound()}
+  else{event.preventDefault();closePlayerProfile()}
+});
+function setPlayerShell(active,round=false){
+  document.body.classList.toggle('player-profile-active',active);document.body.classList.toggle('player-round-active',active&&round);
+  const menu=$('.mobile-menu-btn'),title=$('#topbar-title');
+  if(menu){menu.setAttribute('onclick',active?(round?'closePlayerRound()':'closePlayerProfile()'):"setPage('more')");menu.setAttribute('aria-label',active?(round?'Back to player overview':'Back to players'):'Open navigation menu')}
+  if(title)title.textContent=active?'Player Stats':'Players';
+}
+
 /* ================= SETTINGS ================= */
 function renderSettings(){
   const el=$('#pg-settings');
@@ -5408,6 +5691,7 @@ function setPage(pg){
       </div>`);return;
   }
   if(pg==='cgames')pg=window._cgamesLastTab||'custom';
+  if(pg!=='players'&&typeof setPlayerShell==='function')setPlayerShell(false);
   if(['custom','draft','origin'].includes(pg))window._cgamesLastTab=pg;
   if(pg!=='match')stopMcPoll();
   S.ui.page=pg;
