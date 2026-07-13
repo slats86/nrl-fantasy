@@ -1,8 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const {
-  parseInitialPlayerId, hasSeasonStats, findSearchPlayerId, findSearchPlayerPath,
-  hasStatComponents, hasCompleteSeasonDetails, buildOfficialPayload
+  parseInitialPlayerId, hasSeasonStats, playerSlug, playerNameKey, searchQueryVariants, findSearchPlayerId, findSearchPlayerPath,
+  hasStatComponents, hasCompleteSeasonDetails, payloadMatchesPlayer, buildOfficialPayload
 } = require('../footystatistics');
 
 test('FootyStatistics profile source exposes its current internal player ID', () => {
@@ -38,7 +40,12 @@ test('FootyStatistics search safely matches nicknames, apostrophes, hyphens and 
   assert.equal(findSearchPlayerId(results, 'dallin-watene-zelezniak'), '12');
   assert.equal(findSearchPlayerId(results, 'josh-king'), '14');
   assert.equal(findSearchPlayerPath(results, 'josh-king'), '/mel/josh-king');
+  assert.equal(findSearchPlayerPath([{
+    id: 15, first_name: 'Tino', last_name: "Fa'asuamaleaui", player_path: '/gld/tino-faasuamaleaui'
+  }], {name: "Tino Fa'asuamaleaui", slug: 'tino-fa-asuamaleaui'}), '/gld/tino-faasuamaleaui');
   assert.equal(findSearchPlayerPath([{...results[4], player_path: '/mel/../admin'}], 'josh-king'), null);
+  assert.equal(playerNameKey("Tino Fa'asuamaleaui"), playerNameKey('tino-faasuamaleaui'));
+  assert.deepEqual(searchQueryVariants("Tino Fa'asuamaleaui"), ["Tino Fa'asuamaleaui", 'Tino Faasuamaleaui']);
 });
 
 test('stale 2026 records ending at Round 14 are rejected in favour of complete detail', () => {
@@ -55,8 +62,43 @@ test('stale 2026 records ending at Round 14 are rejected in favour of complete d
   assert.equal(hasCompleteSeasonDetails(stale, 2026, scores), false);
   assert.equal(hasCompleteSeasonDetails(fantasyOnlyLate, 2026, scores), false);
   assert.equal(hasCompleteSeasonDetails(resolved, 2026, scores), true);
+  assert.equal(hasCompleteSeasonDetails({stats: [detailed(18)]}, 2026, {'18': 80, '19': 0}), true);
   assert.equal(hasStatComponents({fantasy_points: 83}), false);
   assert.equal(hasStatComponents({tackles: 0, metres_gained: 0}), true);
+});
+
+test('dynamic resolution covers every club and position without player-specific mappings', () => {
+  const players = require('../public/players.json').filter(player =>
+    Object.keys(player.stats && player.stats.scores || {}).some(round => Number(round) > 14));
+  const samples = [];
+  for (const squadId of new Set(players.map(player => player.squad_id)))
+    samples.push(players.find(player => player.squad_id === squadId));
+  for (const position of [1, 2, 3, 4, 5, 6])
+    samples.push(players.find(player => player.positions.includes(position)));
+  const unique = [...new Map(samples.map(player => [player.id, player])).values()];
+  unique.forEach((player, index) => {
+    const name = player.first_name + ' ' + player.last_name;
+    const expected = {name, slug: playerSlug(name), squadId: player.squad_id, positions: player.positions};
+    const results = [
+      {id: 800000 + index, first_name: player.first_name, last_name: player.last_name,
+        squad_id: -1, positions: '99', player_path: '/bad/' + playerSlug(name)},
+      {id: 900000 + index, player_id: player.id, first_name: player.first_name, last_name: player.last_name,
+        squad_id: player.squad_id, positions: player.positions.join(','), player_path: '/club/' + playerSlug(name)}
+    ];
+    assert.equal(findSearchPlayerId(results, expected), String(900000 + index));
+  });
+  assert.equal(new Set(unique.map(player => player.squad_id)).size, 17);
+  assert.deepEqual([...new Set(unique.flatMap(player => player.positions))].sort(), [1, 2, 3, 4, 5, 6]);
+  const implementation = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8') +
+    fs.readFileSync(path.join(__dirname, '..', 'footystatistics.js'), 'utf8');
+  assert.doesNotMatch(implementation, /Valentine Holmes|Liam Henry|Jayden Campbell|500845|100007929|100001622/);
+});
+
+test('payload identity rejects another player even when rounds and scores look current', () => {
+  const expected = {name: 'Player One', slug: 'player-one', squadId: 1, positions: [4]};
+  assert.equal(payloadMatchesPlayer({player:{first_name:'Player', last_name:'One', squad_id:1, positions:'4'}}, expected), true);
+  assert.equal(payloadMatchesPlayer({player:{first_name:'Player', last_name:'Two', squad_id:1, positions:'4'}}, expected), false);
+  assert.equal(payloadMatchesPlayer({player:{first_name:'Player', last_name:'One', squad_id:2, positions:'4'}}, expected), false);
 });
 
 test('official NRL fallback preserves the resolved source ID and detailed round stats', () => {
@@ -78,4 +120,5 @@ test('official NRL fallback preserves the resolved source ID and detailed round 
   assert.equal(payload.stats[0].goals, 7);
   assert.equal(payload.stats[0].metres_gained, 175);
   assert.equal(payload.stats[0].opponent, 'Tigers');
+  assert.equal(buildOfficialPayload(player, rounds, {'18': {}}, 2026, 1627).stats.length, 0);
 });

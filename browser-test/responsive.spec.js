@@ -119,6 +119,60 @@ test('classic and custom state sync across devices', async ({browser}) => {
   await second.close();await first.close();
 });
 
+for (const width of [375, 1440]) test(`detailed statistics UI, search and filters at ${width}px`, async ({browser}) => {
+  const context=await browser.newContext({baseURL:'http://127.0.0.1:32188',viewport:{width,height:900}});
+  const page=await context.newPage();
+  await page.route('**/api/player-stats/*',route=>route.fulfill({json:{
+    current_season:new Date().getFullYear(),stats:[15,16,17,18].map(round=>({
+      year:new Date().getFullYear(),round_id:round,match_type:'nrl',fantasy_points:64,
+      tackles:31,metres_gained:176,tries:1,goals:2,time_on_ground:80
+    }))
+  }}));
+  expect((await page.request.post('/api/soo/register',{data:{
+    name:'Statistics UI',email:`stats-${width}@example.com`,password:'statistics-password-123'
+  }})).status()).toBe(201);
+  await page.goto('/');
+  const appearancePrompt=page.getByText('Choose your look');
+  if(await appearancePrompt.isVisible().catch(()=>false)){
+    await page.getByRole('button',{name:'Modern Lime'}).click();
+    await page.getByRole('button',{name:'Skip tour'}).click();
+  }
+  await page.waitForTimeout(300);
+  await page.evaluate(()=>{S.settings.onboardingVersion=1;S.settings.themeChosen=true;save();closeModal()});
+  const player=await page.evaluate(()=>{
+    const p=PLAYERS.find(item=>OFFS[item.id]&&OFFS[item.id].some((score,index)=>index>=14&&score));
+    const round=OFFS[p.id].findIndex((score,index)=>index>=14&&score)+1;
+    return {id:p.id,name:p.name,last:p.name.split(' ').pop(),club:p.sq,position:p.pos[0],round};
+  });
+
+  await page.evaluate(({id,round})=>{
+    const p=PLAYERS[id],fixture=RFIX[round];
+    S.ui.mcRound=round;
+    S.ui.mcMatch=Math.max(0,fixture.games.findIndex(game=>game[0]===p.sq||game[1]===p.sq));
+    setPage('match');
+  },player);
+  const matchRow=page.locator('#pg-match tr').filter({hasText:player.name}).first();
+  await expect(matchRow).toBeVisible();
+  await matchRow.click();
+  await expect(page.locator('#modal tr').filter({hasText:'Tackle'})).toContainText('31');
+  await expect(page.locator('#modal tr').filter({hasText:'Run Metres'})).toContainText('176');
+  await page.keyboard.press('Escape');
+
+  await page.evaluate(()=>setPage('players'));
+  await page.locator('#player-stats-search').fill(player.last);
+  await page.waitForTimeout(180);
+  await page.locator('#player-stats-search + select').selectOption(String(player.club));
+  await page.locator('#pg-players .pos-filter button').filter({hasText:new RegExp('^'+await page.evaluate(pos=>POSN[pos],player.position)+'$')}).click();
+  const profileRow=page.locator('#pg-players .pl-main-table tbody tr').filter({hasText:player.name}).first();
+  await expect(profileRow).toBeVisible();
+  await profileRow.click();
+  await expect(page.getByText('2026 game log')).toBeVisible();
+  const roundRow=page.locator('#modal .gamelog tbody tr').filter({has:page.locator('td:first-child b', {hasText:String(player.round)})}).first();
+  await expect(roundRow).toContainText('31');
+  await expect(roundRow).toContainText('176');
+  await context.close();
+});
+
 for (const width of widths) test(`responsive app shell at ${width}px`, async ({page}) => {
   await page.setViewportSize({width,height:900});
   const errors=[]; page.on('pageerror', error => errors.push(error.message));

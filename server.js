@@ -7,8 +7,8 @@ const crypto = require('crypto');
 const zlib   = require('zlib');
 const {createDatabase} = require('./db');
 const {
-  parseInitialPlayerId, hasSeasonStats, findSearchPlayerId, findSearchPlayerPath,
-  hasCompleteSeasonDetails, buildOfficialPayload
+  parseInitialPlayerId, hasSeasonStats, searchQueryVariants, searchPlayerSelection, findSearchPlayerPath,
+  hasCompleteSeasonDetails, payloadMatchesPlayer, buildOfficialPayload
 } = require('./footystatistics');
 const PORT     = process.env.PORT || 3000;
 const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
@@ -458,72 +458,78 @@ async function officialNrlPayload(playerId, sourcePlayerId, year) {
   return payload;
 }
 
-async function resolveFootyStatisticsId(playerId, slug) {
-  const cachedId = footyStatisticsIds.get(playerId);
-  if (cachedId) return cachedId;
-
-  let searchResults = null;
-  try {
-    const searchBody = await footyStatisticsGet('/api/search?q=' + encodeURIComponent(slug.replace(/-/g, ' ')), 'application/json');
-    searchResults = JSON.parse(searchBody);
-    const searchId = findSearchPlayerId(searchResults, slug);
-    if (searchId && searchId !== String(playerId)) {
-      footyStatisticsIds.set(playerId, searchId);
-      return searchId;
-    }
-  } catch (error) {
-    console.warn('[footystatistics-resolver] primary search failed:', error.message);
-  }
-
-  let profilePath = findSearchPlayerPath(searchResults, slug);
-  if (!profilePath) {
-    try {
-      const searchBody = await footyStatisticsGet('/api/players/search?q=' + encodeURIComponent(slug.replace(/-/g, ' ')), 'application/json');
-      profilePath = findSearchPlayerPath(JSON.parse(searchBody), slug);
-    } catch (error) {
-      console.warn('[footystatistics-resolver] profile search failed:', error.message);
-    }
-  }
-
-  const profilePaths = profilePath ? [profilePath] : ['/sti/' + encodeURIComponent(slug)];
-  for (const requestPath of profilePaths) {
-    try {
-      const profile = await footyStatisticsGet(requestPath, 'text/html');
+async function resolveFootyStatisticsId(player, slug) {
+  const cached = footyStatisticsIds.get(player.id);
+  if (cached) return {...cached, method: 'cache'};
+  const expected = {name: player.first_name + ' ' + player.last_name, slug, squadId: player.squad_id, positions: player.positions};
+  const failures = []; let ambiguous = false;
+  for (const searchPath of ['/api/players/search', '/api/search']) {
+    for (const query of searchQueryVariants(expected.name)) try {
+      const searchBody = await footyStatisticsGet(searchPath + '?q=' + encodeURIComponent(query), 'application/json');
+      const results = JSON.parse(searchBody);
+      const selection = searchPlayerSelection(results, expected);
+      if (!selection || !selection.player) continue;
+      if (selection.ambiguous) { ambiguous = true; continue; }
+      const searchId = String(selection.player.id || selection.player.player_id || '');
+      if (/^\d+$/.test(searchId) && searchId !== String(player.id)) {
+        const resolved = {id: searchId, resolved: true, method: 'search', ambiguous, failures};
+        footyStatisticsIds.set(player.id, resolved); return resolved;
+      }
+      const profilePath = findSearchPlayerPath(results, expected);
+      if (!profilePath) continue;
+      const profile = await footyStatisticsGet(profilePath, 'text/html');
       const profileId = parseInitialPlayerId(profile);
       if (profileId) {
-        footyStatisticsIds.set(playerId, profileId);
-        return profileId;
+        const resolved = {id: profileId, resolved: true, method: 'profile', ambiguous, failures};
+        footyStatisticsIds.set(player.id, resolved); return resolved;
       }
     } catch (error) {
-      console.warn('[footystatistics-resolver] profile failed:', error.message);
+      failures.push(searchPath + ': ' + error.message);
     }
   }
-  return null;
+  return {id: String(player.id), resolved: false, method: ambiguous ? 'ambiguous' : 'official-fallback', ambiguous, failures};
 }
 
-async function officialPlayerScores(playerId) {
+async function officialPlayer(playerId) {
   const {players} = await officialNrlData();
-  const player = players.find(item => Number(item.id) === Number(playerId));
-  return player && player.stats && player.stats.scores || null;
+  return players.find(item => Number(item.id) === Number(playerId)) || null;
 }
 
 async function proxyFootyStatistics(req, res, playerId, slug) {
   try {
     const year = new Date().getFullYear();
-    let resolvedId = slug ? await resolveFootyStatisticsId(playerId, slug) : null;
-    if (!resolvedId) resolvedId = playerId;
+    const player = await officialPlayer(playerId);
+    if (!player) throw new Error('official NRL player was not found');
+    const resolution = slug ? await resolveFootyStatisticsId(player, slug) : {
+      id: String(playerId), resolved: false, method: 'official-fallback', ambiguous: false, failures: []
+    };
+    const resolvedId = resolution.id;
     let payload = null;
+    let fallbackReason = '';
     try {
       payload = await footyStatisticsPayload(resolvedId);
     } catch (error) {
       console.warn('[footystatistics-proxy] resolved payload failed:', error.message);
+      fallbackReason = 'upstream-failure';
     }
-    const scores = await officialPlayerScores(playerId);
-    if (!hasCompleteSeasonDetails(payload, year, scores))
+    if (payload && !payloadMatchesPlayer(payload, {
+      name: player.first_name + ' ' + player.last_name, slug, squadId: player.squad_id, positions: player.positions
+    })) fallbackReason = 'identity-mismatch';
+    else if (payload && !hasCompleteSeasonDetails(payload, year, player.stats && player.stats.scores))
+      fallbackReason = 'incomplete-details';
+    if (!payload || fallbackReason)
       payload = await officialNrlPayload(playerId, resolvedId, year);
+    payload.source_player_id = Number(resolvedId);
+    payload.resolution_status = resolution.resolved ? 'resolved' : 'official-fallback';
+    payload.resolution_method = resolution.method;
     jsonRes(req, res, 200, payload, {
       'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
-      'X-FootyStatistics-Player-Id': resolvedId
+      'X-FootyStatistics-Player-Id': resolvedId,
+      'X-FootyStatistics-Resolution': payload.resolution_status,
+      'X-FootyStatistics-Resolution-Method': resolution.method,
+      'X-FootyStatistics-Ambiguous': resolution.ambiguous ? 'true' : 'false',
+      'X-Player-Stats-Source': fallbackReason ? 'official-nrl-fallback' : 'footystatistics',
+      'X-Player-Stats-Fallback-Reason': fallbackReason
     });
   } catch (error) {
     console.error('[footystatistics-proxy]', error.message);

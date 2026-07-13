@@ -16,36 +16,69 @@ function playerSlug(value) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function findSearchPlayer(results, slug) {
+function playerNameKey(value) {
+  return String(value || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[\u2018\u2019'`]/g, '').replace(/[^a-z0-9]/g, '');
+}
+
+function searchQueryVariants(value) {
+  const original = String(value || '').normalize('NFKC').trim().replace(/\s+/g, ' ');
+  return [...new Set([
+    original,
+    original.replace(/[\u2018\u2019'`]/g, ''),
+    original.replace(/[-\u2010-\u2015]/g, ' ')
+  ].map(query => query.trim().replace(/\s+/g, ' ')).filter(Boolean))];
+}
+
+function numericPositions(value) {
+  const values = Array.isArray(value) ? value : String(value || '').split(/[,/]/);
+  return values.map(Number).filter(position => Number.isInteger(position) && position > 0);
+}
+
+function searchPlayerSelection(results, expected) {
   if (!Array.isArray(results)) return null;
-  const wanted = playerSlug(slug);
+  const criteria = typeof expected === 'string' ? {slug: expected} : (expected || {});
+  const wanted = playerNameKey(criteria.name || criteria.slug);
+  const wantedPositions = numericPositions(criteria.positions);
   const matches = results.filter(player => [
     player.name,
     [player.first_name, player.last_name].filter(Boolean).join(' '),
     [player.nickname, player.last_name].filter(Boolean).join(' '),
     [player.first_name, player.nickname, player.last_name].filter(Boolean).join(' ')
-  ].some(name => playerSlug(name) === wanted));
-  matches.sort((a, b) => {
-    const aInternal = a.player_id && String(a.id) !== String(a.player_id) ? 1 : 0;
-    const bInternal = b.player_id && String(b.id) !== String(b.player_id) ? 1 : 0;
-    if (aInternal !== bInternal) return bInternal - aInternal;
-    return Number(b.active === true) - Number(a.active === true);
-  });
-  return matches[0] || null;
+  ].some(name => playerNameKey(name) === wanted)).map(player => {
+    const positions = numericPositions(player.positions || player.positions_list);
+    let score = 0;
+    if (playerNameKey(player.slug || String(player.player_path || '').split('/').pop()) === wanted) score += 4;
+    if (criteria.squadId && Number(player.squad_id) === Number(criteria.squadId)) score += 8;
+    if (wantedPositions.length && positions.some(position => wantedPositions.includes(position))) score += 3;
+    if (player.player_id && String(player.id) !== String(player.player_id)) score += 2;
+    if (player.active === true) score += 1;
+    return {player, score};
+  }).sort((a, b) => b.score - a.score);
+  if (!matches.length) return {player: null, ambiguous: false, candidates: []};
+  const top = matches.filter(match => match.score === matches[0].score);
+  const ids = new Set(top.map(match => String(match.player.id || match.player.player_id || '')));
+  return {player: top[0].player, ambiguous: ids.size > 1, candidates: matches.map(match => match.player)};
 }
 
-function findSearchPlayerId(results, slug) {
-  const match = findSearchPlayer(results, slug);
+function findSearchPlayer(results, expected) {
+  const selection = searchPlayerSelection(results, expected);
+  return selection && !selection.ambiguous ? selection.player : null;
+}
+
+function findSearchPlayerId(results, expected) {
+  const match = findSearchPlayer(results, expected);
   return match && /^\d+$/.test(String(match.id || match.player_id || ''))
     ? String(match.id || match.player_id) : null;
 }
 
-function findSearchPlayerPath(results, slug) {
-  const match = findSearchPlayer(results, slug);
+function findSearchPlayerPath(results, expected) {
+  const criteria = typeof expected === 'string' ? {slug: expected} : (expected || {});
+  const match = findSearchPlayer(results, criteria);
   const playerPath = String(match && match.player_path || '');
-  const wanted = playerSlug(slug);
+  const wanted = playerNameKey(criteria.name || criteria.slug);
   return /^\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(playerPath) &&
-    playerPath.split('/').pop() === wanted ? playerPath : null;
+    playerNameKey(playerPath.split('/').pop()) === wanted ? playerPath : null;
 }
 
 const DETAIL_FIELDS = ['tackles', 'metres_gained', 'tries', 'goals'];
@@ -56,7 +89,7 @@ function hasStatComponents(stat) {
 
 function hasCompleteSeasonDetails(payload, year, scores) {
   if (!payload || !Array.isArray(payload.stats)) return false;
-  const expectedRounds = Object.entries(scores || {}).filter(([, score]) => score !== null && score !== undefined)
+  const expectedRounds = Object.entries(scores || {}).filter(([, score]) => score !== null && score !== undefined && Number(score) !== 0)
     .map(([round]) => Number(round)).filter(Number.isFinite);
   if (!expectedRounds.length) return hasSeasonStats(payload, year);
   const currentStats = payload.stats.filter(stat => Number(stat.year) === Number(year) && stat.match_type === 'nrl');
@@ -66,8 +99,23 @@ function hasCompleteSeasonDetails(payload, year, scores) {
   });
 }
 
+function payloadMatchesPlayer(payload, expected) {
+  const player = payload && payload.player;
+  if (!player) return false;
+  const wanted = playerNameKey(expected && (expected.name || expected.slug));
+  const names = [player.name, [player.first_name, player.last_name].filter(Boolean).join(' '),
+    [player.nickname, player.last_name].filter(Boolean).join(' ')];
+  if (!names.some(name => playerNameKey(name) === wanted)) return false;
+  if (expected.squadId && player.squad_id && Number(expected.squadId) !== Number(player.squad_id)) return false;
+  const expectedPositions = numericPositions(expected.positions);
+  const actualPositions = numericPositions(player.positions);
+  return !expectedPositions.length || !actualPositions.length || actualPositions.some(position => expectedPositions.includes(position));
+}
+
 function buildOfficialPayload(player, rounds, details, year, sourcePlayerId) {
-  const stats = Object.entries(details || {}).filter(([round]) => /^\d+$/.test(round)).map(([round, values]) => {
+  const stats = Object.entries(details || {}).filter(([round, values]) => /^\d+$/.test(round) &&
+    ['T', 'TCK', 'MG', 'G'].some(field => values && values[field] !== null && values[field] !== undefined &&
+      Number.isFinite(Number(values[field])))).map(([round, values]) => {
     const roundId = Number(round);
     const roundData = (rounds || []).find(item => Number(item.id) === roundId);
     const match = roundData && (roundData.matches || []).find(item =>
@@ -119,6 +167,7 @@ function buildOfficialPayload(player, rounds, details, year, sourcePlayerId) {
 }
 
 module.exports = {
-  parseInitialPlayerId, hasSeasonStats, findSearchPlayer, findSearchPlayerId,
-  findSearchPlayerPath, hasStatComponents, hasCompleteSeasonDetails, buildOfficialPayload
+  parseInitialPlayerId, hasSeasonStats, playerSlug, playerNameKey, searchQueryVariants, numericPositions, searchPlayerSelection,
+  findSearchPlayer, findSearchPlayerId, findSearchPlayerPath, hasStatComponents,
+  hasCompleteSeasonDetails, payloadMatchesPlayer, buildOfficialPayload
 };
