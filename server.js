@@ -6,7 +6,7 @@ const path   = require('path');
 const crypto = require('crypto');
 const zlib   = require('zlib');
 const {createDatabase} = require('./db');
-const {parseInitialPlayerId, hasSeasonStats, findSearchPlayerId} = require('./footystatistics');
+const {parseInitialPlayerId, hasSeasonStats, findSearchPlayerId, buildOfficialPayload} = require('./footystatistics');
 const PORT     = process.env.PORT || 3000;
 const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
 const FROM_EMAIL = process.env.FROM_EMAIL || 'NRL Fantasy <noreply@the-squad.com.au>';
@@ -383,8 +383,11 @@ function footyStatisticsGet(requestPath, accept) {
       });
       upstream.on('end', () => {
         const body = Buffer.concat(chunks).toString('utf8');
-        if (upstream.statusCode < 200 || upstream.statusCode >= 300)
-          return reject(new Error('upstream returned ' + upstream.statusCode));
+        if (upstream.statusCode < 200 || upstream.statusCode >= 300) {
+          const error = new Error('upstream returned ' + upstream.statusCode);
+          error.statusCode = upstream.statusCode;
+          return reject(error);
+        }
         resolve(body);
       });
       upstream.on('error', reject);
@@ -400,14 +403,76 @@ async function footyStatisticsPayload(playerId) {
   return JSON.parse(body);
 }
 
+let officialNrlDataPromise = null;
+function officialNrlData() {
+  if (!officialNrlDataPromise) {
+    officialNrlDataPromise = Promise.all([
+      fs.promises.readFile(path.join(__dirname, 'public/players.json'), 'utf8'),
+      fs.promises.readFile(path.join(__dirname, 'public/rounds.json'), 'utf8')
+    ]).then(([players, rounds]) => ({players: JSON.parse(players), rounds: JSON.parse(rounds)}))
+      .catch(error => { officialNrlDataPromise = null; throw error; });
+  }
+  return officialNrlDataPromise;
+}
+
+function officialNrlPlayerDetails(playerId) {
+  return new Promise((resolve, reject) => {
+    const upstreamReq = https.request({
+      hostname: 'fantasy.nrl.com', path: '/data/nrl/stats/players/' + encodeURIComponent(playerId) + '.json',
+      method: 'GET', headers: {'User-Agent': 'NRL-Fantasy-The-Squad/1.0', 'Accept': 'application/json', 'Accept-Encoding': 'identity'}
+    }, upstream => {
+      const chunks = []; let size = 0;
+      upstream.on('data', chunk => {
+        size += chunk.length;
+        if (size > 3 * 1024 * 1024) return upstream.destroy(new Error('official NRL response too large'));
+        chunks.push(chunk);
+      });
+      upstream.on('end', () => {
+        if (upstream.statusCode < 200 || upstream.statusCode >= 300)
+          return reject(new Error('official NRL upstream returned ' + upstream.statusCode));
+        try {
+          let body = Buffer.concat(chunks);
+          const encoding = String(upstream.headers['content-encoding'] || '').toLowerCase();
+          if (encoding === 'gzip') body = zlib.gunzipSync(body);
+          else if (encoding === 'br') body = zlib.brotliDecompressSync(body);
+          resolve(JSON.parse(body.toString('utf8')));
+        } catch (error) { reject(error); }
+      });
+      upstream.on('error', reject);
+    });
+    upstreamReq.on('error', reject);
+    upstreamReq.setTimeout(10000, () => upstreamReq.destroy(new Error('official NRL upstream timeout')));
+    upstreamReq.end();
+  });
+}
+
+async function officialNrlPayload(playerId, sourcePlayerId, year) {
+  const [{players, rounds}, details] = await Promise.all([officialNrlData(), officialNrlPlayerDetails(playerId)]);
+  const player = players.find(item => Number(item.id) === Number(playerId));
+  if (!player) throw new Error('official NRL player was not found');
+  const payload = buildOfficialPayload(player, rounds, details, year, sourcePlayerId);
+  if (!hasSeasonStats(payload, year)) throw new Error('official NRL current season statistics were not found');
+  return payload;
+}
+
 async function proxyFootyStatistics(req, res, playerId, slug) {
   try {
     const year = new Date().getFullYear();
     let resolvedId = footyStatisticsIds.get(playerId) || playerId;
-    let payload = await footyStatisticsPayload(resolvedId);
-    if (!hasSeasonStats(payload, year) && slug) {
-      const searchBody = await footyStatisticsGet('/api/search?q=' + encodeURIComponent(slug.replace(/-/g, ' ')), 'application/json');
-      let profileId = findSearchPlayerId(JSON.parse(searchBody), slug);
+    let payload = null;
+    try {
+      payload = await footyStatisticsPayload(resolvedId);
+    } catch (error) {
+      if (!slug || error.statusCode !== 404) throw error;
+    }
+    if ((!payload || !hasSeasonStats(payload, year)) && slug) {
+      let profileId = null;
+      try {
+        const searchBody = await footyStatisticsGet('/api/search?q=' + encodeURIComponent(slug.replace(/-/g, ' ')), 'application/json');
+        profileId = findSearchPlayerId(JSON.parse(searchBody), slug);
+      } catch (error) {
+        if (error.statusCode !== 404) throw error;
+      }
       if (!profileId) {
         const profile = await footyStatisticsGet('/sti/' + encodeURIComponent(slug), 'text/html');
         profileId = parseInitialPlayerId(profile);
@@ -415,10 +480,13 @@ async function proxyFootyStatistics(req, res, playerId, slug) {
       if (!profileId) throw new Error('current player ID was not found');
       resolvedId = profileId;
       payload = await footyStatisticsPayload(resolvedId);
-      if (!hasSeasonStats(payload, year)) throw new Error('current season statistics were not found');
+      if (!hasSeasonStats(payload, year)) payload = await officialNrlPayload(playerId, resolvedId, year);
       footyStatisticsIds.set(playerId, resolvedId);
     }
-    jsonRes(req, res, 200, payload, {'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600'});
+    jsonRes(req, res, 200, payload, {
+      'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+      'X-FootyStatistics-Player-Id': resolvedId
+    });
   } catch (error) {
     console.error('[footystatistics-proxy]', error.message);
     jsonRes(req, res, 502, {error: 'Detailed player statistics are temporarily unavailable', requestId: req.id || null});
