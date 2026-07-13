@@ -36,6 +36,12 @@
 - Fifteen-minute production health, PostgreSQL readiness, and application-shell monitoring
 - Structured request-error boundaries with traceable 500 responses and crash-regression coverage
 - Weekly npm and GitHub Actions dependency updates, production vulnerability auditing, and sensitive-file ownership
+- Multi-session accounts with per-device logout and password-reset revocation across every session
+- Versioned app-state and State of Origin team writes with transactional stale-write rejection
+- Server-side completed-game pick locks and constrained State of Origin pick payloads
+- Visible, retryable cloud-save interruption handling
+- All-player dynamic FootyStatistics resolution audit with identity, round, and component validation
+- Complete account-lifecycle, concurrent-device, internal-link, contrast, and browser-console regression coverage
 
 ## PostgreSQL cutover
 
@@ -78,6 +84,8 @@ Ongoing operations:
 
 ## Responsive browser automation
 
-`npm run test:browser` covers authenticated registration/login state, logout, cross-device game-state synchronisation, league creation/joining, Custom-versus-Classic team isolation, reload persistence, pick updates, owner removal controls, score administration, accessibility landmarks, console errors, navigation, and horizontal overflow at 320, 375, 390, 768, 1024, 1440, and 1920 pixels.
+`npm run test:browser` covers authenticated registration/login/reset/deletion, per-device logout, cross-device game-state synchronisation and stale-write detection, league creation/joining, Custom-versus-Classic team isolation, complete team-builder actions, locked picks, owner controls, score administration, live refresh, recoverable failures, internal links, theme contrast, touch targets, accessibility landmarks, console errors, navigation, and horizontal overflow at 320, 375, 390, 768, 1024, 1440, and 1920 pixels.
+
+`npm run audit:player-stats` audits every application player with source-provided post-Round-14 appearances and writes JSON and Markdown evidence. `npm run smoke:player-ui` verifies real Match Centre and profile detail for the named regression players on desktop and mobile with a disposable account.
 
 The suite passed in the Linux test workspace after Chromium dependencies were installed. Password-reset delivery, rendering, and the reset/login flow were also verified against production.
