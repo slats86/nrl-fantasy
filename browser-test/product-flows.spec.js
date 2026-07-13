@@ -66,8 +66,11 @@ test('registration, invalid login, password reset, persistent session and accoun
   await expect(page.locator('#soo-auth-err')).toContainText(/reset link is on its way/i);
   let capture;
   await expect.poll(async()=>{
-    try{capture=JSON.parse(await fs.readFile(captureFile,'utf8'));return capture.to;}catch{return '';}
-  }).toBe(email);
+    try{
+      capture=JSON.parse(await fs.readFile(captureFile,'utf8'));
+      return capture.to===email&&/resetToken=[a-f0-9]+/i.test(capture.html||'')?'reset-ready':'';
+    }catch{return '';}
+  }).toBe('reset-ready');
   const token=(capture.html.match(/resetToken=([a-f0-9]+)/i)||[])[1];
   expect(token).toBeTruthy();
   await page.goto(`/?resetToken=${token}`);

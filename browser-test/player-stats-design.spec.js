@@ -75,6 +75,9 @@ for(const width of [375,1440])test(`approved Player Stats visual at ${width}px`,
   const {context,page,errors}=await openAccount(browser,width,`visual-${width}`);
   await page.evaluate(()=>{const p=PLAYERS.find(item=>item.name==='Jayden Campbell')||PLAYERS[0];setPage('players');showPlayer(p.id)});
   await expect(page.locator('.player-profile')).toBeVisible();
+  // Host system-ui fallbacks rasterize differently between developer and CI
+  // images. Keep the visual assertion strict by pinning only this capture.
+  await page.addStyleTag({content:'*,*::before,*::after{font-family:Arial,sans-serif!important}'});
   await expect(page).toHaveScreenshot(`player-stats-approved-${width}.png`,{animations:'disabled',caret:'hide',maxDiffPixelRatio:.012});
   expect(errors).toEqual([]);await context.close();
 });

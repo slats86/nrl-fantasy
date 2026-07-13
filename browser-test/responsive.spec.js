@@ -1,6 +1,10 @@
 'use strict';
 const {test, expect} = require('@playwright/test');
 const widths = [320, 375, 390, 768, 1024, 1440, 1920];
+async function flushCloudSave(page){
+  await page.waitForTimeout(950);
+  await page.evaluate(()=>_cloudSaveChain);
+}
 
 test('authenticated account, league, picks, owner and score flows', async ({browser}) => {
   const owner = await browser.newContext({baseURL:'http://127.0.0.1:32188'});
@@ -131,7 +135,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     S.customLeague={name:'Synced Custom',cap:S.settings.cap,tradesPerRound:2,seasonTrades:30,team:{squad:[],line:emptyLine(),bank:S.settings.cap,history:{},startRound:S.round,tradesRound:0,tradesSeason:0}};
     save();
   });
-  await page.waitForTimeout(1300);
+  await flushCloudSave(page);
   const second=await browser.newContext({baseURL:'http://127.0.0.1:32188'}),phone=await second.newPage();
   expect((await phone.request.post('/api/soo/login',{data:{email:'sync@example.com',password:'sync-password-123'}})).status()).toBe(200);
   await phone.goto('/');await phone.waitForLoadState('domcontentloaded');await phone.waitForTimeout(300);
@@ -144,7 +148,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     S.customLeague.team.squad=[customPid];S.customLeague.team.line=emptyLine();S.customLeague.team.line.starters[1][0]=customPid;
     save();
   });
-  await phone.waitForTimeout(1300);
+  await flushCloudSave(phone);
   await page.reload();await page.waitForLoadState('domcontentloaded');await page.waitForTimeout(450);
   const reverseSynced=await page.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague.team.squad.slice()}));
   expect(reverseSynced.classic).toHaveLength(1);expect(reverseSynced.custom).toHaveLength(1);
@@ -155,7 +159,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     phone.evaluate(()=>{S.watchlist=[1];save()}),
     page.evaluate(()=>{S.watchlist=[2];save()})
   ]);
-  await Promise.all([phone.waitForTimeout(1500),page.waitForTimeout(1500)]);
+  await Promise.all([flushCloudSave(phone),flushCloudSave(page)]);
   const conflicts=(await Promise.all([phone.getByText('Newer changes found').isVisible().catch(()=>false),page.getByText('Newer changes found').isVisible().catch(()=>false)])).filter(Boolean).length;
   expect(conflicts).toBe(1);
   await phone.request.post('/api/soo/logout');
