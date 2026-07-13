@@ -1,7 +1,7 @@
 # Product test report
 
 Date: 13 July 2026
-Branch: `agent/round19-live-data-pipeline`
+Branches: `agent/round19-live-data-pipeline` plus production-verification follow-ups
 
 ## Round 19 live-data incident (13 July 2026)
 
@@ -31,7 +31,15 @@ The focused audit checked all seven fixtures and the top scorer from every parti
 
 The real local application endpoint returned Round 19 complete with final scores `6-32`, `0-66`, `16-40`, `28-12`, `26-24`, `18-19`, and `22-18`. `/api/player-stats/502490?slug=nicholas-hynes` resolved Nicholas Hynes dynamically to FootyStatistics ID 1606 and returned the official Round 19 fallback with the same 107-point detailed components above.
 
-Production verification will be appended after CI, merge and Railway deployment; no production user, league or team data is used for this read-only verification.
+### Exact production verification
+
+PRs #53, #54 and #55 passed the protected `test` check and merged as `792e4d6`, `1d77c21` and `f86fd97`. Railway served the final application with a reset process uptime, `/health` returning `{ok:true}`, and `/ready` returning `{ok:true,storage:"postgresql"}`. Railway's edge briefly returned its fallback 502 during each handover; the new instances became healthy within the next probe. Application readiness was green after handover, but completely interruption-free Railway edge routing remains platform-dependent.
+
+The repaired data workflow was then dispatched on `f86fd97`. It found a genuine upstream player correction, created/updated the single bot PR #56, ran CI for exact bot commit `998ec16`, published the required `test` status, merged normally as `ec3ccf1`, and closed obsolete PR #22. This proves the changed-data, protected-CI and automatic-merge path; it did not silently report success while leaving a stale PR.
+
+Final production data verification found Round 19 `complete`, lifted at `2026-07-13T11:19:14+10:00`, with all matches final at `6-32`, `0-66`, `16-40`, `28-12`, `26-24`, `18-19` and `22-18`. `HEAD /api/rounds` returned 200 with an ETag, `no-cache, max-age=0, must-revalidate`, `X-NRL-Data-Stale: false`, and live memory/upstream source metadata.
+
+Production detailed-stat samples agreed with the official component audit: Nicholas Hynes resolved dynamically to internal ID 1606 and returned 107 points, 17 tackles, 83 metres, two tries and 11 goals; Zac Hosking resolved to 1624 and returned 83 points, 28 tackles, 124 metres and three tries; Haumole Olakau'atu resolved to 1656 and returned 62 points, 26 tackles, 145 metres and one try. The read-only UI verifier used browser-local authentication interception (no production account or writes), waited for passive startup refresh, and passed Round 19 finals plus the Hynes detail modal at 1440×900 and 390×844 with no browser errors or horizontal overflow.
 
 The first post-deploy cache-header probe found `HEAD /api/rounds` returning 404 because the new live routes admitted only GET. GET data and health were correct, but this cache-validation regression was fixed immediately by admitting GET and HEAD and adding an empty-body/ETag/cache-header server test before final production sign-off.
 
@@ -113,7 +121,7 @@ Match Centre modals and Player profile game logs passed for all three players on
 - `npm run audit:player-stats`
 - `npm run smoke:player-ui -- --base-url=http://127.0.0.1:32290`
 
-Round 19 gate results: 34 core/unit/API tests passed with one PostgreSQL test skipped by the generic command; the isolated PostgreSQL invocation passed 1/1; the complete Playwright suite passed 15/15 across 320, 375, 390, 768, 1024, 1440 and 1920 pixel coverage; the read-only real-feed Round 19 UI smoke passed at 1440 and 390 pixels with no browser errors.
+Round 19 gate results: 35 core/unit/API tests passed with one PostgreSQL test skipped by the generic command; the isolated PostgreSQL invocation passed 1/1; the complete Playwright suite passed 15/15 across 320, 375, 390, 768, 1024, 1440 and 1920 pixel coverage; the read-only real-feed Round 19 UI smoke passed at 1440 and 390 pixels with no browser errors.
 
 ## Remaining risks and manual checks
 
@@ -121,4 +129,4 @@ Round 19 gate results: 34 core/unit/API tests passed with one PostgreSQL test sk
 - Password-reset content and the full UI flow are tested through a permission-restricted test capture. Actual Resend inbox delivery is an external-service smoke and must not expose the reset link in logs.
 - FootyStatistics and NRL feeds are external, mutable services. The resolver caches successful identity mappings in-process and rejects incomplete identity/detail payloads, but continued scheduled audit/monitoring is required.
 - Draft is intentionally a local AI sandbox. Networked multiplayer Draft is not advertised or represented as implemented.
-- Production verification is restricted to read-only health/data checks and disposable accounts removed through the normal account-deletion route.
+- Production verification is restricted to read-only health/data checks and browser-local authentication interception; it creates or modifies no production account, league, team or database data.
