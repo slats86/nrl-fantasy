@@ -5546,7 +5546,9 @@ async function bootstrapAuth(){
     if(r.ok){const d=await r.json();S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};save();await syncCloudState();}
     else if(S.sooAuth){S.sooAuth=null;save();}
   }catch(e){console.warn('Session check failed',e);}
-  showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));setTimeout(maybeShowOnboarding,150);
+  showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));
+  autoRefresh();/* start controlled live polling without a user action */
+  setTimeout(maybeShowOnboarding,150);
 }
 bootstrapAuth();
 </script>

@@ -257,6 +257,8 @@ test('Match Centre advances generically, refreshes live scores/components, pause
   await page.route('**/api/player-stats/*',route=>route.fulfill({json:{stats:[{year:2026,match_type:'nrl',round_id:19,
     fantasy_points:61,tackles:17,metres_gained:123,tries:1,goals:2,time_on_ground:80}]}}));
   await page.goto('/');await finishOnboarding(page);await page.evaluate(()=>_refreshInFlight);
+  expect(playerRequests).toBeGreaterThan(0);expect(roundRequests).toBeGreaterThan(0);
+  expect(await page.evaluate(()=>({round:LIVE.round,status:LIVE.status,score:LIVE.scores[0]}))).toEqual({round:19,status:'live',score:61});
   playerRequests=0;roundRequests=0;
   await page.evaluate(()=>Promise.all([autoRefresh(),autoRefresh(),autoRefresh()]));
   expect({playerRequests,roundRequests}).toEqual({playerRequests:1,roundRequests:1});
