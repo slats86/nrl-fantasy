@@ -16,16 +16,54 @@ function playerSlug(value) {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-function findSearchPlayerId(results, slug) {
+function findSearchPlayer(results, slug) {
   if (!Array.isArray(results)) return null;
   const wanted = playerSlug(slug);
-  const match = results.find(player => {
-    const fullName = [player.first_name, player.nickname, player.last_name].filter(Boolean).join(' ');
-    const regularName = [player.first_name, player.last_name].filter(Boolean).join(' ');
-    return playerSlug(fullName) === wanted || playerSlug(regularName) === wanted;
+  const matches = results.filter(player => [
+    player.name,
+    [player.first_name, player.last_name].filter(Boolean).join(' '),
+    [player.nickname, player.last_name].filter(Boolean).join(' '),
+    [player.first_name, player.nickname, player.last_name].filter(Boolean).join(' ')
+  ].some(name => playerSlug(name) === wanted));
+  matches.sort((a, b) => {
+    const aInternal = a.player_id && String(a.id) !== String(a.player_id) ? 1 : 0;
+    const bInternal = b.player_id && String(b.id) !== String(b.player_id) ? 1 : 0;
+    if (aInternal !== bInternal) return bInternal - aInternal;
+    return Number(b.active === true) - Number(a.active === true);
   });
+  return matches[0] || null;
+}
+
+function findSearchPlayerId(results, slug) {
+  const match = findSearchPlayer(results, slug);
   return match && /^\d+$/.test(String(match.id || match.player_id || ''))
     ? String(match.id || match.player_id) : null;
+}
+
+function findSearchPlayerPath(results, slug) {
+  const match = findSearchPlayer(results, slug);
+  const playerPath = String(match && match.player_path || '');
+  const wanted = playerSlug(slug);
+  return /^\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(playerPath) &&
+    playerPath.split('/').pop() === wanted ? playerPath : null;
+}
+
+const DETAIL_FIELDS = ['tackles', 'metres_gained', 'tries', 'goals'];
+function hasStatComponents(stat) {
+  return DETAIL_FIELDS.some(field => stat && stat[field] !== null && stat[field] !== '' &&
+    Number.isFinite(Number(stat[field])));
+}
+
+function hasCompleteSeasonDetails(payload, year, scores) {
+  if (!payload || !Array.isArray(payload.stats)) return false;
+  const expectedRounds = Object.entries(scores || {}).filter(([, score]) => score !== null && score !== undefined)
+    .map(([round]) => Number(round)).filter(Number.isFinite);
+  if (!expectedRounds.length) return hasSeasonStats(payload, year);
+  const currentStats = payload.stats.filter(stat => Number(stat.year) === Number(year) && stat.match_type === 'nrl');
+  return expectedRounds.every(round => {
+    const stat = currentStats.find(item => Number(item.round_id) === round);
+    return hasStatComponents(stat);
+  });
 }
 
 function buildOfficialPayload(player, rounds, details, year, sourcePlayerId) {
@@ -80,4 +118,7 @@ function buildOfficialPayload(player, rounds, details, year, sourcePlayerId) {
   };
 }
 
-module.exports = {parseInitialPlayerId, hasSeasonStats, findSearchPlayerId, buildOfficialPayload};
+module.exports = {
+  parseInitialPlayerId, hasSeasonStats, findSearchPlayer, findSearchPlayerId,
+  findSearchPlayerPath, hasStatComponents, hasCompleteSeasonDetails, buildOfficialPayload
+};
