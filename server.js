@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const zlib   = require('zlib');
 const {createDatabase} = require('./db');
 const {validateFeed} = require('./live-data');
+const {freshness: teamNewsFreshness} = require('./lib/team-news');
 const {
   parseInitialPlayerId, hasSeasonStats, searchQueryVariants, searchPlayerSelection, findSearchPlayerPath,
   hasCompleteSeasonDetails, payloadMatchesPlayer, buildOfficialPayload
@@ -287,11 +288,11 @@ function changesLockedPicks(current, proposed) {
   return [...LOCKED_SOO_GAMES].some(game => JSON.stringify(current && current[game] || {}) !== JSON.stringify(proposed && proposed[game] || {}));
 }
 
-const APP_STATE_KEYS = new Set(['classic','customLeague','league','draft','settings','watchlist','corrections','origin','priceHistory','round','season']);
+const APP_STATE_KEYS = new Set(['classic','customLeague','league','draft','settings','watchlist','teamNewsPrefs','corrections','origin','priceHistory','round','season']);
 function cleanAppState(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const clean = {};
-  const records = new Set(['classic','customLeague','league','draft','settings','corrections','origin','priceHistory','season']);
+  const records = new Set(['classic','customLeague','league','draft','settings','teamNewsPrefs','corrections','origin','priceHistory','season']);
   for (const [key, item] of Object.entries(value)) {
     if (!APP_STATE_KEYS.has(key)) continue;
     if (key === 'watchlist') {
@@ -488,6 +489,18 @@ async function serveOfficialFeed(req, res, fileName) {
     'X-NRL-Data-Age': String(Math.max(0, Math.floor((Date.now() - feed.fetchedAt) / 1000))),
     'X-NRL-Data-Stale': feed.stale ? 'true' : 'false',
     ...(feed.stale ? {'Warning': '110 - "Response is stale"'} : {})
+  });
+}
+
+function serveTeamNews(req,res){
+  fs.readFile(path.join(__dirname,'public','team-news.json'),(error,buffer)=>{
+    if(error)return jsonRes(req,res,503,{error:'Team News is temporarily unavailable',freshness:'source-unavailable'});
+    try{
+      const data=JSON.parse(buffer.toString('utf8'));data.freshness=teamNewsFreshness(data.checkedAt,data.sourceAvailable!==false);
+      const body=Buffer.from(JSON.stringify(data)),headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-cache, max-age=0, must-revalidate','ETag':contentEtag(body),'X-Team-News-Freshness':data.freshness};
+      if(req.method==='HEAD'){res.writeHead(200,Object.assign({},securityHeaders(headers['Content-Type']),headers));res.end();return}
+      compressedRes(req,res,200,body,headers);
+    }catch(parseError){jsonRes(req,res,503,{error:'Team News snapshot is invalid',freshness:'source-unavailable'})}
   });
 }
 
@@ -746,6 +759,7 @@ async function handleRequest(req, res) {
     return serveOfficialFeed(req, res, 'players').catch(error => requestError(req, res, error));
   if (url === '/api/rounds' && (req.method === 'GET' || req.method === 'HEAD'))
     return serveOfficialFeed(req, res, 'rounds').catch(error => requestError(req, res, error));
+  if (url === '/api/team-news' && (req.method === 'GET' || req.method === 'HEAD')) return serveTeamNews(req,res);
   const playerStats = url.match(/^\/api\/player-stats\/(\d+)$/);
   if (playerStats && req.method === 'GET') {
     const requested = new URL(req.url, 'http://localhost');
