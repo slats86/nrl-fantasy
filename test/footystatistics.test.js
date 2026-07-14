@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   parseInitialPlayerId, hasSeasonStats, playerSlug, playerNameKey, searchQueryVariants, findSearchPlayerId, findSearchPlayerPath,
-  hasStatComponents, hasCompleteSeasonDetails, payloadMatchesPlayer, buildOfficialPayload
+  hasStatComponents, hasCompleteSeasonDetails, payloadMatchesPlayer, mergeHistoricalPlayerStats, buildOfficialPayload
 } = require('../footystatistics');
 
 test('FootyStatistics profile source exposes its current internal player ID', () => {
@@ -121,4 +121,20 @@ test('official NRL fallback preserves the resolved source ID and detailed round 
   assert.equal(payload.stats[0].metres_gained, 175);
   assert.equal(payload.stats[0].opponent, 'Tigers');
   assert.equal(buildOfficialPayload(player, rounds, {'18': {}}, 2026, 1627).stats.length, 0);
+});
+
+test('official current stats retain verified historical games and round context', () => {
+  const current = {current_season: 2026, stats: [
+    {year: 2026, round_id: 18, match_id: 118, match_type: 'nrl', fantasy_points: 80, tackles: 12}
+  ]};
+  const resolved = {current_season: 2025, stats: [
+    {year: 2026, round_id: 14, match_id: 114, match_type: 'nrl', fantasy_points: 30},
+    {year: 2025, round_id: 27, match_id: 127, match_type: 'nrl', position_match: 'Halfback', number: '7', fantasy_points: 74},
+    {year: 2025, round_id: 26, match_id: 126, match_type: 'nrl', position_match: 'Fullback', number: '14', fantasy_points: 58}
+  ], round_strip: [{round: 26, played: true}, {round: 27, played: true}]};
+  const merged = mergeHistoricalPlayerStats(current, resolved, 2026);
+  assert.deepEqual(merged.stats.map(row => [row.year, row.round_id]), [[2026, 18], [2025, 27], [2025, 26]]);
+  assert.equal(merged.stats.some(row => row.year === 2026 && row.round_id === 14), false);
+  assert.equal(merged.stats.find(row => row.round_id === 27).position_match, 'Halfback');
+  assert.deepEqual(merged.round_strips[2025], resolved.round_strip);
 });

@@ -10,7 +10,7 @@ const {validateFeed} = require('./live-data');
 const {freshness: teamNewsFreshness} = require('./lib/team-news');
 const {
   parseInitialPlayerId, hasSeasonStats, searchQueryVariants, searchPlayerSelection, findSearchPlayerPath,
-  hasCompleteSeasonDetails, payloadMatchesPlayer, buildOfficialPayload
+  hasCompleteSeasonDetails, payloadMatchesPlayer, mergeHistoricalPlayerStats, buildOfficialPayload
 } = require('./footystatistics');
 const PORT     = process.env.PORT || 3000;
 const APP_URL  = (process.env.APP_URL || 'https://nrl.the-squad.com.au').replace(/\/$/, '');
@@ -696,21 +696,24 @@ async function proxyFootyStatistics(req, res, playerId, slug) {
       id: String(playerId), resolved: false, method: 'official-fallback', ambiguous: false, failures: []
     };
     const resolvedId = resolution.id;
-    let payload = null;
+    let payload = null, resolvedPayload = null;
     let fallbackReason = '';
     try {
       payload = await footyStatisticsPayload(resolvedId);
+      resolvedPayload = payload;
     } catch (error) {
       console.warn('[footystatistics-proxy] resolved payload failed:', error.message);
       fallbackReason = 'upstream-failure';
     }
     if (payload && !payloadMatchesPlayer(payload, {
       name: player.first_name + ' ' + player.last_name, slug, squadId: player.squad_id, positions: player.positions
-    })) fallbackReason = 'identity-mismatch';
+    })) { fallbackReason = 'identity-mismatch'; resolvedPayload = null; }
     else if (payload && !hasCompleteSeasonDetails(payload, year, player.stats && player.stats.scores))
       fallbackReason = 'incomplete-details';
-    if (!payload || fallbackReason)
-      payload = await officialNrlPayload(playerId, resolvedId, year);
+    if (!payload || fallbackReason) {
+      const officialPayload = await officialNrlPayload(playerId, resolvedId, year);
+      payload = mergeHistoricalPlayerStats(officialPayload, resolvedPayload, year);
+    } else payload = mergeHistoricalPlayerStats(payload, payload, year);
     payload.source_player_id = Number(resolvedId);
     payload.resolution_status = resolution.resolved ? 'resolved' : 'official-fallback';
     payload.resolution_method = resolution.method;

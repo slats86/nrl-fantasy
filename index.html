@@ -2291,6 +2291,7 @@ function renderDraft(){
 }
 function draftLandingHTML(){
   const flow=S.ui.draftFlow||'';
+  const form=S.ui.draftForm||{};
   return `<div style="max-width:520px;margin:0 auto">
   <div class="card" style="text-align:center;padding:28px 20px;margin-bottom:14px">
    <div class="home-kicker" style="margin-bottom:6px">Build your competition</div>
@@ -2305,12 +2306,12 @@ function draftLandingHTML(){
   <div class="card">
    <h3>Create a league</h3>
    <div class="settings-grid" style="margin-bottom:14px">
-    <div class="set-item"><label>League name</label><input id="dr-lgname" placeholder="e.g. The Friday Night Comp" value="The Friday Night Comp"></div>
-    <div class="set-item"><label>Your team name</label><input id="dr-name" value="My Team"></div>
+    <div class="set-item"><label>League name</label><input id="dr-lgname" placeholder="e.g. The Friday Night Comp" value="${esc(form.leagueName||'The Friday Night Comp')}" oninput="S.ui.draftForm=S.ui.draftForm||{};S.ui.draftForm.leagueName=this.value"></div>
+    <div class="set-item"><label>Your team name</label><input id="dr-name" value="${esc(form.teamName||'My Team')}" oninput="S.ui.draftForm=S.ui.draftForm||{};S.ui.draftForm.teamName=this.value"></div>
     <div class="set-item"><label>League size</label>
-     <select id="dr-size">${[4,6,8,10,12].map(n=>`<option ${n===8?'selected':''}>${n}</option>`).join('')}</select></div>
+     <select id="dr-size" onchange="S.ui.draftForm=S.ui.draftForm||{};S.ui.draftForm.size=this.value">${[4,6,8,10,12].map(n=>`<option ${n===+(form.size||8)?'selected':''}>${n}</option>`).join('')}</select></div>
     <div class="set-item"><label>Your draft pick position</label>
-     <select id="dr-pick"><option value="-1">Random</option>${[...Array(12).keys()].map(i=>`<option value="${i}">${i+1}</option>`).join('')}</select></div>
+     <select id="dr-pick" onchange="S.ui.draftForm=S.ui.draftForm||{};S.ui.draftForm.pick=this.value"><option value="-1" ${form.pick==null||+form.pick===-1?'selected':''}>Random</option>${[...Array(12).keys()].map(i=>`<option value="${i}" ${+form.pick===i?'selected':''}>${i+1}</option>`).join('')}</select></div>
    </div>
    <button class="btn" onclick="createDraftLeague()">Create local draft</button>
   </div>`:flow==='join'?`
@@ -2340,7 +2341,7 @@ function createDraftLeague(){
   participants[myPick]={name:myName,isMe:true,isAI:false};
   S.draft={phase:'lobby',league:{code:genLeagueCode(),name:lgName,size,draftDate:null,participants,isOwner:true,allowAI:true,localOnly:true},
     size,me:myPick,teams:null,pickNo:0,done:false,log:[],history:{}};
-  S.ui.draftFlow=null;S.ui.draftLobbyTab='overview';
+  S.ui.draftFlow=null;S.ui.draftForm=null;S.ui.draftLobbyTab='overview';
   save();renderDraft();
 }
 function joinDraftLeague(){
@@ -3201,13 +3202,15 @@ async function loadDetailedStats(pid){
     const response=await refreshFetch('/api/player-stats/'+FEEDIDS[pid]+'?slug='+encodeURIComponent(slug));
     const payload=response;
     if(!Array.isArray(payload.stats))return 0;
+    cachePlayerGameHistory(pid,payload);
     const games=payload.stats.filter(x=>+x.year===new Date().getFullYear()&&x.match_type==='nrl');
     if(!RST[pid])RST[pid]={};
     S.dataPatch=S.dataPatch||{};S.dataPatch.st=S.dataPatch.st||{};
     S.dataPatch.stFetched=S.dataPatch.stFetched||{};
     S.dataPatch.st[pid]=S.dataPatch.st[pid]||{};
     games.forEach(game=>{
-      const st=STAT_KEYS.concat(['TOG']).map(k=>+(game[FOOTY_STAT_FIELDS[k]]||0));
+      const st=playerPayloadStatArray(game);
+      if(!st)return;
       RST[pid][+game.round_id]=st;S.dataPatch.st[pid][+game.round_id]=st;
     });
     S.dataPatch.stFetched[pid]=Date.now();
@@ -5115,8 +5118,8 @@ function byePlannerHTML(){
 }
 
 /* ── Approved Player Stats experience ───────────────────── */
-.players-screen.profile-mode.page.on{display:block;max-width:1500px}
-.player-profile{--profile-radius:10px;display:grid;gap:12px;font-variant-numeric:tabular-nums}
+.players-screen.profile-mode.page.on{display:block;width:100%;max-width:1500px;min-width:0}
+.player-profile{--profile-radius:10px;display:grid;grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%;gap:12px;font-variant-numeric:tabular-nums}
 .player-profile button{font:inherit}
 .player-profile-card{background:var(--card);border:1px solid var(--line);border-radius:var(--profile-radius)}
 .player-profile-top{display:flex;align-items:center;gap:14px;padding:14px 16px}
@@ -5160,7 +5163,9 @@ html[style*="color-scheme: light"] .player-profile-status{color:#4d7c0f}
 .player-log-card{overflow:hidden}.player-log-head{padding:14px 16px;border-bottom:1px solid var(--line)}
 .player-game-log{width:100%;border-collapse:collapse}.player-game-log th{padding:8px 13px;background:var(--card2);color:var(--dim);font-size:8px;letter-spacing:.75px;text-transform:uppercase;text-align:left}.player-game-log th.num,.player-game-log td.num{text-align:right}.player-game-log td{padding:10px 13px;border-top:1px solid var(--line);font-size:11px}.player-game-log tbody:first-of-type tr:first-child td{border-top:0}.player-game-row{cursor:pointer}.player-game-row:hover td{background:rgba(var(--acc-rgb),.055)}.player-game-row.selected td{background:rgba(var(--acc-rgb),.08)}.player-game-score{font-size:15px;font-weight:900}.player-game-state{color:var(--dim);font-weight:800;font-size:10px}.player-expand-button{width:30px;height:30px;min-height:30px;border:0;background:transparent;color:var(--dim);cursor:pointer;border-radius:6px}.player-expand-button[aria-expanded="true"]{color:var(--acc);transform:rotate(180deg)}
 .player-game-detail td{padding:0;background:var(--bg2);border-top:2px solid var(--acc)}.player-stat-groups{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;padding:16px}.player-stat-group{grid-column:span 2;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px}.player-stat-group:nth-child(n+4){grid-column:span 3}.player-stat-group h3{font-size:14px;font-weight:900;line-height:1.45;letter-spacing:.8px;text-transform:uppercase;color:var(--acc);margin-bottom:11px}.player-stat-item{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 0;color:var(--txt);font-size:15px;line-height:1.45}.player-stat-item span{opacity:.88}.player-stat-item b{color:var(--txt);font-size:16px;font-weight:900;line-height:1.45}.player-stat-unavailable{grid-column:1/-1;padding:16px;color:var(--dim);font-size:14px;text-align:center}
-.player-history-card{overflow:hidden}.player-history-head{padding:15px 16px;border-bottom:1px solid var(--line)}.player-history-table{width:100%;border-collapse:collapse;font-size:15px}.player-history-table th,.player-history-table td{padding:11px 13px;border-top:1px solid var(--line);text-align:left}.player-history-table th{border-top:0;background:var(--card2);color:var(--dim);font-size:14px}.player-history-table th button{min-height:36px;padding:0;background:none;border:0;color:inherit;font:inherit;font-weight:850;cursor:pointer}.player-history-table .num{text-align:right}.player-history-mobile{display:none}.player-role-splits{display:grid;gap:7px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}.player-role-split{display:grid;grid-template-columns:1fr repeat(3,auto);gap:8px;align-items:center;font-size:14px;line-height:1.45}.player-role-split span{color:var(--dim)}.player-role-split b{font-size:15px}.player-role-split small{color:var(--dim);font-size:13px}
+.player-history-card{width:100%;max-width:100%;min-width:0;overflow:hidden}.player-history-head{padding:16px;display:flex;align-items:flex-end;justify-content:space-between;gap:18px;border-bottom:1px solid var(--line)}.player-history-head h2{font-size:16px;text-transform:uppercase;letter-spacing:.7px}.player-history-head p{margin-top:4px;color:var(--dim);font-size:14px}.player-history-head label{display:grid;grid-template-columns:auto minmax(120px,160px);align-items:center;gap:10px;color:var(--dim);font-size:14px;font-weight:850}.player-history-head select{min-height:42px;font-size:15px;color:var(--txt)}
+.player-history-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));border-bottom:1px solid var(--line);background:var(--card2)}.player-history-summary>div{min-width:0;padding:13px 14px;border-right:1px solid var(--line)}.player-history-summary>div:last-child{border-right:0}.player-history-summary span{display:block;color:var(--dim);font-size:13px;line-height:1.35}.player-history-summary b{display:block;margin-top:5px;font-size:16px;line-height:1.35;overflow-wrap:anywhere}.player-history-loading{padding:10px 16px;color:var(--dim);font-size:14px;border-bottom:1px solid var(--line)}
+.player-game-history-table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;contain:paint}.player-game-history-table{width:100%;min-width:1120px;border-collapse:collapse;font-size:15px}.player-game-history-table th{padding:10px 11px;background:var(--card2);color:var(--dim);font-size:14px;letter-spacing:.35px;text-align:left;white-space:nowrap}.player-game-history-table td{padding:11px;border-top:1px solid var(--line);line-height:1.45;vertical-align:middle}.player-game-history-table .num{text-align:right}.player-history-status{display:inline-flex;align-items:center;min-height:26px;padding:3px 7px;border:1px solid var(--line);border-radius:5px;color:var(--dim);font-size:13px;font-weight:850;white-space:nowrap}.player-history-status.played{color:var(--green);border-color:currentColor}.player-history-status.injured,.player-history-status.suspended{color:var(--red);border-color:currentColor}.player-history-status.rested{color:var(--amber);border-color:currentColor}.player-game-history-mobile{display:none}.player-role-splits{display:grid;gap:7px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}.player-role-split{display:grid;grid-template-columns:1fr repeat(3,auto);gap:8px;align-items:center;font-size:14px;line-height:1.45}.player-role-split span{color:var(--dim)}.player-role-split b{font-size:15px}.player-role-split small{color:var(--dim);font-size:13px}
 .player-recent{display:none}
 .player-round-screen{display:none}
 @media(max-width:1150px){.player-stat-groups{grid-template-columns:repeat(2,minmax(0,1fr))}.player-stat-group,.player-stat-group:nth-child(n+4){grid-column:auto}}
@@ -5186,7 +5191,7 @@ html[style*="color-scheme: light"] .player-profile-status{color:#4d7c0f}
   .player-round-score{margin:12px 0 0;padding:16px;text-align:center;border:1px solid rgba(var(--acc-rgb),.48);border-radius:9px;background:rgba(var(--acc-rgb),.09)}.player-round-score b{display:block;font-size:42px;line-height:1;color:var(--acc)}.player-round-score span{display:block;margin-top:5px;color:var(--dim);font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
   .player-round-facts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}.player-round-fact{padding:11px;background:var(--card);border:1px solid var(--line);border-radius:8px}.player-round-fact span{display:block;color:var(--dim);font-size:8px;text-transform:uppercase}.player-round-fact b{display:block;margin-top:6px;font-size:14px}
   .player-round-accordions{display:grid;gap:7px}.player-round-accordion{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}.player-round-accordion>button{width:100%;min-height:48px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;background:transparent;border:0;color:var(--txt);font-size:14px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;cursor:pointer}.player-round-accordion>button span:last-child{color:var(--acc)}.player-round-accordion-body{padding:2px 14px 12px;border-top:1px solid var(--line)}.player-round-accordion .player-stat-item{font-size:15px;padding:10px 0;border-bottom:1px solid var(--line)}.player-round-accordion .player-stat-item:last-child{border-bottom:0}.player-round-accordion .player-stat-item b{font-size:16px}
-  .player-history-table{display:none}.player-history-mobile{display:grid;gap:8px;padding:11px}.player-history-season{border:1px solid var(--line);border-radius:8px;background:var(--card2);overflow:hidden}.player-history-season>summary{min-height:48px;padding:0 13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:16px;font-weight:900}.player-history-position{padding:12px 13px;border-top:1px solid var(--line)}.player-history-position h3{font-size:15px;margin-bottom:9px}.player-history-facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.player-history-fact span{display:block;color:var(--dim);font-size:13px}.player-history-fact b{display:block;font-size:15px;margin-top:3px}.player-role-split{grid-template-columns:1fr auto;gap:4px 8px}.player-role-split small{grid-column:1/-1}
+  .player-history-head{display:block;padding:14px}.player-history-head h2{font-size:15px}.player-history-head p{font-size:13px}.player-history-head label{display:block;margin-top:13px;font-size:14px}.player-history-head label span{display:block;margin-bottom:7px}.player-history-head select{width:100%;min-height:48px;font-size:16px}.player-history-summary{grid-template-columns:repeat(2,minmax(0,1fr));padding:7px;background:var(--card2);gap:7px}.player-history-summary>div{padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--card);min-height:66px}.player-history-summary span{font-size:13px}.player-history-summary b{font-size:16px}.player-game-history-table-wrap{display:none}.player-game-history-mobile{display:grid;gap:8px;padding:9px;background:var(--bg)}.player-history-round-card{border:1px solid var(--line);border-radius:9px;background:var(--card);overflow:hidden}.player-history-round-card.selected{border-color:var(--acc)}.player-history-round-card>button{width:100%;min-height:56px;padding:9px 11px;display:grid;grid-template-columns:minmax(0,1fr) auto 20px;gap:8px;align-items:center;text-align:left;border:0;background:transparent;color:var(--txt);cursor:pointer}.player-history-round-card>button:disabled{cursor:default;opacity:1}.player-history-round-card>button span:first-child{min-width:0}.player-history-round-card>button b{display:block;font-size:16px}.player-history-round-card>button small{display:block;margin-top:4px;color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player-history-round-card .player-history-status{font-size:12px;white-space:normal;text-align:center}.player-history-round-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}.player-history-round-facts>div{min-width:0;padding:9px 7px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}.player-history-round-facts>div:nth-child(3n){border-right:0}.player-history-round-facts>div:nth-last-child(-n+3){border-bottom:0}.player-history-round-facts span{display:block;color:var(--dim);font-size:12px}.player-history-round-facts b{display:block;margin-top:4px;font-size:15px;overflow-wrap:anywhere}.player-role-split{grid-template-columns:1fr auto;gap:4px 8px}.player-role-split small{grid-column:1/-1}
 }
 @media(max-width:360px){.player-profile{padding-left:7px;padding-right:7px}.player-profile-identity{gap:8px}.player-profile-identity h1{font-size:17px}.player-profile-meta{font-size:9px}.player-chart-card{padding-left:7px;padding-right:7px}.player-chart-tab{font-size:9px}.player-metric-value{font-size:18px}}
 @media(prefers-reduced-motion:reduce){.player-profile *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
@@ -5434,6 +5439,22 @@ const PLAYER_STAT_GROUPS=[
 ];
 const PLAYER_STAT_NAMES={T:'Tries',TS:'Try saves',G:'Goals',FG:'Field goals',TA:'Try assists',LB:'Line breaks',LBA:'Line-break assists',MG:'Run metres',TB:'Tackle breaks',OFH:'Offloads to hand',OFG:'Offloads to ground',TCK:'Tackles',MT:'Missed tackles',KD:'Kick defusals',TO:'Turnovers won',ER:'Errors',PC:'Penalties conceded',SB:'Sin bins',SO:'Send offs',SAI:'Six-again infringements',KM:'Kick metres',FTF:'40/20 kicks',FDO:'Forced drop-outs',EFIG:'Effective kick-in-goal'};
 const _playerProfileLoads=new Set();
+const PLAYER_GAME_HISTORY={};
+
+function playerPayloadStatArray(game){
+  if(!game)return null;
+  const supplied=Object.values(FOOTY_STAT_FIELDS).some(field=>game[field]!==null&&game[field]!==undefined);
+  return supplied?STAT_KEYS.concat(['TOG']).map(key=>+(game[FOOTY_STAT_FIELDS[key]]||0)):null;
+}
+function cachePlayerGameHistory(pid,payload){
+  const byYear={},strips={};
+  (payload.stats||[]).filter(game=>game&&game.match_type==='nrl'&&Number.isFinite(+game.year)&&Number.isFinite(+game.round_id)).forEach(game=>{
+    const year=+game.year;(byYear[year]=byYear[year]||[]).push({...game,year,round_id:+game.round_id});
+  });
+  Object.entries(payload.round_strips||{}).forEach(([year,rows])=>{if(Array.isArray(rows))strips[+year]=rows});
+  if(Array.isArray(payload.round_strip)&&Number.isFinite(+payload.current_season))strips[+payload.current_season]=payload.round_strip;
+  PLAYER_GAME_HISTORY[pid]={byYear,strips,fetchedAt:Date.now()};
+}
 
 function playerRoundRows(pid){
   const p=PLAYERS[pid],out=[];
@@ -5448,6 +5469,46 @@ function playerRoundRows(pid){
     out.push({r,gm,bye,played,home,oppId,opp:oppId==null?'—':CLUBS[oppId].s,st:RST[pid]&&RST[pid][r],pts:played?playerPts(pid,r):null});
   }
   return out;
+}
+function playerHistoryStatus(raw,strip,base){
+  if(raw||base&&base.played)return {id:'played',label:'Played'};
+  if(strip&&strip.is_bye||base&&base.bye||String(strip&&strip.status||'').toLowerCase()==='bye')return {id:'bye',label:'Bye'};
+  const status=String(strip&&strip.status||'').toLowerCase().replace(/[_-]+/g,' ');
+  if(status.includes('injur'))return {id:'injured',label:'Injured'};
+  if(status.includes('suspend'))return {id:'suspended',label:'Suspended'};
+  if(status.includes('rest'))return {id:'rested',label:'Rested'};
+  if(status.includes('not selected')||status.includes('non selection'))return {id:'not-selected',label:'Not selected'};
+  return {id:'unavailable',label:'Did not play — reason unavailable'};
+}
+function playerGameHistoryYears(pid){
+  const current=new Date().getFullYear(),history=PLAYER_GAME_HISTORY[pid],years=new Set([current]);
+  if(history){Object.keys(history.byYear).forEach(year=>years.add(+year));Object.keys(history.strips).forEach(year=>years.add(+year))}
+  return [...years].filter(Number.isFinite).sort((a,b)=>b-a);
+}
+function selectedPlayerGameHistorySeason(pid){
+  const years=playerGameHistoryYears(pid),current=new Date().getFullYear();
+  S.ui.playerHistorySeasons=S.ui.playerHistorySeasons||{};
+  const stored=+S.ui.playerHistorySeasons[pid],selected=years.includes(stored)?stored:(years.includes(current)?current:years[0]);
+  S.ui.playerHistorySeasons[pid]=selected;return selected;
+}
+function playerGameHistoryRows(pid,year){
+  const current=new Date().getFullYear(),history=PLAYER_GAME_HISTORY[pid]||{byYear:{},strips:{}},rawRows=history.byYear[year]||[],stripRows=history.strips[year]||[];
+  const rawByRound=new Map(rawRows.map(row=>[+row.round_id,row])),stripByRound=new Map(stripRows.map(row=>[+(row.round||row.round_id),row]));
+  const baseByRound=new Map((year===current?playerRoundRows(pid):[]).map(row=>[row.r,row]));
+  const rounds=new Set([...rawByRound.keys(),...stripByRound.keys(),...baseByRound.keys()]);
+  return [...rounds].filter(Number.isFinite).sort((a,b)=>b-a).map(r=>{
+    const raw=rawByRound.get(r),strip=stripByRound.get(r),base=baseByRound.get(r),status=playerHistoryStatus(raw,strip,base);
+    const squadId=raw&&+raw.squad_id,homeSquad=raw&&+raw.home_squad_id,awaySquad=raw&&+raw.away_squad_id;
+    const home=raw&&homeSquad?homeSquad===squadId:strip&&typeof strip.is_home==='boolean'?strip.is_home:base?base.home:null;
+    const opponent=raw&&raw.opponent||strip&&(strip.opponent_name||strip.opponent_abrev)||base&&base.opp||'—';
+    const number=raw&&parseInt(raw.number,10),role=Number.isFinite(number)?(number<=13?'Starting':'Interchange'):'Not available';
+    const position=raw&&raw.position_match||'Not available',st=raw?playerPayloadStatArray(raw):base&&base.st||null;
+    const points=raw&&raw.fantasy_points!=null?+raw.fantasy_points:base&&base.pts!=null?base.pts:null;
+    const price=raw&&raw.price!=null?+raw.price:year===current&&RPRICE[pid]&&RPRICE[pid][r-1]!=null?RPRICE[pid][r-1]*1000:null;
+    return {year,r,raw,strip,base,status,played:status.id==='played',home,opponent,position,role,st,minutes:raw&&raw.time_on_ground!=null?+raw.time_on_ground:st&&st[STAT_KEYS.length]||null,
+      price,be:raw&&raw.be!=null?+raw.be:null,pts:points,date:raw&&raw.match_date||strip&&strip.match_date||null,oppId:base&&base.oppId,
+      venue:raw&&raw.venue_name||strip&&strip.venue_name||null};
+  });
 }
 function playerStatGroups(st){
   if(!st)return [];
@@ -5554,26 +5615,31 @@ function renderStatGroups(st){
   if(!groups.length)return '<div class="player-stat-unavailable">Detailed components are unavailable for this match. The Fantasy score is shown without substituting averages.</div>';
   return groups.map(group=>`<section class="player-stat-group" aria-label="${group.label}"><h3>${group.label}</h3>${group.items.map(item=>`<div class="player-stat-item"><span>${item.label}</span><b>${item.value}</b></div>`).join('')}</section>`).join('');
 }
-function renderPlayerGameLog(pid,rows){
-  const p=PLAYERS[pid],display=[...rows].reverse();
-  return `<section class="player-log-card player-profile-card"><div class="player-log-head player-section-head"><h2>Game Log</h2><span class="player-section-label">Official match statistics</span></div>
-    <table class="player-game-log"><thead><tr><th>Round</th><th>Opponent</th><th>Position</th><th class="num">Minutes</th><th class="num">Fantasy points</th><th><span class="player-chart-summary">Expand</span></th></tr></thead>
-    ${display.map(row=>{const expanded=S.ui.playerExpandedRound===row.r,minutes=row.st&&row.st[STAT_KEYS.length];return `<tbody><tr class="player-game-row ${expanded?'selected':''}" onclick="openPlayerRound(${pid},${row.r})">
-      <td><b>Round ${row.r}</b></td><td>${row.bye?'BYE':`${row.home?'v':'@'} ${row.opp}`}</td><td>${row.played?POSN[p.pos[0]]:'—'}</td><td class="num">${row.played?(minutes||'—'):'—'}</td><td class="num">${row.played?`<span class="player-game-score">${row.pts}</span>`:`<span class="player-game-state">${row.bye?'BYE':'DNP'}</span>`}</td><td><button class="player-expand-button" aria-label="${expanded?'Collapse':'Expand'} Round ${row.r}" aria-expanded="${expanded}" ${row.played?'':'disabled'} onclick="event.stopPropagation();openPlayerRound(${pid},${row.r})">⌄</button></td></tr>
-      ${expanded&&row.played?`<tr class="player-game-detail"><td colspan="6"><div class="player-stat-groups">${renderStatGroups(row.st)}</div></td></tr>`:''}</tbody>`}).join('')}</table></section>`;
+function playerHistoryValue(value,formatter=value=>value){return value==null||value===''?'Not available':formatter(value)}
+function playerHistoryDate(value){if(!value)return 'Not available';const date=new Date(String(value).replace(' ','T'));return Number.isNaN(date.getTime())?'Not available':date.toLocaleDateString('en-AU',{day:'numeric',month:'short'})}
+function playerHistorySummary(rows){
+  const played=rows.filter(row=>row.played&&row.pts!=null),minutes=played.map(row=>row.minutes).filter(value=>value!=null),positions=[...new Set(played.map(row=>row.position).filter(value=>value&&value!=='Not available'))];
+  const total=played.reduce((sum,row)=>sum+row.pts,0);
+  return [['Games',played.length],['Average',played.length?(total/played.length).toFixed(1):null],['Total points',played.length?total:null],['High score',played.length?Math.max(...played.map(row=>row.pts)):null],['Average minutes',minutes.length?(minutes.reduce((a,b)=>a+b,0)/minutes.length).toFixed(1):null],['Positions played',positions.length?positions.join(' / '):null]];
 }
-function playerHistoryRows(pid){return ((typeof HIST!=='undefined'&&HIST[pid])||[]).map((row,index)=>({season:row[0],position:HIST_POS[row[1]]||'Unknown',games:row[2],starts:null,minutes:row[3],average:row[4],total:null,high:null,index}))}
-function sortPlayerHistory(key){const current=S.ui.playerHistorySort||'season';if(current===key)S.ui.playerHistoryDir=(S.ui.playerHistoryDir||-1)*-1;else{S.ui.playerHistorySort=key;S.ui.playerHistoryDir=key==='position'?1:-1}renderPlayers()}
-function renderHistoryValue(value,suffix=''){return value==null?'Not available':`${value}${suffix}`}
-function renderPlayerHistory(pid){
-  const rows=playerHistoryRows(pid),key=S.ui.playerHistorySort||'season',dir=S.ui.playerHistoryDir||-1;
-  rows.sort((a,b)=>{const av=a[key],bv=b[key];if(typeof av==='string')return dir*av.localeCompare(bv);return dir*((av??-Infinity)-(bv??-Infinity))||b.season-a.season||a.index-b.index});
-  const sortHead=(id,label,num=false)=>`<th class="${num?'num':''}"><button onclick="sortPlayerHistory('${id}')" aria-label="Sort history by ${label}">${label}${key===id?(dir<0?' ▼':' ▲'):''}</button></th>`;
-  if(!rows.length)return `<section class="player-history-card player-profile-card"><div class="player-history-head"><h2>Previous seasons — performance by position</h2></div><div class="player-stat-unavailable">Historical position data is not available for this player.</div></section>`;
-  const seasons=[...new Set(rows.map(row=>row.season))].sort((a,b)=>b-a);
-  return `<section class="player-history-card player-profile-card"><div class="player-history-head player-section-head"><h2>Previous seasons — performance by position</h2><span class="player-section-label">Every available season and position</span></div>
-    <table class="player-history-table"><thead><tr>${sortHead('season','Season')}${sortHead('position','Position')}${sortHead('games','Games',true)}<th class="num">Starts</th>${sortHead('minutes','Average minutes',true)}${sortHead('average','Average Fantasy',true)}<th class="num">Total Fantasy</th><th class="num">High score</th></tr></thead><tbody>${rows.map(row=>`<tr data-season="${row.season}" data-position="${esc(row.position)}"><td><b>${row.season}</b></td><td>${esc(row.position)}</td><td class="num">${row.games}</td><td class="num">${renderHistoryValue(row.starts)}</td><td class="num">${renderHistoryValue(row.minutes)}</td><td class="num"><b>${renderHistoryValue(row.average)}</b></td><td class="num">${renderHistoryValue(row.total)}</td><td class="num">${renderHistoryValue(row.high)}</td></tr>`).join('')}</tbody></table>
-    <div class="player-history-mobile">${seasons.map((season,index)=>`<details class="player-history-season" ${index===0?'open':''}><summary><span>${season}</span><span>${rows.filter(row=>row.season===season).length} position${rows.filter(row=>row.season===season).length===1?'':'s'}</span></summary>${rows.filter(row=>row.season===season).map(row=>`<div class="player-history-position" data-season="${row.season}" data-position="${esc(row.position)}"><h3>${esc(row.position)}</h3><div class="player-history-facts">${[['Games',row.games],['Starts',row.starts],['Average minutes',row.minutes],['Average Fantasy',row.average],['Total Fantasy',row.total],['High score',row.high]].map(([label,value])=>`<div class="player-history-fact"><span>${label}</span><b>${renderHistoryValue(value)}</b></div>`).join('')}</div></div>`).join('')}</details>`).join('')}</div>
+function setPlayerHistorySeason(pid,year){
+  S.ui.playerHistorySeasons=S.ui.playerHistorySeasons||{};S.ui.playerHistorySeasons[pid]=+year;S.ui.playerExpandedRound=null;S.ui.playerExpandedSeason=null;renderPlayers();
+  requestAnimationFrame(()=>$('#player-history-season')?.focus({preventScroll:true}));
+}
+function renderPlayerGameHistory(pid){
+  const years=playerGameHistoryYears(pid),season=selectedPlayerGameHistorySeason(pid),rows=playerGameHistoryRows(pid,season),summary=playerHistorySummary(rows),loading=_playerProfileLoads.has(pid);
+  const statusCell=row=>row.played?'<span class="player-history-status played">Played</span>':`<span class="player-history-status ${row.status.id}">${esc(row.status.label)}</span>`;
+  const opponent=row=>row.status.id==='bye'?'Bye':`${row.home===true?'Home v':row.home===false?'Away @':'v'} ${esc(row.opponent)}`;
+  const expanded=row=>S.ui.playerExpandedSeason===season&&S.ui.playerExpandedRound===row.r;
+  return `<section class="player-history-card player-profile-card" aria-labelledby="player-game-history-title">
+    <div class="player-history-head"><div><h2 id="player-game-history-title">Game history</h2><p>Verified game-by-game Fantasy and match statistics</p></div><label for="player-history-season"><span>Season</span><select id="player-history-season" onchange="setPlayerHistorySeason(${pid},this.value)">${years.map(year=>`<option value="${year}" ${year===season?'selected':''}>${year}</option>`).join('')}</select></label></div>
+    <div class="player-history-summary" aria-label="${season} season summary">${summary.map(([label,value])=>`<div><span>${label}</span><b>${playerHistoryValue(value)}</b></div>`).join('')}</div>
+    ${loading?'<p class="player-history-loading" role="status">Loading all available seasons…</p>':''}
+    ${rows.length?`<div class="player-game-history-table-wrap"><table class="player-game-history-table"><thead><tr><th>Round</th><th>Date</th><th>Opponent</th><th>Status</th><th>Position</th><th>Role</th><th class="num">Minutes</th><th class="num">Price</th><th class="num">BE</th><th class="num">Fantasy</th><th><span class="sr-only">Expand</span></th></tr></thead>
+      ${rows.map(row=>`<tbody><tr class="player-game-row ${expanded(row)?'selected':''}" data-season="${season}" data-round="${row.r}" data-position="${esc(row.position)}" ${row.played?`onclick="openPlayerGameRound(${pid},${season},${row.r})"`:''}>
+        <td><b>Round ${row.r}</b></td><td>${playerHistoryDate(row.date)}</td><td>${opponent(row)}</td><td>${statusCell(row)}</td><td>${esc(row.position)}</td><td>${esc(row.role)}</td><td class="num">${playerHistoryValue(row.minutes)}</td><td class="num">${playerHistoryValue(row.price,fmtK)}</td><td class="num">${playerHistoryValue(row.be)}</td><td class="num">${row.pts==null?'Not available':`<span class="player-game-score">${row.pts}</span>`}</td><td>${row.played?`<button class="player-expand-button" aria-label="${expanded(row)?'Collapse':'Expand'} ${season} Round ${row.r}" aria-expanded="${expanded(row)}" onclick="event.stopPropagation();openPlayerGameRound(${pid},${season},${row.r})">⌄</button>`:''}</td></tr>
+        ${expanded(row)&&row.played?`<tr class="player-game-detail"><td colspan="11"><div class="player-stat-groups">${renderStatGroups(row.st)}</div></td></tr>`:''}</tbody>`).join('')}</table></div>
+      <div class="player-game-history-mobile">${rows.map(row=>`<article class="player-history-round-card ${expanded(row)?'selected':''}" data-season="${season}" data-round="${row.r}" data-position="${esc(row.position)}"><button ${row.played?'':`disabled`} aria-expanded="${expanded(row)}" onclick="openPlayerGameRound(${pid},${season},${row.r})"><span><b>Round ${row.r}</b><small>${playerHistoryDate(row.date)} · ${opponent(row)}</small></span>${statusCell(row)}<span aria-hidden="true">${row.played?'›':''}</span></button><div class="player-history-round-facts">${[['Position',row.position],['Role',row.role],['Minutes',row.minutes],['Price',row.price==null?null:fmtK(row.price)],['Break-even',row.be],['Fantasy',row.pts]].map(([label,value])=>`<div><span>${label}</span><b>${playerHistoryValue(value)}</b></div>`).join('')}</div></article>`).join('')}</div>`:`<div class="player-stat-unavailable">No verified game-by-game records are available for ${season}. No season averages have been substituted.</div>`}
   </section>`;
 }
 function renderPlayerRecent(pid,rows){
@@ -5581,9 +5647,9 @@ function renderPlayerRecent(pid,rows){
 }
 function renderPlayerProfile(el,pid){
   const p=PLAYERS[pid];if(!p){closePlayerProfile();return}
-  const rows=playerRoundRows(pid);
+  const rows=playerRoundRows(pid),historySeason=selectedPlayerGameHistorySeason(pid),historyRows=playerGameHistoryRows(pid,historySeason);
   setPlayerShell(true,Number.isInteger(S.ui.playerRound));
-  if(Number.isInteger(S.ui.playerRound)){el.innerHTML=renderPlayerRoundScreen(pid,S.ui.playerRound,rows);return}
+  if(Number.isInteger(S.ui.playerRound)){el.innerHTML=renderPlayerRoundScreen(pid,S.ui.playerRound,historyRows,historySeason);return}
   const metrics=playerProfileMetrics(pid,rows),loading=_playerProfileLoads.has(pid);
   el.innerHTML=`<article class="player-profile" aria-labelledby="player-profile-name">
     <header class="player-profile-top player-profile-card"><button class="player-profile-back" aria-label="Back to players" onclick="closePlayerProfile()">←</button>
@@ -5591,24 +5657,24 @@ function renderPlayerProfile(el,pid){
       <div class="player-profile-actions"><button class="player-profile-action primary watch-btn" data-wid="${pid}" aria-pressed="${isWatched(pid)}" onclick="toggleProfileWatch(${pid})">${isWatched(pid)?'★ Watching':'☆ Watch'}</button><button class="player-profile-action" onclick="openComparison(${pid})">⇔ Compare</button></div>
     </header>
     <div class="player-metrics">${metrics.map(([label,value,sub])=>`<div class="player-metric"><div class="player-metric-label">${label}</div><div class="player-metric-value">${value}</div><div class="player-metric-sub">${sub}</div></div>`).join('')}</div>
-    ${loading?'<p role="status" aria-live="polite" class="muted">Loading current detailed match statistics…</p>':''}
+    ${loading?'<p role="status" aria-live="polite" class="muted">Loading all available seasons and detailed match statistics…</p>':''}
     <div class="player-profile-grid">${renderPlayerChart(pid,rows)}<aside class="player-side-stack">${renderPlayerRole(pid,rows)}${renderNextOpponents(pid)}</aside></div>
-    ${renderPlayerRecent(pid,rows)}${renderPlayerGameLog(pid,rows)}${renderPlayerHistory(pid)}
+    ${renderPlayerRecent(pid,rows)}${renderPlayerGameHistory(pid)}
   </article>`;
 }
 async function showPlayer(pid){
   if(!PLAYERS[pid])return;
-  S.ui.playerProfilePid=pid;S.ui.playerRound=null;S.ui.playerExpandedRound=null;S.ui.playerSelectedRound=null;S.ui.playerChartMetric='score';
+  S.ui.playerProfilePid=pid;S.ui.playerRound=null;S.ui.playerExpandedRound=null;S.ui.playerExpandedSeason=null;S.ui.playerSelectedRound=null;S.ui.playerChartMetric='score';
   window.scrollTo({top:0,behavior:'instant'});renderPlayers();
   const heading=$('#player-profile-name');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}
   const missing=Array.from({length:MAXR},(_,i)=>i+1).some(r=>playedIn(pid,r)&&!(RST[pid]&&RST[pid][r]));
-  if(missing&&!_playerProfileLoads.has(pid)){
+  if((missing||!PLAYER_GAME_HISTORY[pid])&&!_playerProfileLoads.has(pid)){
     _playerProfileLoads.add(pid);renderPlayers();await loadDetailedStats(pid);_playerProfileLoads.delete(pid);
     if(S.ui.playerProfilePid===pid)renderPlayers();
   }
 }
 function closePlayerProfile(){
-  S.ui.playerProfilePid=null;S.ui.playerRound=null;S.ui.playerExpandedRound=null;setPlayerShell(false);renderPlayers();
+  S.ui.playerProfilePid=null;S.ui.playerRound=null;S.ui.playerExpandedRound=null;S.ui.playerExpandedSeason=null;setPlayerShell(false);renderPlayers();
   requestAnimationFrame(()=>{$('#player-stats-search')?.focus()});
 }
 function toggleProfileWatch(pid){toggleWatch(pid);renderPlayers()}
@@ -5618,19 +5684,23 @@ function selectPlayerRound(round){
   S.ui.playerSelectedRound=round;renderPlayers();
 }
 function openPlayerRound(pid,round){
-  const row=playerRoundRows(pid).find(item=>item.r===round);if(!row||!row.played)return;
+  return openPlayerGameRound(pid,new Date().getFullYear(),round);
+}
+function openPlayerGameRound(pid,season,round){
+  const row=playerGameHistoryRows(pid,+season).find(item=>item.r===round);if(!row||!row.played)return;
+  S.ui.playerHistorySeasons=S.ui.playerHistorySeasons||{};S.ui.playerHistorySeasons[pid]=+season;
   S.ui.playerSelectedRound=round;
   if(matchMedia('(max-width:768px)').matches){S.ui.playerRound=round;S.ui.playerOpenGroups={scoring:true,running:true};renderPlayers();requestAnimationFrame(()=>$('.player-round-nav h1')?.focus())}
-  else{S.ui.playerExpandedRound=S.ui.playerExpandedRound===round?null:round;renderPlayers()}
+  else{const open=S.ui.playerExpandedRound===round&&S.ui.playerExpandedSeason===+season;S.ui.playerExpandedRound=open?null:round;S.ui.playerExpandedSeason=open?null:+season;renderPlayers()}
 }
 function closePlayerRound(){S.ui.playerRound=null;window.scrollTo({top:0,behavior:'instant'});renderPlayers();requestAnimationFrame(()=>$('#player-profile-name')?.focus({preventScroll:true}))}
 function togglePlayerStatGroup(id){S.ui.playerOpenGroups=S.ui.playerOpenGroups||{};S.ui.playerOpenGroups[id]=!S.ui.playerOpenGroups[id];renderPlayers()}
-function renderPlayerRoundScreen(pid,round,rows){
+function renderPlayerRoundScreen(pid,round,rows,season=new Date().getFullYear()){
   const p=PLAYERS[pid],row=rows.find(item=>item.r===round);if(!row||!row.played){S.ui.playerRound=null;return '<p class="empty-state">This match is unavailable.</p>'}
-  const groups=playerStatGroups(row.st),minutes=row.st&&row.st[STAT_KEYS.length];
-  return `<article class="player-round-screen" aria-labelledby="player-round-title"><nav class="player-round-nav" aria-label="Round breakdown"><button aria-label="Back to player overview" onclick="closePlayerRound()">←</button><h1 id="player-round-title" tabindex="-1">Round ${round}</h1><button aria-label="Close player statistics" onclick="closePlayerProfile()">×</button></nav>
-    <section class="player-round-hero player-profile-card"><div class="player-round-opponent"><div>${row.oppId==null?'':avatar({sq:row.oppId,name:CLUBS[row.oppId].s},38)}</div><div><h2>${row.home?'Home v':'Away @'} ${row.oppId==null?'Opponent unavailable':CLUBS[row.oppId].n}</h2><p>${CLUBS[p.sq].n} · Round ${round}</p></div></div><div class="player-round-score"><b>${row.pts}</b><span>Fantasy points</span></div></section>
-    <div class="player-round-facts"><div class="player-round-fact"><span>Position</span><b>${POSN[p.pos[0]]}</b></div><div class="player-round-fact"><span>Minutes</span><b>${minutes||'—'}</b></div></div>
+  const groups=playerStatGroups(row.st),minutes=row.minutes;
+  return `<article class="player-round-screen" aria-labelledby="player-round-title"><nav class="player-round-nav" aria-label="Round breakdown"><button aria-label="Back to player overview" onclick="closePlayerRound()">←</button><h1 id="player-round-title" tabindex="-1">${season} · Round ${round}</h1><button aria-label="Close player statistics" onclick="closePlayerProfile()">×</button></nav>
+    <section class="player-round-hero player-profile-card"><div class="player-round-opponent"><div>${row.oppId==null?'':avatar({sq:row.oppId,name:CLUBS[row.oppId].s},38)}</div><div><h2>${row.home===true?'Home v':row.home===false?'Away @':'v'} ${esc(row.opponent)}</h2><p>${CLUBS[p.sq].n} · ${season} Round ${round}${row.date?' · '+playerHistoryDate(row.date):''}</p></div></div><div class="player-round-score"><b>${row.pts??'—'}</b><span>Fantasy points</span></div></section>
+    <div class="player-round-facts"><div class="player-round-fact"><span>Position</span><b>${esc(row.position)}</b></div><div class="player-round-fact"><span>Role</span><b>${esc(row.role)}</b></div><div class="player-round-fact"><span>Minutes</span><b>${playerHistoryValue(minutes)}</b></div><div class="player-round-fact"><span>Price / BE</span><b>${playerHistoryValue(row.price,fmtK)} · ${playerHistoryValue(row.be)}</b></div></div>
     <div class="player-round-accordions">${groups.length?groups.map(group=>{const open=!!(S.ui.playerOpenGroups&&S.ui.playerOpenGroups[group.id]);return `<section class="player-round-accordion"><button aria-expanded="${open}" aria-controls="player-group-${group.id}" onclick="togglePlayerStatGroup('${group.id}')"><span>${group.label}</span><span>${open?'−':'+'}</span></button>${open?`<div class="player-round-accordion-body" id="player-group-${group.id}">${group.items.map(item=>`<div class="player-stat-item"><span>${item.label}</span><b>${item.value}</b></div>`).join('')}</div>`:''}</section>`}).join(''):'<div class="player-stat-unavailable player-profile-card" role="status">Detailed components are not available from the official feed for this match. No averages have been substituted.</div>'}</div>
   </article>`;
 }

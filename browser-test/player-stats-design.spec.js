@@ -19,6 +19,19 @@ async function openAccount(browser,width,label){
   await page.evaluate(()=>{S.settings.onboardingVersion=1;S.settings.themeChosen=true;applyTheme('blue',false);closeModal()});
   return {context,page,errors};
 }
+async function routeMultiSeasonHistory(page){
+  await page.route('**/api/player-stats/*',route=>route.fulfill({json:{current_season:2026,stats:[
+    {year:2026,match_type:'nrl',round_id:18,opponent:'Raiders',position_match:'Fullback',number:'1',time_on_ground:80,price:700000,be:61,fantasy_points:70,tackles:12,metres_gained:190,tries:1,goals:2},
+    {year:2025,match_type:'nrl',round_id:27,opponent:'Tigers',position_match:'Halfback',number:'7',time_on_ground:80,price:807000,be:55,fantasy_points:74,tackles:15,metres_gained:104,tries:1,goals:6,errors:1,kick_metres:356,home_squad_id:500004,squad_id:500004,match_date:'2025-09-06 17:30:00'},
+    {year:2025,match_type:'nrl',round_id:26,opponent:'Dolphins',position_match:'Fullback',number:'14',time_on_ground:60,price:790000,be:49,fantasy_points:58,tackles:9,metres_gained:141,tries:0,goals:2,away_squad_id:500004,squad_id:500004,match_date:'2025-08-31 16:05:00'},
+    {year:2025,match_type:'nrl',round_id:20,opponent:'Storm',position_match:'Centre',number:'3',time_on_ground:70,price:760000,be:52,fantasy_points:40,home_squad_id:500004,squad_id:500004,match_date:'2025-07-20 14:00:00'}
+  ],round_strips:{2025:[
+    {round:27,played:true,opponent_name:'Tigers',is_home:true},{round:26,played:true,opponent_name:'Dolphins',is_home:false},
+    {round:25,played:false,opponent_name:'Raiders',status:'injured'},{round:24,played:false,opponent_name:'Knights',status:'suspended'},
+    {round:23,played:false,opponent_name:'Broncos',status:'rested'},{round:22,played:false,opponent_name:'Eels',status:'not_selected'},
+    {round:21,played:false,opponent_name:'Bye',status:'bye',is_bye:true},{round:20,played:true,opponent_name:'Storm',is_home:true}
+  ]}}}));
+}
 
 test('Player Stats structure is responsive at every supported viewport',async({browser})=>{
   for(const width of [320,375,390,768,1024,1440,1920]){
@@ -40,13 +53,13 @@ test('Player Stats structure is responsive at every supported viewport',async({b
     expect(overflow,`${width}px profile overflow`).toBeLessThanOrEqual(1);
     const header=await page.locator('.player-profile-top').boundingBox();expect(header.x).toBeGreaterThanOrEqual(0);expect(header.x+header.width).toBeLessThanOrEqual(width);
     if(width<=768){
-      await expect(page.locator('.player-recent')).toBeVisible();await expect(page.locator('.player-log-card')).toBeHidden();
+      await expect(page.locator('.player-recent')).toBeVisible();await expect(page.locator('.player-game-history-mobile')).toBeVisible();await expect(page.locator('.player-game-history-table-wrap')).toBeHidden();
       await expect(page.locator('#bottom-tabbar')).toBeVisible();await expect(page.getByRole('button',{name:'Back to players'})).toBeVisible();
       expect(await page.locator('.topbar-brand').evaluate(node=>getComputedStyle(node,'::after').content)).toContain('PLAYER STATS');
       await page.locator('.player-chart .point').last().click();await expect(page.locator('.player-round-screen')).toBeVisible();
       await page.keyboard.press('Escape');await expect(page.locator('.player-profile')).toBeVisible();
     }else{
-      await expect(page.locator('.player-log-card')).toBeVisible();await expect(page.locator('.player-side-stack')).toBeVisible();
+      await expect(page.locator('.player-game-history-table-wrap')).toBeVisible();await expect(page.locator('.player-side-stack')).toBeVisible();
     }
     expect(errors).toEqual([]);await context.close();
   }
@@ -74,17 +87,19 @@ test('themes, byes, long names and unavailable match details remain honest',asyn
   expect(errors).toEqual([]);await context.close();
 });
 
-test('expanded details are readable and historical positions remain distinct',async({browser})=>{
+test('expanded details are readable and multi-season positions remain distinct',async({browser})=>{
   for(const width of [1024,1440]){
     const {context,page,errors}=await openAccount(browser,width,`readability-${width}`);
-    const state=await page.evaluate(()=>{const entry=Object.entries(HIST).find(([id,rows])=>rows.some((row,index)=>rows.some((other,otherIndex)=>otherIndex!==index&&other[0]===row[0]&&other[1]!==row[1]))&&playerRoundRows(+id).some(row=>row.played));const pid=entry?+entry[0]:6;setPage('players');showPlayer(pid);return {pid,history:HIST[pid]}});
-    await expect(page.locator('.player-profile')).toBeVisible();await expect(page.getByText('Loading current detailed match statistics…')).toBeHidden();
-    await page.evaluate(pid=>{const round=playerRoundRows(pid).find(row=>row.played).r,st=Array(STAT_KEYS.length+1).fill(1);st[STAT_KEYS.indexOf('MG')]=176;st[STAT_KEYS.indexOf('TCK')]=31;st[STAT_KEYS.length]=80;RST[pid]=RST[pid]||{};RST[pid][round]=st;S.ui.playerExpandedRound=round;renderPlayers()},state.pid);
+    await routeMultiSeasonHistory(page);
+    const pid=await page.evaluate(()=>{const pid=PLAYERS.find(item=>playerRoundRows(item.id).some(row=>row.played)).id;setPage('players');showPlayer(pid);return pid});
+    await expect(page.locator('.player-profile')).toBeVisible();await expect(page.getByText('Loading all available seasons and detailed match statistics…')).toBeHidden();
+    await page.locator('#player-history-season').selectOption('2025');await page.getByRole('button',{name:'Expand 2025 Round 27',exact:true}).click();
+    const summary=page.locator('.player-history-summary');for(const value of ['3','57.3','172','74','70.0','Halfback / Fullback / Centre'])await expect(summary).toContainText(value);
     const detail=page.locator('.player-game-detail'),label=detail.locator('.player-stat-item span').first(),value=detail.locator('.player-stat-item b').first(),heading=detail.locator('.player-stat-group h3').first();
     await expect(detail).toBeVisible();await expect(label).toBeVisible();expect(parseFloat(await label.evaluate(node=>getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(15);expect(parseFloat(await value.evaluate(node=>getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);expect(parseFloat(await heading.evaluate(node=>getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(14);
     expect(parseFloat(await label.evaluate(node=>getComputedStyle(node).lineHeight))).toBeGreaterThanOrEqual(21.75);
-    const rows=await page.locator('.player-history-table tbody tr').evaluateAll(nodes=>nodes.map(node=>[node.dataset.season,node.dataset.position]));
-    expect(rows.length).toBe(state.history.length);expect(new Set(rows.map(row=>row.join('|'))).size).toBe(rows.length);
+    const positions=await page.locator('.player-game-history-table tr[data-season="2025"][data-position]').evaluateAll(nodes=>nodes.map(node=>node.dataset.position));
+    expect(positions).toEqual(expect.arrayContaining(['Halfback','Fullback','Centre']));expect(new Set(positions).size).toBeGreaterThan(1);
     const groupRows=await detail.locator('.player-stat-group').evaluateAll(nodes=>new Set(nodes.map(node=>Math.round(node.getBoundingClientRect().top))).size);
     expect(groupRows).toBeGreaterThanOrEqual(2);
     if(width===1440)for(const theme of ['lime','blue','gold','teal','light']){
@@ -92,16 +107,22 @@ test('expanded details are readable and historical positions remain distinct',as
       const contrast=await label.evaluate(node=>{const parse=value=>(value.match(/[\d.]+/g)||[]).slice(0,3).map(Number),fg=parse(getComputedStyle(node).color),bg=parse(getComputedStyle(node.closest('.player-stat-group')).backgroundColor),alpha=+getComputedStyle(node).opacity||1,mix=fg.map((value,index)=>value*alpha+bg[index]*(1-alpha)),lum=rgb=>{const values=rgb.map(value=>{const s=value/255;return s<=.04045?s/12.92:Math.pow((s+.055)/1.055,2.4)});return .2126*values[0]+.7152*values[1]+.0722*values[2]},a=lum(mix),b=lum(bg);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)});
       expect(contrast,`${theme} expanded-label contrast`).toBeGreaterThanOrEqual(4.5);
     }
-    await page.reload();await page.evaluate(pid=>{setPage('players');showPlayer(pid)},state.pid);await expect(page.getByRole('heading',{name:'Previous seasons — performance by position'})).toBeVisible();await expect(page.locator('.player-history-table tbody tr')).toHaveCount(state.history.length);
+    await page.getByRole('button',{name:'Collapse 2025 Round 27',exact:true}).click();await expect(page.locator('#player-history-season')).toHaveValue('2025');
+    if(width===1024){await page.getByRole('button',{name:'Back to players'}).click();await page.evaluate(id=>showPlayer(id),pid);await expect(page.locator('#player-history-season')).toHaveValue('2025')}
     expect(errors).toEqual([]);await context.close();
   }
 });
 
-test('mobile history exposes equivalent fields without overflow',async({browser})=>{
+test('mobile history preserves season through round navigation and exposes equivalent fields',async({browser})=>{
   const {context,page,errors}=await openAccount(browser,375,'mobile-history');
-  const state=await page.evaluate(()=>{const pid=+Object.keys(HIST).find(id=>HIST[id].length>2);setPage('players');showPlayer(pid);return {pid,count:HIST[pid].length}});
-  await expect(page.getByRole('heading',{name:'Previous seasons — performance by position'})).toBeVisible();
-  await expect(page.locator('.player-history-mobile .player-history-position')).toHaveCount(state.count);await expect(page.locator('.player-history-mobile').getByText('Starts',{exact:true}).first()).toBeVisible();await expect(page.locator('.player-history-mobile').getByText('Not available',{exact:true}).first()).toBeVisible();
+  await routeMultiSeasonHistory(page);
+  await page.evaluate(()=>{const pid=PLAYERS.find(item=>playerRoundRows(item.id).some(row=>row.played)).id;setPage('players');showPlayer(pid)});
+  await expect(page.getByRole('heading',{name:'Game history'})).toBeVisible();await expect(page.locator('#player-history-season option')).toHaveCount(2);
+  await page.locator('#player-history-season').selectOption('2025');await expect(page.locator('.player-history-round-card')).toHaveCount(8);
+  for(const status of ['Injured','Suspended','Rested','Not selected','Bye'])await expect(page.locator('.player-game-history-mobile').getByText(status,{exact:true})).toBeVisible();
+  await page.locator('.player-history-round-card[data-round="27"]>button').click();await expect(page.locator('.player-round-screen')).toBeVisible();await expect(page.getByRole('heading',{name:'2025 · Round 27'})).toBeVisible();
+  await page.getByRole('button',{name:'Back to player overview'}).click();await expect(page.locator('#player-history-season')).toHaveValue('2025');
+  await page.locator('.player-history-round-card[data-round="20"]>button').click();await expect(page.getByText(/No averages have been substituted/i)).toBeVisible();await page.getByRole('button',{name:'Back to player overview'}).click();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   expect(errors).toEqual([]);await context.close();
 });
@@ -111,10 +132,21 @@ for(const width of [375,1440])test(`approved Player Stats visual at ${width}px`,
   await page.route('**/api/player-stats/*',route=>route.fulfill({json:{stats:[]}}));
   await page.evaluate(async()=>{const p=PLAYERS.find(item=>item.name==='Jayden Campbell')||PLAYERS[0];setPage('players');await showPlayer(p.id)});
   await expect(page.locator('.player-profile')).toBeVisible();
-  await expect(page.getByText('Loading current detailed match statistics…')).toBeHidden();
+  await expect(page.getByRole('heading',{name:'Game history'})).toBeVisible();
+  await expect(page.getByText('Loading all available seasons and detailed match statistics…')).toBeHidden();
   // Playwright's Chromium is fixed, but Linux font rasterization still differs
   // by host image. Keep strict, readable baselines for both supported runners.
   const runner=process.env.CI?'ci':'local';
   await expect(page).toHaveScreenshot(`player-stats-approved-${width}-${runner}.png`,{animations:'disabled',caret:'hide',maxDiffPixelRatio:.012});
+  expect(errors).toEqual([]);await context.close();
+});
+
+test('approved mobile multi-season Game history visual at 375px',async({browser})=>{
+  const {context,page,errors}=await openAccount(browser,375,'history-visual');await routeMultiSeasonHistory(page);
+  await page.evaluate(()=>{const pid=PLAYERS.find(item=>playerRoundRows(item.id).some(row=>row.played)).id;setPage('players');showPlayer(pid)});
+  await expect(page.getByText('Loading all available seasons and detailed match statistics…')).toBeHidden();await page.locator('#player-history-season').selectOption('2025');
+  await page.addStyleTag({content:'.skip-link,#bottom-tabbar{display:none!important}'});await page.evaluate(()=>document.activeElement&&document.activeElement.blur());
+  await page.evaluate(()=>document.querySelector('.player-history-card').scrollIntoView({block:'start',behavior:'instant'}));const runner=process.env.CI?'ci':'local';
+  await expect(page).toHaveScreenshot(`player-game-history-approved-375-${runner}.png`,{animations:'disabled',caret:'hide',maxDiffPixelRatio:.012});
   expect(errors).toEqual([]);await context.close();
 });
