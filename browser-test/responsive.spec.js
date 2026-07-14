@@ -149,6 +149,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     save();
   });
   await flushCloudSave(phone);
+  await expect.poll(async()=>{const response=await page.request.get('/api/app-state');if(!response.ok())return null;const body=await response.json();return {classic:body.state?.classic?.squad?.length||0,custom:body.state?.customLeague?.team?.squad?.length||0}},{timeout:8000}).toEqual({classic:1,custom:1});
   await page.reload();await page.waitForLoadState('domcontentloaded');await page.waitForTimeout(450);
   const reverseSynced=await page.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague.team.squad.slice()}));
   expect(reverseSynced.classic).toHaveLength(1);expect(reverseSynced.custom).toHaveLength(1);
