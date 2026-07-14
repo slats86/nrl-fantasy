@@ -43,6 +43,13 @@ test('unknown API paths return JSON 404', async () => {
   assert.match(response.headers.get('content-type'), /application\/json/);
 });
 
+test('Team News API serves the verified snapshot with freshness and cache validation', async () => {
+  const response=await fetch(`http://127.0.0.1:${port}/api/team-news`);
+  assert.equal(response.status,200);assert.match(response.headers.get('content-type'),/application\/json/);assert.equal(response.headers.get('cache-control'),'no-cache, max-age=0, must-revalidate');assert.ok(response.headers.get('etag'));assert.ok(response.headers.get('x-team-news-freshness'));
+  const body=await response.json();assert.equal(body.schemaVersion,1);assert.ok(body.availability.length>50);assert.ok(body.teamLists.length>=7);assert.ok(body.availability.every(item=>item.sourceUrl&&item.checkedAt));
+  const head=await fetch(`http://127.0.0.1:${port}/api/team-news`,{method:'HEAD'});assert.equal(head.status,200);assert.equal(await head.text(),'');
+});
+
 test('malformed and oversized JSON requests fail safely', async () => {
   const malformed = await fetch(`http://127.0.0.1:${port}/api/soo/create`, {
     method: 'POST', headers: {'content-type': 'application/json'}, body: '{not-json'

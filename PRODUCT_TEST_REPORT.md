@@ -1,7 +1,63 @@
 # Product test report
 
 Date: 14 July 2026
-Branches: `agent/round19-live-data-pipeline`, production-verification follow-ups, and `agent/player-stats-approved-design`
+Branches: `agent/round19-live-data-pipeline`, production-verification follow-ups, `agent/player-stats-approved-design`, `agent/team-news-hub`, and `agent/players-hub-approved`
+
+## Approved Players Hub and Player Stats regressions (14 July 2026)
+
+### Areas and exact scenarios tested
+
+The Players destination now matches `design/players-hub-approved-concept.png`: desktop retains the established navigation rail and uses current-data summary cards, a wide search/compare row, All Players/Watchlist/Market Movers/Injuries views, combinable filters, sorting and a dense accessible results table. Mobile uses dedicated cards, horizontally scrollable views and quick filters, a full-height filter sheet, and a persistent comparison tray only after selection. Watch and Compare controls are independent from the keyboard-accessible player identity target, and comparison accepts two or three players while communicating the three-player limit.
+
+Every displayed value comes from the existing player, fixture, watchlist, named-team and authorised Team News sources. Break-even remains an honest unavailable value because no trusted feed field exists. The Injuries view and summary use the already-verified Team News snapshot; when that source is unavailable, the hub displays an explicit unavailable state and never fabricates, scrapes or infers injury facts.
+
+Player profiles retain the form chart, fixtures, Watch/Compare and current game log. Expanded Scoring, Running, Defence, Discipline and Kicking cards now use 14px bold headings, 15px labels, 16px bold values, 1.45 line height, stronger contrast, larger padding and balanced wrapping (three-plus-two at normal desktop widths, two columns at constrained desktop widths and five only at very wide widths). Mobile accordions retain every supplied statistic with 48px category targets and the same 15px/16px label/value minimums.
+
+`Previous seasons — performance by position` restores every supplied historical season/position row without merging positions. Desktop provides sortable season, position, games, minutes and average columns; mobile groups the same records into expandable season cards without horizontal overflow. Starts, total Fantasy and high score say `Not available` because those fields are absent from the historical feed. The current Role & Minutes card restores starting/interchange games, averages and minutes from the existing split dataset while labelling eligible positions without inventing position-specific role splits.
+
+Playwright covers 320, 375, 390, 768, 1024, 1440 and 1920 pixels; multi-character focus retention; combined filters and reset; form/price/average/last-three/break-even/ownership/name sorting; Watch; three-player comparison; profile/back filter restoration; honest empty/stale states; 44px mobile targets; historical multi-position separation and reload; mobile/desktop equivalent history; expanded-component typography and wrapping; WCAG AA expanded-label contrast across all five existing themes; real post-Round-14 components; no horizontal overflow; and unexpected console/page errors. Strict local and CI visual baselines are stored for the Players Hub and Player Stats at 375px and 1440px.
+
+### Issues found, root cause and fix
+
+| Severity | Issue and root cause | Fix applied | Regression coverage |
+|---|---|---|---|
+| High | The Players destination was a legacy split panel with Smart Picks above a wide table and no purpose-built mobile research flow. | Replaced it with one shared filtered/sorted view model rendered as an approved desktop hub and dedicated mobile cards/filter sheet/comparison tray. | Seven-width structural suite and strict 375px/1440px local/CI visuals. |
+| High | The redesigned profile had dropped all historical season/position records even though the bundled source retained separate rows back to each player's earliest available season. | Restored sortable desktop and grouped mobile history using the source rows exactly; unavailable fields are explicit rather than derived. | Multiple positions in one season, full row counts, reload persistence and mobile equivalence. |
+| Medium | Expanded component cards used 8–10px typography and forced five narrow cards into one row. | Raised typography/line-height/contrast/padding and introduced balanced responsive spans with a connected selected-row border. | Computed font/line-height/contrast checks plus 1024px/1440px wrapping assertions. |
+| Medium | The first hub renderer recomputed and resorted all 556 players for every result row, making mobile rerenders approach the interaction timeout. | Compute one immutable view model per render and share it across all desktop rows and mobile cards. | Filter, reset, Watch and Compare interactions complete within the full browser suite. |
+| Medium | Added browser registration traffic exhausted the intentional authentication limiter before legacy responsive tests. | Players Hub UI tests use browser-local read-only session/app-state interception because they do not test persistence; real authentication and limiter tests remain unchanged. | Complete suite passes under the production-equivalent sensitive-route limits. |
+
+Final local gates: `npm run check` passed 45 executed unit/API tests with the explicit PostgreSQL case intentionally skipped; the isolated PostgreSQL migration/persistence suite passed 1/1 against `nrl_fantasy_test`; and the complete Playwright suite passed 31/31 in 4.6 minutes. CI-mode visual checks passed 4/4. No scoring formula, player resolver, upstream correction behavior or Match Centre polling code was changed, and no production user, team, league, pick, score or preference data was accessed or modified.
+
+## Team News central hub (14 July 2026)
+
+### Areas and exact scenarios tested
+
+Team News is a primary desktop and mobile destination with Overview, Injuries, Team Lists, Changes & Replacements, Late Mail, and Suspensions & Returns views. The dashboard uses a compact personalised subset and an update count; relevance includes Classic and custom squads, league squads, watchlists, followed players/clubs, and status changes since the prior Team News visit.
+
+The official-source importer was run against the live NRL Casualty Ward, Team Lists topic/current and preceding round pages, Late Mail, and 2026 Judiciary report. The verified snapshot contains 88 availability facts, 12 official match team sheets across Rounds 18–19, 12 final-team publication events, and the current match suspension. Of the 88 availability names, 81 match the application dataset exactly and four resolve safely through same-club first-name aliases (Seb/Sebastian, Mitch/Mitchell and Api/Apisai). Three official Casualty Ward names are not present in the current Fantasy player dataset and remain explicitly unresolved rather than being attached to a different player.
+
+Desktop testing covers the full injury table, source metadata, search and every requested filter, round/match/list-version selection, current-versus-prior round comparison, complete reshuffle sequences, replacement comparison, follow actions, player-profile navigation and source links. At 320, 375, 390 and 768 pixels the table is replaced by expandable cards, controls scroll horizontally, bottom navigation remains visible and the page has no horizontal overflow. The same hub was exercised at 1024, 1440 and 1920 pixels and under Modern Lime, Electric Blue, Stadium Gold, Teal & Coral and Light Editorial.
+
+Pure regression fixtures cover exact and alias identity, same-name players resolved by club, injury/suspension/rest/non-selection separation, return-round ranges, explicit confirmed replacements, derived direct replacements, uncertain multi-player reshuffles, Tuesday-to-24-hour-to-final history, conflicting reports, duplicate reports, multi-digit Late Mail round discovery, and upstream outage freshness. API coverage verifies JSON content type, ETag, no-cache policy, HEAD handling, source attribution, and structural completeness. Playwright checks keyboard-accessible tabs/cards, retained search focus, safe external links, player integration, dashboard personalisation, stale-source announcements, all target widths/themes, and unexpected browser errors.
+
+### Issues found, root cause and fix
+
+| Severity | Issue and root cause | Fix applied | Regression coverage |
+|---|---|---|---|
+| High | Availability was split between a hardcoded named-team string and user-maintained injury-chip flags, with no sourced central model. | Added a generated, source-attributed Team News domain, no-cache API, retained history, freshness state, hub UI and shared availability indicators. User fantasy preferences remain separate. | Unit parser/classifier tests, API structural tests and complete Team News Playwright suite. |
+| High | A one-out/one-in diff was treated as a direct replacement even when other players moved positions. | A direct relationship now requires exactly two changes. Multi-step reshuffles retain the complete sequence, carry `possible` accuracy and have no asserted direct replacement. | Confirmed, derived and multi-player reshuffle fixtures. |
+| High | Identity enrichment between fetches could look like a withdrawal and re-addition of the same player. | Roster comparisons use stable punctuation-normalized names within the known club roster; official IDs remain metadata, not diff identity. | Generated snapshot rejects self-replacement changes; alias/same-name fixtures. |
+| Medium | Multi-digit Late Mail URLs were greedily parsed as Round 9 instead of Round 19. | Round extraction is now anchored to the complete `round-N` slug segment. | Explicit Round 19 link-discovery regression. |
+| Medium | A failed source refresh could erase usable information. | Import failures retain the last verified committed snapshot; the browser retains its in-memory snapshot, marks it source-unavailable and substantially reduces hidden-page work. | Import fallback logic and stale-source browser scenario. |
+| Medium | Browser search rerendered the directory on each keystroke and could lose focus. | The current selection is restored to the replacement input after render. | Search focus and apostrophe-name browser test. |
+| Medium | Repeated UI-test registration/login traffic exhausted intentional sensitive-route limits. | Team News read-only tests use isolated local session/app-state routes and never weaken application rate limiting. | Complete suite under the real shared rate-limit configuration. |
+
+The scheduled data workflow now adds `public/team-news.json` to its dedicated bot update and runs every 15 minutes during Tuesday’s team-list release window, every 10 minutes during active NRL match windows, and every four hours otherwise. Import requests have 12-second timeouts, three bounded attempts and identified user-agent headers. Successful no-change runs remain successful. Browser refresh is every five minutes while the Team News hub is visible, every 30 minutes elsewhere, paused while hidden, and immediate on return.
+
+Remaining limitation: official NRL pages are the active production sources because they have the highest requested priority. The reconciliation model supports official-club and publication tiers and retains superseded conflicts, but supplementary club/publication crawlers are not enabled until a source is reviewed for stable structured facts and permitted automated access. The hub never fills an official gap with an unattributed or guessed report.
+
+Final local gates: `npm run check` passed 45 tests with the isolated PostgreSQL case intentionally skipped in that command; the PostgreSQL integration test then passed separately against `nrl_fantasy_test`; and the complete Playwright suite passed all 23 tests in 5.0 minutes with no unexpected page/console errors. The live Team News import completed with zero upstream failures. No production account, league, team, pick, score or preference was read or modified.
 
 ## Approved Player Stats redesign (14 July 2026)
 

@@ -2,6 +2,7 @@ name: Fetch NRL Fantasy Data
 
 on:
   schedule:
+    - cron: '*/15 5-12 * * 2'       # Tuesday official team-list release window
     - cron: '*/10 3-13 * * 4,5,6,0' # active NRL match window (UTC / Australia east coast)
     - cron: '0 */4 * * *'            # pre-game, corrections and off-days
   workflow_dispatch:
@@ -45,7 +46,7 @@ jobs:
           git config user.name "nrl-data-bot"
           git config user.email "bot@nrl-fantasy"
           git switch -C bot/nrl-data-refresh origin/main
-          git add public/players.json public/rounds.json index.html
+          git add public/players.json public/rounds.json public/team-news.json index.html
           if git diff --staged --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Official data is already current; no publish is needed."

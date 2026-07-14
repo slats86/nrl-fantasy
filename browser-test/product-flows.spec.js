@@ -186,7 +186,7 @@ test('navigation, internal links, dialogs and failed requests remain usable', as
   expect(await page.evaluate(()=>({status:LIVE.status,score:LIVE.scores[0]}))).toEqual({status:'live',score:57});
   await expect(page.locator('#hdr-status')).toContainText('LIVE');
   const unlabeled=[];
-  for(const name of ['home','classic','match','leagues','origin','custom','players','settings']){
+  for(const name of ['home','classic','match','teamnews','leagues','origin','custom','players','settings']){
     await page.evaluate(value=>setPage(value),name);await page.waitForTimeout(80);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth),`${name} overflow`).toBeLessThanOrEqual(1);
     unlabeled.push(...await page.locator(`#pg-${name} input:visible,#pg-${name} select:visible,#pg-${name} textarea:visible`).evaluateAll(nodes=>nodes.filter(node=>!(node.labels&&node.labels.length)&&!node.getAttribute('aria-label')&&!node.getAttribute('aria-labelledby')).map(node=>node.id||node.outerHTML.slice(0,80))));
@@ -284,6 +284,7 @@ test('Match Centre advances generically, refreshes live scores/components, pause
   const beforeResume=playerRequests;
   await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});document.dispatchEvent(new Event('visibilitychange'));});
   await expect.poll(()=>playerRequests).toBeGreaterThan(beforeResume);
+  await page.evaluate(()=>_refreshInFlight);
 
   fail=true;await page.evaluate(()=>autoRefresh());
   await expect(page.locator('#hdr-updated')).toContainText('Data may be stale');

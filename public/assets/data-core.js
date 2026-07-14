@@ -102,6 +102,7 @@ function defaultState(){
     customLeague:null, /* {name,created,chipsEnabled,cap,tradesPerRound,seasonTrades,captainMult,benchScores,bank,tradesRound,tradesSeason} */
     draft:null,        /* {phase,league,size,teams,me,pickNo,done,log,history} */
     watchlist:[],      /* [pid,...] starred players */
+    teamNewsPrefs:{followedPlayers:[],followedClubs:[],lastVisitedAt:null},
     priceHistory:{},   /* {round:{pid:price}} snapshot after each simulated round */
     plannedTrades:[],  /* [{out:pid,in:pid,note:''}] staged future trades */
     corrections:{},    /* {r:{pid:pts}} commissioner score overrides */
@@ -165,6 +166,7 @@ function load(){
     if(S.settings&&S.settings.bonusEvents===undefined){S.settings.bonusEvents=false;S.settings.bonusMetre=5;S.settings.bonusTackle=5;S.settings.bonusTryInv=5;S.settings.consistencyBonus=false;S.settings.consistencyStreak=3;S.settings.consistencyMult=1.1;S.settings.upsetBonus=false;S.settings.upsetThreshold=60;S.settings.upsetBonusPts=10;}
     if(S.draft&&!S.draft.phase)S.draft=null; /* migrate: reset legacy draft — new league-code flow required */
     if(!S.watchlist)S.watchlist=[];
+    if(!S.teamNewsPrefs)S.teamNewsPrefs={followedPlayers:[],followedClubs:[],lastVisitedAt:null};
     if(!S.ui.classicTab)S.ui.classicTab='team';
     if(!S.ui.draftPostTab)S.ui.draftPostTab='team';
     if(!S.ui.trPage)S.ui.trPage='classic';

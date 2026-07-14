@@ -74,6 +74,38 @@ test('themes, byes, long names and unavailable match details remain honest',asyn
   expect(errors).toEqual([]);await context.close();
 });
 
+test('expanded details are readable and historical positions remain distinct',async({browser})=>{
+  for(const width of [1024,1440]){
+    const {context,page,errors}=await openAccount(browser,width,`readability-${width}`);
+    const state=await page.evaluate(()=>{const entry=Object.entries(HIST).find(([id,rows])=>rows.some((row,index)=>rows.some((other,otherIndex)=>otherIndex!==index&&other[0]===row[0]&&other[1]!==row[1]))&&playerRoundRows(+id).some(row=>row.played));const pid=entry?+entry[0]:6;setPage('players');showPlayer(pid);return {pid,history:HIST[pid]}});
+    await expect(page.locator('.player-profile')).toBeVisible();await expect(page.getByText('Loading current detailed match statistics…')).toBeHidden();
+    await page.evaluate(pid=>{const round=playerRoundRows(pid).find(row=>row.played).r,st=Array(STAT_KEYS.length+1).fill(1);st[STAT_KEYS.indexOf('MG')]=176;st[STAT_KEYS.indexOf('TCK')]=31;st[STAT_KEYS.length]=80;RST[pid]=RST[pid]||{};RST[pid][round]=st;S.ui.playerExpandedRound=round;renderPlayers()},state.pid);
+    const detail=page.locator('.player-game-detail'),label=detail.locator('.player-stat-item span').first(),value=detail.locator('.player-stat-item b').first(),heading=detail.locator('.player-stat-group h3').first();
+    await expect(detail).toBeVisible();await expect(label).toBeVisible();expect(parseFloat(await label.evaluate(node=>getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(15);expect(parseFloat(await value.evaluate(node=>getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16);expect(parseFloat(await heading.evaluate(node=>getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(14);
+    expect(parseFloat(await label.evaluate(node=>getComputedStyle(node).lineHeight))).toBeGreaterThanOrEqual(21.75);
+    const rows=await page.locator('.player-history-table tbody tr').evaluateAll(nodes=>nodes.map(node=>[node.dataset.season,node.dataset.position]));
+    expect(rows.length).toBe(state.history.length);expect(new Set(rows.map(row=>row.join('|'))).size).toBe(rows.length);
+    const groupRows=await detail.locator('.player-stat-group').evaluateAll(nodes=>new Set(nodes.map(node=>Math.round(node.getBoundingClientRect().top))).size);
+    expect(groupRows).toBeGreaterThanOrEqual(2);
+    if(width===1440)for(const theme of ['lime','blue','gold','teal','light']){
+      await page.evaluate(id=>applyTheme(id,false),theme);
+      const contrast=await label.evaluate(node=>{const parse=value=>(value.match(/[\d.]+/g)||[]).slice(0,3).map(Number),fg=parse(getComputedStyle(node).color),bg=parse(getComputedStyle(node.closest('.player-stat-group')).backgroundColor),alpha=+getComputedStyle(node).opacity||1,mix=fg.map((value,index)=>value*alpha+bg[index]*(1-alpha)),lum=rgb=>{const values=rgb.map(value=>{const s=value/255;return s<=.04045?s/12.92:Math.pow((s+.055)/1.055,2.4)});return .2126*values[0]+.7152*values[1]+.0722*values[2]},a=lum(mix),b=lum(bg);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)});
+      expect(contrast,`${theme} expanded-label contrast`).toBeGreaterThanOrEqual(4.5);
+    }
+    await page.reload();await page.evaluate(pid=>{setPage('players');showPlayer(pid)},state.pid);await expect(page.getByRole('heading',{name:'Previous seasons — performance by position'})).toBeVisible();await expect(page.locator('.player-history-table tbody tr')).toHaveCount(state.history.length);
+    expect(errors).toEqual([]);await context.close();
+  }
+});
+
+test('mobile history exposes equivalent fields without overflow',async({browser})=>{
+  const {context,page,errors}=await openAccount(browser,375,'mobile-history');
+  const state=await page.evaluate(()=>{const pid=+Object.keys(HIST).find(id=>HIST[id].length>2);setPage('players');showPlayer(pid);return {pid,count:HIST[pid].length}});
+  await expect(page.getByRole('heading',{name:'Previous seasons — performance by position'})).toBeVisible();
+  await expect(page.locator('.player-history-mobile .player-history-position')).toHaveCount(state.count);await expect(page.locator('.player-history-mobile').getByText('Starts',{exact:true}).first()).toBeVisible();await expect(page.locator('.player-history-mobile').getByText('Not available',{exact:true}).first()).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+  expect(errors).toEqual([]);await context.close();
+});
+
 for(const width of [375,1440])test(`approved Player Stats visual at ${width}px`,async({browser})=>{
   const {context,page,errors}=await openAccount(browser,width,`visual-${width}`);
   await page.route('**/api/player-stats/*',route=>route.fulfill({json:{stats:[]}}));

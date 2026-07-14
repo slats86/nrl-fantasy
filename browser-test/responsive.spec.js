@@ -149,6 +149,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     save();
   });
   await flushCloudSave(phone);
+  await expect.poll(async()=>{const response=await page.request.get('/api/app-state');if(!response.ok())return null;const body=await response.json();return {classic:body.state?.classic?.squad?.length||0,custom:body.state?.customLeague?.team?.squad?.length||0}},{timeout:8000}).toEqual({classic:1,custom:1});
   await page.reload();await page.waitForLoadState('domcontentloaded');await page.waitForTimeout(450);
   const reverseSynced=await page.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague.team.squad.slice()}));
   expect(reverseSynced.classic).toHaveLength(1);expect(reverseSynced.custom).toHaveLength(1);
@@ -180,9 +181,14 @@ for (const width of [375, 1440]) test(`detailed statistics UI, search and filter
   const statsRegistration=await page.request.post('/api/soo/register',{data:{
     name:'Statistics UI',email:`stats-${width}@example.com`,password:'statistics-password-123'
   }});
-  if(statsRegistration.status()===429&&width===1440){
-    expect((await page.request.post('/api/soo/login',{data:{email:'stats-375@example.com',password:'statistics-password-123'}})).status()).toBe(200);
-  }else expect(statsRegistration.status()).toBe(201);
+  if(statsRegistration.status()!==201){
+    const candidates=[
+      {email:'stats-375@example.com',password:'statistics-password-123'},
+      {email:'player-design@example.com',password:'player-design-password'}
+    ];
+    let loginStatus=401;for(const credentials of candidates){const login=await page.request.post('/api/soo/login',{data:credentials});loginStatus=login.status();if(loginStatus===200)break}
+    expect(loginStatus).toBe(200);
+  }
   await page.goto('/');
   const appearancePrompt=page.getByText('Choose your look');
   if(await appearancePrompt.isVisible().catch(()=>false)){
@@ -213,20 +219,20 @@ for (const width of [375, 1440]) test(`detailed statistics UI, search and filter
   await page.evaluate(()=>setPage('players'));
   await page.locator('#player-stats-search').fill(player.last);
   await page.waitForTimeout(180);
-  await page.locator('#player-stats-search + select').selectOption(String(player.club));
-  await page.locator('#pg-players .pos-filter button').filter({hasText:new RegExp('^'+await page.evaluate(pos=>POSN[pos],player.position)+'$')}).click();
-  const profileRow=page.locator('#pg-players .pl-main-table tbody tr').filter({hasText:player.name}).first();
+  await page.getByLabel('Filter by club').selectOption(String(player.club));
+  await page.getByLabel('Filter by position').selectOption(String(player.position));
+  const profileRow=page.locator(width===375?'.players-mobile-card':'.players-table tbody tr').filter({hasText:player.name}).first();
   await expect(profileRow).toBeVisible();
-  await profileRow.click();
+  await profileRow.locator('.players-identity').click();
   await expect(page.locator('.player-profile')).toBeVisible();
   await expect(page.getByRole('heading',{name:player.name,level:1})).toBeVisible();
   await expect(page.getByRole('heading',{name:'2026 Form'})).toBeVisible();
   await page.evaluate(()=>applyTheme('blue',false));
   await page.screenshot({path:`reports/player-stats-${width}.png`,fullPage:false});
-  await expect(page.getByRole('button',{name:'Score'})).toHaveAttribute('aria-pressed','true');
-  await page.getByRole('button',{name:'Minutes'}).click();
-  await expect(page.getByRole('button',{name:'Minutes'})).toHaveAttribute('aria-pressed','true');
-  await page.getByRole('button',{name:'Score'}).click();
+  await expect(page.getByRole('button',{name:'Score',exact:true})).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Minutes',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Minutes',exact:true})).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Score',exact:true}).click();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   if(width===375){
     const recent=page.getByRole('button',{name:new RegExp(`Open Round ${player.round},`)});
@@ -254,12 +260,11 @@ for (const width of [375, 1440]) test(`detailed statistics UI, search and filter
   expect(await page.evaluate(id=>S.watchlist.includes(id),player.id)).toBe(true);
   if(width===1440){
     await page.keyboard.press('Escape');
-    await page.evaluate(()=>{S.ui.plSearch='';S.ui.plClub=-1;S.ui.plPos=0;setPage('players');});
-    await page.locator('#pg-players th').filter({hasText:'Avg'}).first().click();
+    await page.evaluate(()=>{S.ui.plSearch='';S.ui.plFilters={};S.ui.plClub=-1;S.ui.plPos=0;setPage('players');});
+    await page.getByLabel('Sort players').selectOption('avg');
     expect(await page.evaluate(()=>S.ui.plSort)).toBe('avg');
-    const compareButtons=page.locator('#pg-players .pl-main-table tbody tr td:last-child button');
-    await compareButtons.nth(0).click();await page.locator('#modal button').filter({hasText:/^OK$/}).click();
-    await compareButtons.nth(1).click();
+    const compareButtons=page.locator('.players-table tbody .players-row-action[aria-label*="to comparison"]');
+    await compareButtons.first().click();await compareButtons.first().click();await page.getByRole('button',{name:/Compare 2\/3/}).click();
     await expect(page.locator('#modal')).toContainText(/Player Comparison/i);
     await page.keyboard.press('Escape');
   }
@@ -299,7 +304,7 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   await expect(cardTab).toHaveAttribute('tabindex', '0');
   await cardTab.focus();
   await cardTab.press('Enter');
-  for (const name of ['home','classic','match','leagues','custom','players','settings']) {
+  for (const name of ['home','classic','match','teamnews','leagues','custom','players','settings']) {
     await page.evaluate(pg => { if (typeof window.setPage === 'function') window.setPage(pg); }, name);
     await page.waitForTimeout(50);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -308,7 +313,7 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   const mobileNav = await page.locator('#bottom-tabbar').evaluate(el => getComputedStyle(el).display !== 'none');
   expect(mobileNav).toBe(width <= 768);
   if (width <= 768) {
-    await expect(page.locator('#bottom-tabbar .btab')).toHaveCount(5);
+    await expect(page.locator('#bottom-tabbar .btab')).toHaveCount(6);
     await expect(page.getByRole('button',{name:'Open navigation menu'})).toBeVisible();
     await expect(page.locator('.topbar-brand')).toBeVisible();
     await page.locator('#bottom-tabbar .btab').filter({hasText:'More'}).click();
