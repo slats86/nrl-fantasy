@@ -63,11 +63,18 @@ Use `design/players-hub-approved-concept.png` as the approved visual target. Mat
 
 ## Historical player information
 
-- Restore `Previous seasons — performance by position` beneath the current-season game log on individual profiles.
-- Keep each season/position combination separate.
-- Show season, position, games, starts when available, average minutes, average Fantasy points, total Fantasy points and high score when available.
-- Restore the current-season Role & Minutes summary.
-- Never replace position-specific history with a season-wide average.
+- At the bottom of every individual player profile, provide one section titled `Game history`.
+- Put an accessible `Season` dropdown at the top of this section containing every season available for that player, newest first.
+- Default to the current season. Changing the season updates the game history in place without navigating away or reloading the whole profile.
+- Use the same full game-by-game presentation for current and historical seasons. Do not reduce past seasons to position averages.
+- For every round show, when available: round, match date, opponent, home/away, the player's position in that match, starting/interchange role, minutes, price at that round, break-even, Fantasy points and appearance status.
+- Expanding a played round must show its real Scoring, Running, Defence, Discipline and Kicking component statistics using the improved readable type sizes.
+- Clearly distinguish played, bye, injured, suspended, rested and not-selected rounds. Never treat a missing appearance as a zero-point performance unless the source explicitly records it that way.
+- Add a compact selected-season summary above the rows: games, average Fantasy points, total Fantasy points, high score, average minutes and positions played. Every value must be calculated only from that selected season.
+- If a historical season lacks detailed component data, still show every verified game-level field and label unavailable component fields honestly rather than borrowing current-season or season-average data.
+- Preserve the selected season when the user opens a round and returns to the table. A shareable `season` URL/query state is preferred when it can be added without breaking existing profile links.
+- On mobile, use a full-width season selector and expandable round cards. Show equivalent information without horizontal page overflow.
+- Keep the current-season Role & Minutes summary elsewhere on the profile, but do not use it as a substitute for historical game-by-game records.
 
 ## Safety
 
@@ -83,7 +90,7 @@ Use `design/players-hub-approved-concept.png` as the approved visual target. Mat
 - Run the complete Playwright suite.
 - Add Players hub coverage at 320, 375, 390, 768, 1024, 1440 and 1920px.
 - Add tests for multi-character search focus, combined filters, filter reset, sorting, Watch, three-player Compare, profile navigation/back-state restoration, empty states and stale states.
-- Add tests for historical season/position restoration and desktop scoring-panel font sizes.
+- Add tests for the season dropdown, current and previous season game histories, per-match historical positions, expandable historical component rows, missing-detail handling, selection persistence and desktop scoring-panel font sizes.
 - Add strict visual baselines at 375px and 1440px.
 - Perform read-only production verification with all non-GET production requests intercepted.
 - Commit in a dedicated branch, open a PR, wait for required CI, merge, confirm Railway deployment and verify `/health` and `/ready`.

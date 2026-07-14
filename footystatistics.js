@@ -112,6 +112,27 @@ function payloadMatchesPlayer(payload, expected) {
   return !expectedPositions.length || !actualPositions.length || actualPositions.some(position => expectedPositions.includes(position));
 }
 
+function mergeHistoricalPlayerStats(currentPayload, resolvedPayload, currentYear) {
+  const current = currentPayload && typeof currentPayload === 'object' ? currentPayload : {};
+  const resolved = resolvedPayload && typeof resolvedPayload === 'object' ? resolvedPayload : {};
+  const currentStats = Array.isArray(current.stats) ? current.stats : [];
+  const historicalStats = (Array.isArray(resolved.stats) ? resolved.stats : []).filter(stat =>
+    stat && stat.match_type === 'nrl' && Number(stat.year) !== Number(currentYear) &&
+    Number.isFinite(Number(stat.year)) && Number.isFinite(Number(stat.round_id))
+  );
+  const seen = new Set();
+  const stats = [...currentStats, ...historicalStats].filter(stat => {
+    const key = [stat.year, stat.round_id, stat.match_type, stat.match_id || ''].join(':');
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  }).sort((a, b) => Number(b.year) - Number(a.year) || Number(b.round_id) - Number(a.round_id));
+  const roundStrips = Object.assign({}, current.round_strips || {}, resolved.round_strips || {});
+  const resolvedSeason = Number(resolved.current_season);
+  if (Number.isFinite(resolvedSeason) && Array.isArray(resolved.round_strip))
+    roundStrips[resolvedSeason] = resolved.round_strip;
+  return Object.assign({}, current, {stats, round_strips: roundStrips});
+}
+
 function buildOfficialPayload(player, rounds, details, year, sourcePlayerId) {
   const stats = Object.entries(details || {}).filter(([round, values]) => /^\d+$/.test(round) &&
     ['T', 'TCK', 'MG', 'G'].some(field => values && values[field] !== null && values[field] !== undefined &&
@@ -169,5 +190,5 @@ function buildOfficialPayload(player, rounds, details, year, sourcePlayerId) {
 module.exports = {
   parseInitialPlayerId, hasSeasonStats, playerSlug, playerNameKey, searchQueryVariants, numericPositions, searchPlayerSelection,
   findSearchPlayer, findSearchPlayerId, findSearchPlayerPath, hasStatComponents,
-  hasCompleteSeasonDetails, payloadMatchesPlayer, buildOfficialPayload
+  hasCompleteSeasonDetails, payloadMatchesPlayer, mergeHistoricalPlayerStats, buildOfficialPayload
 };
