@@ -6062,6 +6062,7 @@ function hasLocalGameData(){return !!(S.classic&&S.classic.squad&&S.classic.squa
 window.queueCloudSave=function(immediate=false){
   clearTimeout(_cloudSaveTimer);
   _cloudSaveTimer=setTimeout(()=>{
+    _cloudSaveTimer=null;
     const state=cloudPayload();
     _cloudSaveChain=_cloudSaveChain.then(async()=>{
       try{

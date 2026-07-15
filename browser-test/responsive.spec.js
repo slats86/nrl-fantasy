@@ -2,7 +2,7 @@
 const {test, expect} = require('@playwright/test');
 const widths = [320, 375, 390, 768, 1024, 1440, 1920];
 async function flushCloudSave(page){
-  await page.waitForTimeout(950);
+  await page.waitForFunction(()=>_cloudSaveTimer===null,{timeout:5000});
   await page.evaluate(()=>_cloudSaveChain);
 }
 

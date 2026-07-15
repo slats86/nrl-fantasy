@@ -8,7 +8,7 @@ test('desktop Team News hub exposes verified directory, filters, lists and playe
   await page.getByRole('tab',{name:'Injuries'}).click();await expect(page.locator('.team-news-table tbody tr').first()).toBeVisible();await expect(page.getByRole('link',{name:/NRL.com/}).first()).toHaveAttribute('rel',/noopener/);
   const search=page.getByLabel('Search injuries');await search.fill("J'maine");await expect(search).toBeFocused();await expect(page.locator('.team-news-table tbody tr')).toHaveCount(1);await search.fill('');
   await page.getByLabel('Filter injuries by club').selectOption({label:'Broncos'});expect(await page.locator('.team-news-table tbody tr').count()).toBeGreaterThan(1);
-  await page.getByRole('tab',{name:'Team Lists'}).click();await expect(page.getByLabel('Select team-list round')).toBeVisible();await expect(page.locator('.team-list-club')).toHaveCount(2);await expect(page.getByRole('tab',{name:/Final team/}).first()).toHaveAttribute('aria-selected','true');
+  await page.getByRole('tab',{name:'Team Lists'}).click();await expect(page.getByLabel('Select team-list round')).toBeVisible();await expect(page.locator('.team-list-club')).toHaveCount(2);await expect(page.locator('[aria-label="Team-list version"] [role="tab"][aria-selected="true"]')).toHaveCount(1);
   const player=page.locator('.team-list-player-row button').first();const name=await player.textContent();await player.click();await expect(page.getByRole('heading',{name:name.trim(),level:1})).toBeVisible();expect(errors).toEqual([]);await context.close();
 });
 
