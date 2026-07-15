@@ -1,18 +1,18 @@
 # Player statistics audit
 
-Generated: 2026-07-13T09:01:15.155Z
+Generated: 2026-07-15T12:06:59.887Z
 Target: https://nrl.the-squad.com.au
 
 ## Summary
 
 | Metric | Count |
 |---|---:|
-| Total players checked | 367 |
-| Successfully resolved | 367 |
-| Effective successes | 367 |
+| Total players checked | 379 |
+| Successfully resolved | 379 |
+| Effective successes | 379 |
 | Unresolved | 0 |
 | Ambiguous searches | 0 |
-| Stale upstream records | 367 |
+| Stale upstream records | 379 |
 | Missing expected rounds | 0 |
 | Fantasy rounds without components | 0 |
 | Upstream failures | 0 |
@@ -24,7 +24,7 @@ Target: https://nrl.the-squad.com.au
 |---|---:|---:|---|---|---|---|---|---|
 | Payne Haas | 504300 | 1590 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Terrell May | 508065 | 1591 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
-| Nathan Cleary | 504120 | 1593 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Nathan Cleary | 504120 | 1593 | resolved/cache | official-nrl-fallback | yes | — | — | PASS |
 | Herbie Farnworth | 508300 | 1594 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Hudson Young | 504074 | 1595 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Jayden Campbell | 100001622 | 1596 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -32,10 +32,11 @@ Target: https://nrl.the-squad.com.au
 | Erin Clark | 503685 | 1598 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Joseph Tapine | 500555 | 1599 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Dylan Lucas | 505582 | 1601 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Jacob Preston | 507878 | 1602 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Fletcher Sharpe | 100006482 | 1603 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Isaiya Katoa | 100006258 | 1604 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Keaon Koloamatangi | 504174 | 1605 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
-| Nicholas Hynes | 502490 | 1606 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Nicholas Hynes | 502490 | 1606 | resolved/cache | official-nrl-fallback | yes | — | — | PASS |
 | Trai Fuller | 508480 | 1607 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Kai Pearce-Paul | 100008107 | 1608 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Toby Couchman | 100011308 | 1609 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -120,6 +121,7 @@ Target: https://nrl.the-squad.com.au
 | Dane Gagai | 500043 | 1704 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Nat Butcher | 503639 | 1705 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Kalyn Ponga | 504870 | 1706 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Nick Meaney | 505537 | 1707 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Tevita Naufahu | 100017017 | 1708 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Tom Trbojevic | 501505 | 1709 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Greg Marzhew | 504325 | 1710 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -168,6 +170,7 @@ Target: https://nrl.the-squad.com.au
 | Reed Mahoney | 505460 | 1758 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Chris Randall | 100001349 | 1759 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Morgan Smithies | 100006166 | 1760 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Daniel Tupou | 500002 | 1761 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Jarome Luai | 504121 | 1762 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Dylan Brown | 505626 | 1763 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Taniela Paseka | 504251 | 1764 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -177,6 +180,7 @@ Target: https://nrl.the-squad.com.au
 | Jake Averillo | 505643 | 1768 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Tyson Frizell | 500622 | 1770 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Jesse Ramien | 502072 | 1771 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Josh Papalii | 500973 | 1772 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Mathew Feagai | 507925 | 1773 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Lachlan Hubner | 506446 | 1774 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Ezra Mam | 100004534 | 1775 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -211,6 +215,7 @@ Target: https://nrl.the-squad.com.au
 | Jayden Brailey | 502016 | 1811 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Jake Trbojevic | 500751 | 1813 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Hamish Stewart | 100006241 | 1815 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Campbell Graham | 504294 | 1816 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Emre Guler | 504426 | 1817 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Egan Butcher | 504678 | 1818 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Thomas Cant | 509527 | 1819 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -256,6 +261,7 @@ Target: https://nrl.the-squad.com.au
 | Jeral Skelton | 100013303 | 1873 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Ethan Sanders | 100003925 | 1875 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Josh Kerr | 503533 | 1877 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Sean O'Sullivan | 504842 | 1878 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Latu Fainu | 100006631 | 1881 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Bailey Hayward | 505864 | 1882 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Simi Sasagi | 100000129 | 1883 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -285,6 +291,7 @@ Target: https://nrl.the-squad.com.au
 | Jesse Colquhoun | 100004272 | 1913 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Toby Rudolf | 504326 | 1914 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Siosifa Talakai | 504175 | 1915 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Josiah Pahulu | 100009053 | 1918 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Tanner Stowers-Smith | 100013671 | 1919 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Blake Lawrie | 503440 | 1920 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Brad Schneider | 100002660 | 1921 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -306,11 +313,13 @@ Target: https://nrl.the-squad.com.au
 | Jed Stuart | 100012912 | 1946 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Sam Tuivaiti | 100006424 | 1949 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Josh Patston | 100010891 | 1950 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Taylor Losalu | 100000336 | 1952 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Ativalu Lisati | 100010528 | 1953 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Kurtis Morrin | 505648 | 1955 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Jayden Sullivan | 507928 | 1957 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Tony Sukkar | 100004168 | 1958 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Heath Mason | 100006657 | 1964 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Noah Martin | 100006323 | 1965 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Jaylan De Groot | 100006861 | 1967 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Freddy Lussick | 504830 | 1968 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Trent Toelau | 508341 | 1969 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -331,6 +340,7 @@ Target: https://nrl.the-squad.com.au
 | Arama Hau | 100009453 | 1997 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Joey Walsh | 100011351 | 2001 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Jayden Berrell | 500150 | 2006 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Matthew Dufty | 500448 | 148 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Bunty Afoa | 501744 | 194 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Soni Luke | 502756 | 766 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Patrick Herbert | 504007 | 502 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -352,6 +362,7 @@ Target: https://nrl.the-squad.com.au
 | Luke Gale | 509846 | 330740 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Latrell Siegwalt | 510485 | 330653 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Setu Tu | 510696 | 330647 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Dean Ieremia | 100001537 | 730 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Heilum Luki | 100001946 | 2023 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Lachlan Crouch | 100003974 | 2024 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Tom Chester | 100004781 | 2025 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
@@ -360,6 +371,7 @@ Target: https://nrl.the-squad.com.au
 | Billy Scott | 100006259 | 2028 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Jett Liu | 100006318 | 677376 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Vena Patuki-Case | 100006509 | 2030 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
+| Araz Nanva | 100006539 | 330680 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Josh Feledy | 100006630 | 935 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Faaletino Tavana | 100006826 | 330611 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |
 | Ryan Couchman | 100008396 | 2039 | resolved/profile | official-nrl-fallback | yes | — | — | PASS |

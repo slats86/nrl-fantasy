@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-07-13T08:52:34.229Z",
+  "generatedAt": "2026-07-15T11:54:45.350Z",
   "target": "http://127.0.0.1:32289",
   "readOnly": false,
   "summary": {
-    "totalPlayersChecked": 367,
-    "successfullyResolvedPlayers": 367,
-    "effectiveSuccesses": 367,
+    "totalPlayersChecked": 379,
+    "successfullyResolvedPlayers": 379,
+    "effectiveSuccesses": 379,
     "unresolvedPlayers": 0,
     "ambiguousSearchResults": 0,
-    "staleRecords": 367,
+    "staleRecords": 379,
     "playersMissingExpectedRounds": 0,
     "playersWithRoundsWithoutComponents": 0,
     "upstreamFailures": 0,
@@ -85,6 +85,13 @@
         "name": "Dylan Lucas",
         "officialId": 505582,
         "resolvedId": "1601",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
+        "name": "Jacob Preston",
+        "officialId": 507878,
+        "resolvedId": "1602",
         "rounds": [],
         "reason": "incomplete-details"
       },
@@ -705,6 +712,13 @@
         "reason": "incomplete-details"
       },
       {
+        "name": "Nick Meaney",
+        "officialId": 505537,
+        "resolvedId": "1707",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
         "name": "Tevita Naufahu",
         "officialId": 100017017,
         "resolvedId": "1708",
@@ -1041,6 +1055,13 @@
         "reason": "incomplete-details"
       },
       {
+        "name": "Daniel Tupou",
+        "officialId": 500002,
+        "resolvedId": "1761",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
         "name": "Jarome Luai",
         "officialId": 504121,
         "resolvedId": "1762",
@@ -1100,6 +1121,13 @@
         "name": "Jesse Ramien",
         "officialId": 502072,
         "resolvedId": "1771",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
+        "name": "Josh Papalii",
+        "officialId": 500973,
+        "resolvedId": "1772",
         "rounds": [],
         "reason": "incomplete-details"
       },
@@ -1338,6 +1366,13 @@
         "name": "Hamish Stewart",
         "officialId": 100006241,
         "resolvedId": "1815",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
+        "name": "Campbell Graham",
+        "officialId": 504294,
+        "resolvedId": "1816",
         "rounds": [],
         "reason": "incomplete-details"
       },
@@ -1657,6 +1692,13 @@
         "reason": "incomplete-details"
       },
       {
+        "name": "Sean O'Sullivan",
+        "officialId": 504842,
+        "resolvedId": "1878",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
         "name": "Latu Fainu",
         "officialId": 100006631,
         "resolvedId": "1881",
@@ -1860,6 +1902,13 @@
         "reason": "incomplete-details"
       },
       {
+        "name": "Josiah Pahulu",
+        "officialId": 100009053,
+        "resolvedId": "1918",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
         "name": "Tanner Stowers-Smith",
         "officialId": 100013671,
         "resolvedId": "1919",
@@ -2007,6 +2056,13 @@
         "reason": "incomplete-details"
       },
       {
+        "name": "Taylor Losalu",
+        "officialId": 100000336,
+        "resolvedId": "1952",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
         "name": "Ativalu Lisati",
         "officialId": 100010528,
         "resolvedId": "1953",
@@ -2038,6 +2094,13 @@
         "name": "Heath Mason",
         "officialId": 100006657,
         "resolvedId": "1964",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
+        "name": "Noah Martin",
+        "officialId": 100006323,
+        "resolvedId": "1965",
         "rounds": [],
         "reason": "incomplete-details"
       },
@@ -2178,6 +2241,13 @@
         "name": "Jayden Berrell",
         "officialId": 500150,
         "resolvedId": "2006",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
+        "name": "Matthew Dufty",
+        "officialId": 500448,
+        "resolvedId": "148",
         "rounds": [],
         "reason": "incomplete-details"
       },
@@ -2329,6 +2399,13 @@
         "reason": "incomplete-details"
       },
       {
+        "name": "Dean Ieremia",
+        "officialId": 100001537,
+        "resolvedId": "730",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
         "name": "Heilum Luki",
         "officialId": 100001946,
         "resolvedId": "2023",
@@ -2381,6 +2458,13 @@
         "name": "Vena Patuki-Case",
         "officialId": 100006509,
         "resolvedId": "2030",
+        "rounds": [],
+        "reason": "incomplete-details"
+      },
+      {
+        "name": "Araz Nanva",
+        "officialId": 100006539,
+        "resolvedId": "330680",
         "rounds": [],
         "reason": "incomplete-details"
       },
@@ -2666,7 +2750,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2687,7 +2772,8 @@
       "resolvedId": "1595",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2709,7 +2795,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2774,7 +2861,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2795,7 +2883,28 @@
       "resolvedId": "1601",
       "expectedRounds": [
         17,
-        18
+        18,
+        19
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Jacob Preston",
+      "slug": "jacob-preston",
+      "officialId": 507878,
+      "resolvedId": "1602",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2817,7 +2926,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2860,7 +2970,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2881,7 +2992,8 @@
       "resolvedId": "1606",
       "expectedRounds": [
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2903,7 +3015,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2967,7 +3080,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -2987,7 +3101,8 @@
       "officialId": 504274,
       "resolvedId": "1611",
       "expectedRounds": [
-        16
+        16,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3030,7 +3145,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3072,7 +3188,8 @@
       "officialId": 506513,
       "resolvedId": "1617",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3094,7 +3211,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3116,7 +3234,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3137,7 +3256,8 @@
       "resolvedId": "1621",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3157,7 +3277,8 @@
       "officialId": 500449,
       "resolvedId": "1622",
       "expectedRounds": [
-        16
+        16,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3199,7 +3320,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3221,7 +3343,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3242,7 +3365,8 @@
       "resolvedId": "1626",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3285,7 +3409,8 @@
       "resolvedId": "1628",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3368,7 +3493,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3389,7 +3515,8 @@
       "resolvedId": "1634",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3411,7 +3538,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3455,7 +3583,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3476,7 +3605,8 @@
       "resolvedId": "1641",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3519,7 +3649,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3542,7 +3673,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3563,7 +3695,8 @@
       "resolvedId": "1645",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3627,7 +3760,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3670,7 +3804,8 @@
       "resolvedId": "1651",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3714,7 +3849,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3757,7 +3893,8 @@
       "resolvedId": "1655",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3778,7 +3915,8 @@
       "resolvedId": "1656",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3841,7 +3979,8 @@
       "resolvedId": "1662",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -3968,7 +4107,8 @@
       "officialId": 500826,
       "resolvedId": "1669",
       "expectedRounds": [
-        16
+        16,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4030,7 +4170,8 @@
       "resolvedId": "1672",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4073,7 +4214,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4115,7 +4257,8 @@
       "resolvedId": "1677",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4137,7 +4280,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4179,7 +4323,8 @@
       "resolvedId": "1680",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4200,7 +4345,8 @@
       "resolvedId": "1681",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4222,7 +4368,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4243,7 +4390,8 @@
       "resolvedId": "1683",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4283,7 +4431,8 @@
       "officialId": 100002172,
       "resolvedId": "1685",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4306,7 +4455,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4370,7 +4520,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4392,7 +4543,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4413,7 +4565,8 @@
       "resolvedId": "1692",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4434,7 +4587,8 @@
       "resolvedId": "1693",
       "expectedRounds": [
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4456,7 +4610,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4477,7 +4632,8 @@
       "resolvedId": "1696",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4520,7 +4676,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4542,7 +4699,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4563,7 +4721,8 @@
       "resolvedId": "1701",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4628,7 +4787,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4670,7 +4830,28 @@
       "officialId": 504870,
       "resolvedId": "1706",
       "expectedRounds": [
-        17
+        17,
+        19
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Nick Meaney",
+      "slug": "nick-meaney",
+      "officialId": 505537,
+      "resolvedId": "1707",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4692,7 +4873,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4714,7 +4896,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4736,7 +4919,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4758,7 +4942,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4779,7 +4964,8 @@
       "resolvedId": "1712",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4800,7 +4986,8 @@
       "resolvedId": "1713",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4907,7 +5094,8 @@
       "resolvedId": "1720",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4929,7 +5117,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4951,7 +5140,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -4973,7 +5163,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5060,7 +5251,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5082,7 +5274,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5103,7 +5296,8 @@
       "resolvedId": "1729",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5124,7 +5318,8 @@
       "resolvedId": "1730",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5146,7 +5341,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5167,7 +5363,8 @@
       "resolvedId": "1733",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5210,7 +5407,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5320,7 +5518,8 @@
       "resolvedId": "1741",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5342,7 +5541,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5364,7 +5564,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5385,7 +5586,8 @@
       "resolvedId": "1745",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5407,7 +5609,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5453,7 +5656,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5495,7 +5699,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5517,7 +5722,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5540,7 +5746,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5584,7 +5791,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5627,7 +5835,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5672,7 +5881,8 @@
       "resolvedId": "1758",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5692,7 +5902,8 @@
       "officialId": 100001349,
       "resolvedId": "1759",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5715,6 +5926,26 @@
         15,
         16,
         17
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Daniel Tupou",
+      "slug": "daniel-tupou",
+      "officialId": 500002,
+      "resolvedId": "1761",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5759,7 +5990,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5781,7 +6013,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5803,7 +6036,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5849,7 +6083,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5869,7 +6104,8 @@
       "officialId": 505643,
       "resolvedId": "1768",
       "expectedRounds": [
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5891,7 +6127,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5913,7 +6150,28 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Josh Papalii",
+      "slug": "josh-papalii",
+      "officialId": 500973,
+      "resolvedId": "1772",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5957,7 +6215,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -5998,7 +6257,8 @@
       "resolvedId": "1776",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6043,7 +6303,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6086,7 +6347,8 @@
       "resolvedId": "1782",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6129,7 +6391,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6150,7 +6413,8 @@
       "resolvedId": "1785",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6258,7 +6522,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6280,7 +6545,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6301,7 +6567,8 @@
       "resolvedId": "1792",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6322,7 +6589,8 @@
       "resolvedId": "1796",
       "expectedRounds": [
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6365,7 +6633,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6406,7 +6675,8 @@
       "resolvedId": "1802",
       "expectedRounds": [
         15,
-        16
+        16,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6427,7 +6697,8 @@
       "resolvedId": "1803",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6468,7 +6739,8 @@
       "officialId": 100004865,
       "resolvedId": "1805",
       "expectedRounds": [
-        16
+        16,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6511,7 +6783,8 @@
       "resolvedId": "1807",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6534,7 +6807,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6556,7 +6830,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6578,7 +6853,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6622,7 +6898,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6645,6 +6922,26 @@
         16,
         17,
         18
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Campbell Graham",
+      "slug": "campbell-graham",
+      "officialId": 504294,
+      "resolvedId": "1816",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6686,7 +6983,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6708,7 +7006,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6730,7 +7029,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6751,7 +7051,8 @@
       "resolvedId": "1821",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6796,7 +7097,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6818,7 +7120,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6860,7 +7163,8 @@
       "resolvedId": "1826",
       "expectedRounds": [
         15,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6949,7 +7253,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -6990,7 +7295,8 @@
       "resolvedId": "1834",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7010,7 +7316,8 @@
       "officialId": 504714,
       "resolvedId": "1835",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7033,7 +7340,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7053,7 +7361,8 @@
       "officialId": 503341,
       "resolvedId": "1838",
       "expectedRounds": [
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7097,7 +7406,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7183,7 +7493,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7266,7 +7577,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7375,7 +7687,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7395,7 +7708,8 @@
       "officialId": 500339,
       "resolvedId": "1863",
       "expectedRounds": [
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7439,7 +7753,8 @@
       "officialId": 507680,
       "resolvedId": "1865",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7483,7 +7798,8 @@
       "officialId": 100011324,
       "resolvedId": "1867",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7505,7 +7821,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7549,7 +7866,8 @@
       "resolvedId": "1870",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7593,7 +7911,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7616,6 +7935,26 @@
         16,
         17,
         18
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Sean O'Sullivan",
+      "slug": "sean-o-sullivan",
+      "officialId": 504842,
+      "resolvedId": "1878",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7658,7 +7997,8 @@
       "resolvedId": "1882",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7678,7 +8018,8 @@
       "officialId": 100000129,
       "resolvedId": "1883",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7740,7 +8081,8 @@
       "resolvedId": "1887",
       "expectedRounds": [
         15,
-        16
+        16,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7761,7 +8103,8 @@
       "resolvedId": "1888",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7783,7 +8126,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7805,7 +8149,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7826,7 +8171,8 @@
       "resolvedId": "1894",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -7955,7 +8301,8 @@
       "resolvedId": "1901",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8042,7 +8389,8 @@
       "resolvedId": "1905",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8085,7 +8433,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8107,7 +8456,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8173,7 +8523,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8237,7 +8588,28 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Josiah Pahulu",
+      "slug": "josiah-pahulu",
+      "officialId": 100009053,
+      "resolvedId": "1918",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8303,7 +8675,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8325,7 +8698,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8390,7 +8764,8 @@
       "resolvedId": "1927",
       "expectedRounds": [
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8410,7 +8785,8 @@
       "officialId": 100007527,
       "resolvedId": "1928",
       "expectedRounds": [
-        15
+        15,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8453,7 +8829,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8473,7 +8850,8 @@
       "officialId": 100004407,
       "resolvedId": "1935",
       "expectedRounds": [
-        15
+        15,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8517,7 +8895,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8561,7 +8940,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8582,7 +8962,8 @@
       "resolvedId": "1941",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8646,7 +9027,8 @@
       "officialId": 100012912,
       "resolvedId": "1946",
       "expectedRounds": [
-        15
+        15,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8668,7 +9050,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8690,7 +9073,28 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Taylor Losalu",
+      "slug": "taylor-losalu",
+      "officialId": 100000336,
+      "resolvedId": "1952",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8733,7 +9137,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8754,7 +9159,8 @@
       "resolvedId": "1957",
       "expectedRounds": [
         15,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8798,6 +9204,26 @@
       "resolvedId": "1964",
       "expectedRounds": [
         16
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Noah Martin",
+      "slug": "noah-martin",
+      "officialId": 100006323,
+      "resolvedId": "1965",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8861,7 +9287,8 @@
       "resolvedId": "1969",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8882,7 +9309,8 @@
       "resolvedId": "1971",
       "expectedRounds": [
         15,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8902,7 +9330,8 @@
       "officialId": 509864,
       "resolvedId": "1972",
       "expectedRounds": [
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -8924,7 +9353,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9011,7 +9441,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9031,7 +9462,8 @@
       "officialId": 504176,
       "resolvedId": "1983",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9071,7 +9503,8 @@
       "officialId": 509524,
       "resolvedId": "1986",
       "expectedRounds": [
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9113,7 +9546,8 @@
       "expectedRounds": [
         15,
         16,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9177,7 +9611,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9198,7 +9633,8 @@
       "resolvedId": "2001",
       "expectedRounds": [
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9220,6 +9656,26 @@
       "expectedRounds": [
         15,
         18
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Matthew Dufty",
+      "slug": "matthew-dufty",
+      "officialId": 500448,
+      "resolvedId": "148",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9264,7 +9720,8 @@
       "resolvedId": "766",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9345,7 +9802,8 @@
       "officialId": 504315,
       "resolvedId": "2010",
       "expectedRounds": [
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9474,7 +9932,8 @@
         15,
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9537,7 +9996,8 @@
       "officialId": 509404,
       "resolvedId": "2015",
       "expectedRounds": [
-        15
+        15,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9598,7 +10058,8 @@
       "resolvedId": "1064",
       "expectedRounds": [
         15,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9677,13 +10138,34 @@
       "error": null
     },
     {
+      "name": "Dean Ieremia",
+      "slug": "dean-ieremia",
+      "officialId": 100001537,
+      "resolvedId": "730",
+      "expectedRounds": [
+        19
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
       "name": "Heilum Luki",
       "slug": "heilum-luki",
       "officialId": 100001946,
       "resolvedId": "2023",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9703,7 +10185,8 @@
       "officialId": 100003974,
       "resolvedId": "2024",
       "expectedRounds": [
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9724,7 +10207,8 @@
       "resolvedId": "2025",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9766,7 +10250,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9829,6 +10314,26 @@
       "resolvedId": "2030",
       "expectedRounds": [
         15
+      ],
+      "resolution": "resolved",
+      "method": "profile",
+      "ambiguous": false,
+      "source": "official-nrl-fallback",
+      "fallbackReason": "incomplete-details",
+      "status": 200,
+      "identityValid": true,
+      "missingExpectedRounds": [],
+      "roundsWithoutComponents": [],
+      "ok": true,
+      "error": null
+    },
+    {
+      "name": "Araz Nanva",
+      "slug": "araz-nanva",
+      "officialId": 100006539,
+      "resolvedId": "330680",
+      "expectedRounds": [
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9911,7 +10416,8 @@
       "officialId": 100008414,
       "resolvedId": "330639",
       "expectedRounds": [
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -9954,7 +10460,8 @@
       "expectedRounds": [
         15,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10015,7 +10522,8 @@
       "resolvedId": "1017",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10099,7 +10607,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10121,7 +10630,8 @@
       "expectedRounds": [
         15,
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10143,7 +10653,8 @@
       "expectedRounds": [
         16,
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10267,7 +10778,8 @@
       "resolvedId": "330554",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10287,7 +10799,8 @@
       "officialId": 100013858,
       "resolvedId": "330627",
       "expectedRounds": [
-        15
+        15,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10308,7 +10821,8 @@
       "resolvedId": "1066",
       "expectedRounds": [
         16,
-        17
+        17,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10329,7 +10843,8 @@
       "resolvedId": "68371",
       "expectedRounds": [
         15,
-        16
+        16,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
@@ -10413,7 +10928,8 @@
       "resolvedId": "8902643",
       "expectedRounds": [
         17,
-        18
+        18,
+        19
       ],
       "resolution": "resolved",
       "method": "profile",
