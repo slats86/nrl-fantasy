@@ -101,6 +101,11 @@ function defaultState(){
     league:null,       /* classic league {name,teams:[{name,squad,line,ai}],fix:{},...} */
     customLeague:null, /* {name,created,chipsEnabled,cap,tradesPerRound,seasonTrades,captainMult,benchScores,bank,tradesRound,tradesSeason} */
     draft:null,        /* {phase,league,size,teams,me,pickNo,done,log,history} */
+    customLeagues:[],  /* addressable Custom league entries; customLeague aliases the active entry state */
+    draftLeagues:[],   /* addressable Draft league entries; draft aliases the active entry state */
+    activeCustomLeagueId:null,
+    activeDraftLeagueId:null,
+    fantasyLeagueLimit:20,
     watchlist:[],      /* [pid,...] starred players */
     teamNewsPrefs:{followedPlayers:[],followedClubs:[],lastVisitedAt:null},
     priceHistory:{},   /* {round:{pid:price}} snapshot after each simulated round */
@@ -153,18 +158,52 @@ function applyLayoutToTeams(){
     }
   });
   if(S.league)S.league.teams.forEach(t=>{if(!t.ai)return;resizeLine(t.line).forEach(pid=>seatInLine(t.line,pid))});
-  if(S.draft&&S.draft.done)S.draft.teams.forEach(t=>autoSetDraftLineup(t)); /* rebuild draft lineups for new layout */
+}
+function localLeagueId(format,state){
+  const seed=[format,state&&state.created,state&&state.name,state&&state.league&&state.league.code].filter(Boolean).join('-')||format+'-legacy';
+  let hash=0;for(let i=0;i<seed.length;i++)hash=((hash<<5)-hash+seed.charCodeAt(i))|0;
+  return 'LOCAL-'+format.toUpperCase()+'-'+Math.abs(hash).toString(36).toUpperCase();
+}
+function leagueEntries(format){return format==='custom'?(S.customLeagues||[]):(S.draftLeagues||[])}
+function activeLeagueEntry(format){
+  const id=format==='custom'?S.activeCustomLeagueId:S.activeDraftLeagueId;
+  return leagueEntries(format).find(entry=>entry.id===id)||null;
+}
+function syncActiveLeagueEntry(format){
+  const entry=activeLeagueEntry(format),state=format==='custom'?S.customLeague:S.draft;
+  if(entry&&state)entry.state=state;
+}
+function bindActiveLeague(format,id){
+  const entries=leagueEntries(format),entry=entries.find(item=>item.id===id)||entries[0]||null;
+  if(format==='custom'){S.activeCustomLeagueId=entry&&entry.id||null;S.customLeague=entry&&entry.state||null}
+  else{S.activeDraftLeagueId=entry&&entry.id||null;S.draft=entry&&entry.state||null}
+  return entry;
+}
+function ensureMultiLeagueState(){
+  if(!Array.isArray(S.customLeagues))S.customLeagues=[];
+  if(!Array.isArray(S.draftLeagues))S.draftLeagues=[];
+  for(const [format,legacy] of [['custom',S.customLeague],['draft',S.draft]]){
+    const entries=leagueEntries(format);
+    if(legacy&&!entries.some(entry=>entry.state===legacy||entry.id===(legacy._league&&legacy._league.id))){
+      const meta=legacy._league||{},id=meta.id||localLeagueId(format,legacy);
+      entries.push({id,code:meta.code||legacy.code||legacy.league&&legacy.league.code||'',format,name:meta.name||legacy.name||legacy.league&&legacy.league.name||(format==='custom'?'Custom League':'Draft League'),role:meta.role||(legacy.league&&legacy.league.isOwner===false?'member':'owner'),memberCount:meta.memberCount||1,maxMembers:meta.maxMembers||legacy.league&&legacy.league.size||20,teamVersion:Number(meta.teamVersion)||0,draftVersion:Number(meta.draftVersion)||0,state:legacy,updated:meta.updated||Date.now()});
+    }
+  }
+  bindActiveLeague('custom',S.activeCustomLeagueId);
+  bindActiveLeague('draft',S.activeDraftLeagueId);
 }
 function save(){
+  syncActiveLeagueEntry('custom');syncActiveLeagueEntry('draft');
   try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){console.warn('save failed',e)}
   if(window._cloudReady&&typeof window.queueCloudSave==='function')window.queueCloudSave();
+  if(window._cloudReady&&typeof window.queueFantasyLeagueSave==='function')window.queueFantasyLeagueSave();
 }
 function load(){
   try{const raw=localStorage.getItem(STORE_KEY);if(raw){S=JSON.parse(raw);
     if(S.settings&&S.settings.cap===11500000)S.settings.cap=13000000; /* migrate old default cap */
     if(S.classic&&!S.classic.chips)S.classic.chips={active:{},used:{},injured:[]}; /* migrate: add chips state */
     if(S.settings&&S.settings.bonusEvents===undefined){S.settings.bonusEvents=false;S.settings.bonusMetre=5;S.settings.bonusTackle=5;S.settings.bonusTryInv=5;S.settings.consistencyBonus=false;S.settings.consistencyStreak=3;S.settings.consistencyMult=1.1;S.settings.upsetBonus=false;S.settings.upsetThreshold=60;S.settings.upsetBonusPts=10;}
-    if(S.draft&&!S.draft.phase)S.draft=null; /* migrate: reset legacy draft — new league-code flow required */
+    if(S.draft&&!S.draft.phase)S.draft=null; /* migrate: reset incomplete pre-lobby draft saves */
     if(!S.watchlist)S.watchlist=[];
     if(!S.teamNewsPrefs)S.teamNewsPrefs={followedPlayers:[],followedClubs:[],lastVisitedAt:null};
     if(!S.ui.classicTab)S.ui.classicTab='team';
@@ -194,6 +233,7 @@ function load(){
     /* auto-advance any rounds that have real data but weren't applied yet */
     if(S.round<=MAXR||isNaN(MAXR)){applyDataPatch();if(!isNaN(MAXR))autoAdvanceRounds(S.round-1);}
     else if(S.round<MAXR+1)S.round=MAXR+1;
+    ensureMultiLeagueState();
     if(S.draft&&!S.draft.waivers)S.draft.waivers=[];
     if(S.settings&&!S.settings.layout){ /* migrate: preserve this save's existing squad shape */
       S.settings.layout={...DEFAULT_LAYOUT};
@@ -206,6 +246,7 @@ function load(){
     return}}catch(e){}
   S=defaultState();
   PLAYERS.forEach(p=>S.prices[p.id]=p.basePrice);
+  ensureMultiLeagueState();
   save();
 }
 

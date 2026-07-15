@@ -2,9 +2,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const {Pool} = require('pg');
 
 const MIGRATION = '001_initial_json_import';
+const MULTI_LEAGUE_MIGRATION = '002_multi_custom_draft_leagues';
 
 function json(file, fallback = {}) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { return fallback; }
@@ -89,6 +91,53 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
         CREATE INDEX IF NOT EXISTS teams_league_code_idx ON teams(league_code);
         ALTER TABLE app_states ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 1;
         ALTER TABLE teams ADD COLUMN IF NOT EXISTS version bigint NOT NULL DEFAULT 0;
+
+        CREATE TABLE IF NOT EXISTS fantasy_leagues (
+          id text PRIMARY KEY, code text UNIQUE NOT NULL, format text NOT NULL CHECK (format IN ('custom','draft')),
+          name text NOT NULL, owner_id text NOT NULL, rules jsonb NOT NULL DEFAULT '{}'::jsonb,
+          draft_state jsonb, draft_version bigint NOT NULL DEFAULT 0, max_members integer NOT NULL DEFAULT 20,
+          invite_expires_at timestamptz, status text NOT NULL DEFAULT 'active', create_key text,
+          created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+          UNIQUE(owner_id, create_key)
+        );
+        CREATE TABLE IF NOT EXISTS fantasy_memberships (
+          id text PRIMARY KEY, league_id text NOT NULL REFERENCES fantasy_leagues(id) ON DELETE CASCADE,
+          user_id text NOT NULL, role text NOT NULL CHECK (role IN ('owner','member')),
+          join_key text, joined_at timestamptz NOT NULL DEFAULT now(), active boolean NOT NULL DEFAULT true,
+          UNIQUE(league_id,user_id)
+        );
+        CREATE TABLE IF NOT EXISTS fantasy_teams (
+          id text PRIMARY KEY, league_id text NOT NULL REFERENCES fantasy_leagues(id) ON DELETE CASCADE,
+          membership_id text NOT NULL REFERENCES fantasy_memberships(id) ON DELETE CASCADE,
+          user_id text NOT NULL, name text NOT NULL, state jsonb NOT NULL DEFAULT '{}'::jsonb,
+          version bigint NOT NULL DEFAULT 0, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+          UNIQUE(league_id,user_id), UNIQUE(membership_id)
+        );
+        CREATE TABLE IF NOT EXISTS fantasy_draft_picks (
+          league_id text NOT NULL REFERENCES fantasy_leagues(id) ON DELETE CASCADE,
+          player_id bigint NOT NULL, team_id text NOT NULL REFERENCES fantasy_teams(id) ON DELETE CASCADE,
+          pick_number integer NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY(league_id,player_id), UNIQUE(league_id,pick_number)
+        );
+        CREATE TABLE IF NOT EXISTS fantasy_fixtures (
+          league_id text NOT NULL REFERENCES fantasy_leagues(id) ON DELETE CASCADE,
+          round integer NOT NULL, fixture_no integer NOT NULL,
+          home_team_id text NOT NULL REFERENCES fantasy_teams(id) ON DELETE CASCADE,
+          away_team_id text NOT NULL REFERENCES fantasy_teams(id) ON DELETE CASCADE,
+          state jsonb NOT NULL DEFAULT '{}'::jsonb, PRIMARY KEY(league_id,round,fixture_no)
+        );
+        CREATE TABLE IF NOT EXISTS fantasy_scores (
+          league_id text NOT NULL REFERENCES fantasy_leagues(id) ON DELETE CASCADE,
+          team_id text NOT NULL REFERENCES fantasy_teams(id) ON DELETE CASCADE,
+          round integer NOT NULL, points numeric NOT NULL, detail jsonb NOT NULL DEFAULT '{}'::jsonb,
+          PRIMARY KEY(league_id,team_id,round)
+        );
+        CREATE INDEX IF NOT EXISTS fantasy_memberships_user_idx ON fantasy_memberships(user_id) WHERE active;
+        CREATE INDEX IF NOT EXISTS fantasy_memberships_league_idx ON fantasy_memberships(league_id) WHERE active;
+        CREATE INDEX IF NOT EXISTS fantasy_teams_league_idx ON fantasy_teams(league_id);
+        CREATE INDEX IF NOT EXISTS fantasy_draft_picks_team_idx ON fantasy_draft_picks(league_id,team_id);
+        CREATE INDEX IF NOT EXISTS fantasy_fixtures_round_idx ON fantasy_fixtures(league_id,round);
+        CREATE INDEX IF NOT EXISTS fantasy_scores_round_idx ON fantasy_scores(league_id,round);
       `);
       const done = await client.query('SELECT 1 FROM schema_migrations WHERE name=$1', [MIGRATION]);
       if (done.rowCount) return;
@@ -106,6 +155,49 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
       await client.query('INSERT INTO schema_migrations(name) VALUES ($1)', [MIGRATION]);
       console.log('[migration] imported legacy JSON', counts);
     }));
+    await retry(() => transaction(migrateLegacyFantasyLeagues));
+  }
+
+  function stableId(prefix, ...parts) {
+    return prefix + crypto.createHash('sha256').update(parts.map(value => String(value || '')).join('|')).digest('hex').slice(0, 22).toUpperCase();
+  }
+  function stableCode(...parts) {
+    const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=crypto.createHash('sha256').update(parts.map(value=>String(value||'')).join('|')).digest();
+    return Array.from({length:8},(_,i)=>alphabet[bytes[i]%alphabet.length]).join('');
+  }
+  async function migrateLegacyFantasyLeagues(client) {
+    const done=await client.query('SELECT 1 FROM schema_migrations WHERE name=$1',[MULTI_LEAGUE_MIGRATION]);
+    if(done.rowCount)return;
+    const rows=await client.query(`SELECT a.user_email,a.state,u.user_id,u.name FROM app_states a JOIN users u ON u.email=a.user_email FOR UPDATE`);
+    let leaguesCreated=0,membershipsCreated=0,teamsCreated=0;
+    for(const row of rows.rows){
+      for(const format of ['custom','draft']){
+        const legacy=format==='custom'?row.state&&row.state.customLeague:row.state&&row.state.draft;
+        if(!legacy||typeof legacy!=='object'||Array.isArray(legacy))continue;
+        const embeddedCode=String(legacy.league&&legacy.league.code||legacy.code||'').toUpperCase();
+        const identity=/^[A-Z2-9]{6,12}$/.test(embeddedCode)?embeddedCode:`${row.user_id}|${legacy.created||''}|${legacy.name||legacy.league&&legacy.league.name||''}`;
+        const leagueId=stableId('FL',format,identity);let code=/^[A-Z2-9]{6,12}$/.test(embeddedCode)?embeddedCode:stableCode(format,identity);
+        const codeOwner=await client.query('SELECT id FROM fantasy_leagues WHERE code=$1',[code]);if(codeOwner.rowCount&&codeOwner.rows[0].id!==leagueId)code=stableCode(format,identity,leagueId);
+        const name=String(legacy.name||legacy.league&&legacy.league.name||`Legacy ${format} league`).slice(0,80);
+        const proposedOwner=row.user_id;
+        const insertedLeague=await client.query(`INSERT INTO fantasy_leagues(id,code,format,name,owner_id,rules,draft_state,max_members,status,created_at,updated_at)
+          VALUES($1,$2,$3,$4,$5,$6,$7,$8,'active',to_timestamp($9/1000.0),now()) ON CONFLICT(id) DO NOTHING`,
+          [leagueId,code,format,name,proposedOwner,JSON.stringify(format==='custom'?(legacy.settings||{}):{}),format==='draft'?JSON.stringify(legacy):null,Number(legacy.league&&legacy.league.size)||20,Number(legacy.created)||Date.now()]);
+        leaguesCreated+=insertedLeague.rowCount;
+        if(legacy.league&&legacy.league.isOwner===true){await client.query('UPDATE fantasy_leagues SET owner_id=$1 WHERE id=$2',[row.user_id,leagueId]);await client.query(`UPDATE fantasy_memberships SET role='member' WHERE league_id=$1`,[leagueId]);}
+        const persistedLeague=await client.query('SELECT owner_id FROM fantasy_leagues WHERE id=$1',[leagueId]);
+        const owner=persistedLeague.rows[0].owner_id;
+        const membershipId=stableId('FM',leagueId,row.user_id),teamId=stableId('FT',leagueId,row.user_id);
+        const insertedMember=await client.query(`INSERT INTO fantasy_memberships(id,league_id,user_id,role) VALUES($1,$2,$3,$4) ON CONFLICT(league_id,user_id) DO NOTHING`,[membershipId,leagueId,row.user_id,owner===row.user_id?'owner':'member']);
+        membershipsCreated+=insertedMember.rowCount;
+        const teamName=String(format==='custom'?(legacy.team&&legacy.team.name||row.name):(legacy.league&&legacy.league.participants&&legacy.league.participants.find(p=>p.isMe)&&legacy.league.participants.find(p=>p.isMe).name||row.name)).slice(0,60);
+        const teamState=format==='custom'?legacy:{legacyDraft:legacy};
+        const insertedTeam=await client.query(`INSERT INTO fantasy_teams(id,league_id,membership_id,user_id,name,state) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(league_id,user_id) DO NOTHING`,[teamId,leagueId,membershipId,row.user_id,teamName,JSON.stringify(teamState)]);
+        teamsCreated+=insertedTeam.rowCount;
+      }
+    }
+    await client.query('INSERT INTO schema_migrations(name) VALUES($1)',[MULTI_LEAGUE_MIGRATION]);
+    console.log('[migration] multi-league compatibility',{sourceStates:rows.rowCount,leaguesCreated,membershipsCreated,teamsCreated});
   }
 
   async function insertUser(client, user) {
@@ -137,10 +229,12 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
   }
 
   async function load() {
-    const [ur, sr, rr, ar, lr, tr, pr, scr] = await Promise.all([
+    const [ur, sr, rr, ar, lr, tr, pr, scr, flr, fmr, ftr, fdpr, ffr, fsr] = await Promise.all([
       pool.query('SELECT * FROM users'), pool.query('SELECT * FROM sessions'), pool.query('SELECT * FROM password_resets WHERE used_at IS NULL'),
       pool.query('SELECT * FROM app_states'),
-      pool.query('SELECT * FROM leagues'), pool.query('SELECT * FROM teams'), pool.query('SELECT * FROM picks'), pool.query('SELECT * FROM scores')
+      pool.query('SELECT * FROM leagues'), pool.query('SELECT * FROM teams'), pool.query('SELECT * FROM picks'), pool.query('SELECT * FROM scores'),
+      pool.query('SELECT * FROM fantasy_leagues'),pool.query('SELECT * FROM fantasy_memberships'),pool.query('SELECT * FROM fantasy_teams'),
+      pool.query('SELECT * FROM fantasy_draft_picks'),pool.query('SELECT * FROM fantasy_fixtures'),pool.query('SELECT * FROM fantasy_scores')
     ]);
     const users = {}, leagues = {}, scores = {};
     for (const row of ur.rows) users[row.email] = {userId: row.user_id, email: row.email, name: row.name, salt: row.salt, hash: row.password_hash, iterations: row.iterations, leagueCode: row.league_code || undefined, teamId: row.team_id || undefined};
@@ -154,8 +248,28 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
     for (const row of tr.rows) { const team = {id: row.id, userId: row.user_id, name: row.name, version: Number(row.version) || 0, picks: {}}; teams[row.id] = team; if (leagues[row.league_code]) leagues[row.league_code].teams.push(team); }
     for (const row of pr.rows) if (teams[row.team_id]) (teams[row.team_id].picks[row.game] ||= {})[row.position] = Number(row.player_id);
     for (const row of scr.rows) scores[row.game + ':' + row.player_id] = Number(row.points);
-    return {users, leagues, scores};
+    const fantasyLeagues={};
+    for(const row of flr.rows)fantasyLeagues[row.id]={id:row.id,code:row.code,format:row.format,name:row.name,ownerId:row.owner_id,rules:row.rules||{},draftState:row.draft_state,draftVersion:Number(row.draft_version)||0,maxMembers:row.max_members,inviteExpiresAt:row.invite_expires_at?+new Date(row.invite_expires_at):null,status:row.status,createKey:row.create_key||null,created:+new Date(row.created_at),updated:+new Date(row.updated_at),members:[],teams:[],draftPicks:[],fixtures:[],scores:[]};
+    for(const row of fmr.rows)if(fantasyLeagues[row.league_id])fantasyLeagues[row.league_id].members.push({id:row.id,userId:row.user_id,role:row.role,joinKey:row.join_key||null,joined:+new Date(row.joined_at),active:row.active});
+    for(const row of ftr.rows)if(fantasyLeagues[row.league_id])fantasyLeagues[row.league_id].teams.push({id:row.id,membershipId:row.membership_id,userId:row.user_id,name:row.name,state:row.state||{},version:Number(row.version)||0,created:+new Date(row.created_at),updated:+new Date(row.updated_at)});
+    for(const row of fdpr.rows)if(fantasyLeagues[row.league_id])fantasyLeagues[row.league_id].draftPicks.push({playerId:Number(row.player_id),teamId:row.team_id,pickNumber:row.pick_number,created:+new Date(row.created_at)});
+    for(const row of ffr.rows)if(fantasyLeagues[row.league_id])fantasyLeagues[row.league_id].fixtures.push({round:row.round,fixtureNo:row.fixture_no,homeTeamId:row.home_team_id,awayTeamId:row.away_team_id,state:row.state||{}});
+    for(const row of fsr.rows)if(fantasyLeagues[row.league_id])fantasyLeagues[row.league_id].scores.push({teamId:row.team_id,round:row.round,points:Number(row.points),detail:row.detail||{}});
+    return {users, leagues, scores, fantasyLeagues};
   }
+
+  async function insertFantasyLeagues(c,fantasyLeagues,clear=true){
+    if(clear)await c.query('DELETE FROM fantasy_leagues');
+    for(const league of Object.values(fantasyLeagues)){
+      await c.query(`INSERT INTO fantasy_leagues(id,code,format,name,owner_id,rules,draft_state,draft_version,max_members,invite_expires_at,status,create_key,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,[league.id,league.code,league.format,league.name,league.ownerId,JSON.stringify(league.rules||{}),league.draftState==null?null:JSON.stringify(league.draftState),Number(league.draftVersion)||0,league.maxMembers||20,league.inviteExpiresAt?new Date(league.inviteExpiresAt):null,league.status||'active',league.createKey||null,new Date(league.created||Date.now()),new Date(league.updated||Date.now())]);
+      for(const member of league.members||[])await c.query(`INSERT INTO fantasy_memberships(id,league_id,user_id,role,join_key,joined_at,active) VALUES($1,$2,$3,$4,$5,$6,$7)`,[member.id,league.id,member.userId,member.role,member.joinKey||null,new Date(member.joined||Date.now()),member.active!==false]);
+      for(const team of league.teams||[])await c.query(`INSERT INTO fantasy_teams(id,league_id,membership_id,user_id,name,state,version,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,[team.id,league.id,team.membershipId,team.userId,team.name,JSON.stringify(team.state||{}),Number(team.version)||0,new Date(team.created||Date.now()),new Date(team.updated||Date.now())]);
+      for(const pick of league.draftPicks||[])await c.query(`INSERT INTO fantasy_draft_picks(league_id,player_id,team_id,pick_number,created_at) VALUES($1,$2,$3,$4,$5)`,[league.id,pick.playerId,pick.teamId,pick.pickNumber,new Date(pick.created||Date.now())]);
+      for(const fixture of league.fixtures||[])await c.query(`INSERT INTO fantasy_fixtures(league_id,round,fixture_no,home_team_id,away_team_id,state) VALUES($1,$2,$3,$4,$5,$6)`,[league.id,fixture.round,fixture.fixtureNo,fixture.homeTeamId,fixture.awayTeamId,JSON.stringify(fixture.state||{})]);
+      for(const score of league.scores||[])await c.query(`INSERT INTO fantasy_scores(league_id,team_id,round,points,detail) VALUES($1,$2,$3,$4,$5)`,[league.id,score.teamId,score.round,score.points,JSON.stringify(score.detail||{})]);
+    }
+  }
+  async function saveFantasyLeagues(fantasyLeagues){return retry(()=>transaction(c=>insertFantasyLeagues(c,fantasyLeagues)));}
 
   async function saveUsers(users) { return retry(() => transaction(async c => { await c.query('DELETE FROM sessions'); await c.query('DELETE FROM password_resets'); await c.query('DELETE FROM users'); for (const u of Object.values(users)) await insertUser(c, u); })); }
   async function saveLeagues(leagues) { return retry(() => transaction(async c => { await c.query('DELETE FROM leagues'); for (const [code, league] of Object.entries(leagues)) await insertLeague(c, code, league); })); }
@@ -165,6 +279,13 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
     for (const u of Object.values(users)) await insertUser(c, u);
     for (const [code, league] of Object.entries(leagues)) await insertLeague(c, code, league);
   })); }
+  async function saveCompleteAccountState(users,leagues,fantasyLeagues){return retry(()=>transaction(async c=>{
+    await c.query('DELETE FROM fantasy_leagues');
+    await c.query('DELETE FROM sessions');await c.query('DELETE FROM password_resets');await c.query('DELETE FROM users');await c.query('DELETE FROM leagues');
+    for(const u of Object.values(users))await insertUser(c,u);
+    for(const [code,league] of Object.entries(leagues))await insertLeague(c,code,league);
+    await insertFantasyLeagues(c,fantasyLeagues,false);
+  }));}
   async function saveScores(scores) { return retry(() => transaction(async c => { await c.query('DELETE FROM scores'); for (const [key, points] of Object.entries(scores)) { const [g,p] = key.split(':').map(Number); await c.query('INSERT INTO scores VALUES($1,$2,$3)', [g,p,points]); } })); }
   async function saveAppState(email, state, expectedVersion) { return retry(() => transaction(async client => {
     const current = await client.query('SELECT state,updated_at,version FROM app_states WHERE user_email=$1 FOR UPDATE', [email]);
@@ -180,7 +301,7 @@ function createDatabase({connectionString, dataDir, pool: suppliedPool}) {
     return {ok: true, version: nextVersion, updatedAt: +new Date(saved.rows[0].updated_at)};
   })); }
   async function ping() { await pool.query('SELECT 1'); }
-  return {migrate, load, saveUsers, saveLeagues, saveAccountState, saveScores, saveAppState, ping, close: () => pool.end(), retry};
+  return {migrate, load, saveUsers, saveLeagues, saveAccountState, saveCompleteAccountState, saveScores, saveAppState, saveFantasyLeagues, ping, close: () => pool.end(), retry};
 }
 
 module.exports = {createDatabase, readLegacySnapshot};

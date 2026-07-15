@@ -116,6 +116,7 @@ test('Classic and Custom builders stay isolated through autocomplete, captaincy,
   await page.locator('#cl-name').fill('Universal Custom');
   await page.locator('#cl-cap').fill(String(classic.cap+1000000));
   await page.getByRole('button',{name:/Create Custom League/}).click();
+  await expect(page.locator('#custom-league-switch')).toBeVisible();
   const custom=await page.evaluate(()=>{
     const classicBefore=JSON.stringify(S.classic);
     autoComplete();
@@ -153,12 +154,13 @@ test('Classic and Custom builders stay isolated through autocomplete, captaincy,
   expect(await page.evaluate(()=>({name:S.league.name,teams:S.league.teams.length,history:Object.keys(S.league.history).length}))).toEqual({name:'Audit Classic League',teams:4,history:0});
 
   await page.evaluate(()=>{S.draft=null;setPage('draft');});
-  await page.getByRole('button',{name:/Create local draft/}).click();
+  await page.getByRole('button',{name:/Create Draft league/}).click();
   await page.locator('#dr-lgname').fill('Audit Draft League');
-  await page.getByRole('button',{name:'Create local draft',exact:true}).click();
+  await page.getByRole('button',{name:'Create Draft league',exact:true}).click();
+  await expect(page.locator('#draft-league-switch')).toBeVisible();
   const draftCreated=await page.evaluate(()=>({name:S.draft.league.name,owner:S.draft.league.isOwner,localOnly:S.draft.league.localOnly,
     ai:S.draft.league.participants.filter(player=>player.isAI).length,size:S.draft.league.size}));
-  expect(draftCreated).toEqual({name:'Audit Draft League',owner:true,localOnly:true,ai:draftCreated.size-1,size:draftCreated.size});
+  expect(draftCreated).toEqual({name:'Audit Draft League',owner:true,localOnly:false,ai:draftCreated.size-1,size:draftCreated.size});
   await page.getByRole('button',{name:/Start Draft/}).click();
   expect(await page.evaluate(()=>({phase:S.draft.phase,teams:S.draft.teams.length,ai:S.draft.teams.filter(team=>team.ai).length}))).toEqual({phase:'draft',teams:draftCreated.size,ai:draftCreated.size-1});
   await context.close();
