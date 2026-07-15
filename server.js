@@ -8,6 +8,7 @@ const zlib   = require('zlib');
 const {createDatabase} = require('./db');
 const {validateFeed} = require('./live-data');
 const {freshness: teamNewsFreshness} = require('./lib/team-news');
+const {ids: homePlayerIds,competitionSummaries,teamNewsEvents,relevantNews,activeAlerts}=require('./lib/home-dashboard');
 const {
   parseInitialPlayerId, hasSeasonStats, searchQueryVariants, searchPlayerSelection, findSearchPlayerPath,
   hasCompleteSeasonDetails, payloadMatchesPlayer, mergeHistoricalPlayerStats, buildOfficialPayload
@@ -232,6 +233,7 @@ function jsonRes(req, res, status, obj, extra) {
   res.writeHead(status, Object.assign({}, securityHeaders('application/json; charset=utf-8'), {'Cache-Control': 'no-store', 'X-Request-Id': req.id || ''}, corsHeaders(req), extra || {}));
   res.end(status === 204 ? '' : JSON.stringify(obj));
 }
+function jsonReadRes(req,res,status,obj,extra){if(req.method!=='HEAD')return jsonRes(req,res,status,obj,extra);res.writeHead(status,Object.assign({},securityHeaders('application/json; charset=utf-8'),{'Cache-Control':'no-store','X-Request-Id':req.id||''},corsHeaders(req),extra||{}));res.end()}
 
 function requestError(req, res, error) {
   console.error(JSON.stringify({
@@ -571,6 +573,22 @@ function serveTeamNews(req,res){
   });
 }
 
+function homeSnapshot(){
+  try{return JSON.parse(fs.readFileSync(path.join(__dirname,'public','team-news.json'),'utf8'))}catch{return {availability:[],changes:[],lateMail:[],freshness:'source-unavailable',checkedAt:null,sourceAvailable:false}}
+}
+function homeRound(){
+  try{const rounds=JSON.parse(fs.readFileSync(path.join(__dirname,'public','rounds.json'),'utf8')),current=rounds.filter(item=>['active','scheduled'].includes(item.status)).sort((a,b)=>a.id-b.id)[0]||rounds.at(-1);return {round:Number(current.id)||0,status:current.status==='active'?'live':current.status==='complete'?'final':'scheduled',deadline:current.start||current.matches?.[0]?.date||null}}catch{return {round:0,status:'scheduled',deadline:null}}
+}
+function homeContext(user,scope='all'){
+  const round=homeRound(),state=user.appState||{},originLeague=user.leagueCode&&leagues[user.leagueCode],originTeam=originLeague&&(originLeague.teams||[]).find(team=>team.userId===user.userId),classicState=state.classic||{};
+  const classicTeam=state.classic?{id:'classic',name:classicState.name||state.user?.name||user.name,score:classicState.roundScore??classicState.score??null,rank:classicState.rank??null,rankMovement:classicState.rankMovement??null,players:classicState.players||null}:null;
+  const competitions=competitionSummaries({user,classicLeague:null,classicTeam,fantasyLeagues,round:round.round,liveStatus:round.status});if(originTeam)competitions.push({id:'origin:'+originLeague.code,teamId:originTeam.id,format:'origin',leagueName:originLeague.name||'State of Origin',teamName:originTeam.name,score:null,status:round.status,rank:null,rankMovement:null,players:null,matchup:null,updatedAt:originLeague.created||Date.now(),action:{label:'Open team',page:'origin'}});const order={live:1,scheduled:2,final:3};competitions.sort((a,b)=>(a.urgent?0:order[a.status]||3)-(b.urgent?0:order[b.status]||3)||a.format.localeCompare(b.format)||a.leagueName.localeCompare(b.leagueName)||a.id.localeCompare(b.id));
+  const teamIds=homePlayerIds(classicState);for(const league of Object.values(fantasyLeagues))if(fantasyMembership(league,user.userId)){const team=fantasyTeam(league,user.userId);if(team)homePlayerIds(team.state,teamIds)}
+  if(originTeam)homePlayerIds(originTeam.picks,teamIds);const watchlist=new Set((state.watchlist||[]).map(Number)),clubs=new Set(state.teamNews?.followedClubs||[]),snapshot=homeSnapshot(),events=relevantNews(teamNewsEvents(snapshot),{teamPlayerIds:teamIds,watchlist,clubs,scope});
+  const alerts=activeAlerts({competitions,events,teamPlayerIds:teamIds,deadline:round.deadline});
+  return {round,competitions,alerts,events,snapshot,teamIds};
+}
+
 function serveAsset(req, res, fileName) {
   const allowed = new Set(['data-core.js', 'season-data.js', 'history-data.js']);
   if (!allowed.has(fileName)) return jsonRes(req, res, 404, {error: 'Asset not found'});
@@ -830,6 +848,22 @@ async function handleRequest(req, res) {
   if (url === '/api/rounds' && (req.method === 'GET' || req.method === 'HEAD'))
     return serveOfficialFeed(req, res, 'rounds').catch(error => requestError(req, res, error));
   if (url === '/api/team-news' && (req.method === 'GET' || req.method === 'HEAD')) return serveTeamNews(req,res);
+  if(url==='/api/team-news/status'&&(req.method==='GET'||req.method==='HEAD')){
+    const snapshot=homeSnapshot(),validationErrorCount=(snapshot.validationErrors||snapshot.failures||[]).length,body={freshness:teamNewsFreshness(snapshot.checkedAt,snapshot.sourceAvailable!==false),checkedAt:snapshot.checkedAt||null,lastSuccess:snapshot.lastSuccess||snapshot.generatedAt||snapshot.checkedAt||null,sourceVersion:snapshot.sourceVersion||snapshot.schemaVersion||null,sourceHash:snapshot.sourceHash||null,expectedClubCount:Number(snapshot.expectedClubCount)||16,receivedClubCount:Number(snapshot.receivedClubCount)||new Set((snapshot.teamLists||[]).flatMap(item=>[item.home,item.away]).filter(Boolean)).size,validationErrorCount,warning:validationErrorCount?'One or more authorised sources require operational attention':null};
+    return jsonReadRes(req,res,200,body,{'Cache-Control':'public, max-age=60'});
+  }
+  if(url==='/api/home/summary'&&(req.method==='GET'||req.method==='HEAD')){
+    const user=authUser(req,{});if(!user)return jsonRes(req,res,401,{error:'Login required'});const model=homeContext(user);
+    return jsonReadRes(req,res,200,{round:model.round.round,deadline:model.round.deadline,freshness:teamNewsFreshness(model.snapshot.checkedAt,model.snapshot.sourceAvailable!==false),updatedAt:model.snapshot.checkedAt||null,actionCount:model.alerts.length,competitions:model.competitions},{'Cache-Control':'private, no-store'});
+  }
+  if(url==='/api/home/alerts'&&(req.method==='GET'||req.method==='HEAD')){
+    const user=authUser(req,{});if(!user)return jsonRes(req,res,401,{error:'Login required'});const model=homeContext(user);
+    return jsonReadRes(req,res,200,{alerts:model.alerts,generatedAt:new Date().toISOString()},{'Cache-Control':'private, no-store'});
+  }
+  if(url==='/api/home/team-news'&&(req.method==='GET'||req.method==='HEAD')){
+    const user=authUser(req,{});if(!user)return jsonRes(req,res,401,{error:'Login required'});const parsed=new URL(req.url,'http://localhost'),scope=parsed.searchParams.get('scope')||'all';if(!['my-players','watchlist','all'].includes(scope))return jsonRes(req,res,400,{error:'Invalid news scope'});const cursor=Math.max(0,Number(parsed.searchParams.get('cursor'))||0),limit=Math.max(1,Math.min(50,Number(parsed.searchParams.get('limit'))||12)),model=homeContext(user,scope),items=model.events.slice(cursor,cursor+limit);
+    return jsonReadRes(req,res,200,{items,nextCursor:cursor+limit<model.events.length?String(cursor+limit):null,since:user.appState?.homeDashboard?.lastNewsVisit||null,freshness:teamNewsFreshness(model.snapshot.checkedAt,model.snapshot.sourceAvailable!==false),checkedAt:model.snapshot.checkedAt||null},{'Cache-Control':'private, no-store'});
+  }
   const playerStats = url.match(/^\/api\/player-stats\/(\d+)$/);
   if (playerStats && req.method === 'GET') {
     const requested = new URL(req.url, 'http://localhost');

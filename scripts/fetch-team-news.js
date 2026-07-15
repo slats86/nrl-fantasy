@@ -2,7 +2,9 @@
 
 const fs=require('fs');
 const path=require('path');
+const crypto=require('crypto');
 const {parseCasualtyWard,parseTeamLists,parseJudiciary,mergeTeamListHistory,deriveChanges,freshness,dedupeAvailability,normalizeName,inferVersion}=require('../lib/team-news');
+const {publishTeamNews}=require('../lib/home-dashboard');
 
 const ROOT=path.join(__dirname,'..'),OUTPUT=path.join(ROOT,'public','team-news.json');
 const BASE='https://www.nrl.com';
@@ -47,9 +49,10 @@ async function main(){
   availability=statusHistory(previous,dedupeAvailability(availability));
   let suspensions=(judiciary.value||previous?.suspensions||[]).map(item=>({...item,expectedReturnRound:item.expectedReturnRound||latestRound+item.matches+1,returnLabel:item.expectedReturnRound?item.returnLabel:`Round ${latestRound+item.matches+1}`}));
   const changes=deriveChanges(teamLists);
-  const sourceAvailable=failures.length===0,data={schemaVersion:1,season:2026,generatedAt:checkedAt,checkedAt,latestRound,freshness:freshness(checkedAt,sourceAvailable),sourceAvailable,failures,sources:{casualtyWard:URLS.casualty,teamLists:links[0]?.[1]||null,lateMail:lateLinks[0]?.[1]||null,judiciary:URLS.judiciary},availability,teamLists,changes,lateMail:lateMailEvents(teamLists,changes),suspensions,summary:{currentUnavailable:availability.length,currentSuspensions:suspensions.length,matches:teamLists.length,changes:changes.length,unresolvedPlayers:availability.filter(x=>!String(x.identity).startsWith('matched')).length}};
-  const tmp=OUTPUT+'.tmp';fs.writeFileSync(tmp,JSON.stringify(data,null,2)+'\n');fs.renameSync(tmp,OUTPUT);
-  console.log(JSON.stringify({availability:data.availability.length,suspensions:data.suspensions.length,matches:data.teamLists.length,changes:data.changes.length,latestRound,failures:failures.length}));
+  const sourceAvailable=failures.length===0,latestClubs=new Set(teamLists.filter(item=>item.round===latestRound).flatMap(item=>[item.home,item.away]).filter(Boolean)),rounds=JSON.parse(fs.readFileSync(path.join(ROOT,'public','rounds.json'),'utf8')),roundRecord=rounds.find(item=>Number(item.id)===latestRound),expectedClubCount=Math.max(1,Number(roundRecord?.matches?.length)*2||latestClubs.size||16),validationErrors=[...failures.map(item=>item.error),...(latestRound&&latestClubs.size<expectedClubCount?[`Only ${latestClubs.size} of ${expectedClubCount} clubs validated for Round ${latestRound}`]:[])],payloadForHash={availability,teamLists,changes,suspensions},data={schemaVersion:2,season:2026,generatedAt:checkedAt,checkedAt,lastAttempt:checkedAt,lastSuccess:validationErrors.length?previous?.lastSuccess||previous?.generatedAt||null:checkedAt,sourceVersion:`nrl-${latestRound}`,sourceHash:crypto.createHash('sha256').update(JSON.stringify(payloadForHash)).digest('hex'),expectedClubCount,receivedClubCount:latestClubs.size,validationErrors,latestRound,freshness:freshness(checkedAt,sourceAvailable),sourceAvailable,failures,sources:{casualtyWard:URLS.casualty,teamLists:links[0]?.[1]||null,lateMail:lateLinks[0]?.[1]||null,judiciary:URLS.judiciary},availability,teamLists,changes,lateMail:lateMailEvents(teamLists,changes),suspensions,summary:{currentUnavailable:availability.length,currentSuspensions:suspensions.length,matches:teamLists.length,changes:changes.length,unresolvedPlayers:availability.filter(x=>!String(x.identity).startsWith('matched')).length}};
+  const publication=publishTeamNews(previous,data),published=publication.published||data;if(!publication.validation.ok&&previous)published.lastAttempt=checkedAt;
+  const tmp=OUTPUT+'.tmp';fs.writeFileSync(tmp,JSON.stringify(published,null,2)+'\n');fs.renameSync(tmp,OUTPUT);
+  console.log(JSON.stringify({availability:published.availability.length,suspensions:published.suspensions.length,matches:published.teamLists.length,changes:published.changes.length,latestRound:published.latestRound,failures:failures.length,changed:publication.changed,validationErrors:publication.validation.errors}));
   if(!casualty.value&&!previous)throw new Error('Casualty Ward unavailable and no verified snapshot exists');
 }
 if(require.main===module)main().catch(error=>{console.error(error.message);process.exitCode=1});
