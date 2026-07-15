@@ -1,7 +1,38 @@
 # Product test report
 
-Date: 14 July 2026
+Date: 15 July 2026
 Branches: `agent/round19-live-data-pipeline`, production-verification follow-ups, `agent/player-stats-approved-design`, `agent/team-news-hub`, `agent/players-hub-approved`, `agent/player-game-history`, and `agent/complete-players-hub`
+
+## Full product audit of current main (15 July 2026)
+
+### Scope and audit-contract limitation
+
+Commit `19420ae` on `origin/main` was audited after the Players Hub, season-aware Game History and multiple Custom/Draft league merges. The requested `design/FULL_PRODUCT_AUDIT.md` is absent from the current tree, every fetched remote branch and repository history. The executable contract used instead was `design/PLAYERS_HUB_IMPLEMENTATION.md`, `design/MULTI_LEAGUE_IMPLEMENTATION.md`, the existing product report, CI workflow and all repository test/audit scripts. This missing source document is an explicitly unfinished documentation input; no requirement from the two present implementation specifications was omitted.
+
+No confirmed critical or high application defect was found in this pass, so no application code or regression test was changed. Audit artifacts and this report were refreshed through the protected PR workflow. Existing visual baselines were preserved.
+
+### Application verification
+
+- `npm run check`: 47 executed static/unit/API tests passed; only the separately gated PostgreSQL case was skipped.
+- Isolated PostgreSQL 18 database `nrl_fantasy_test`: 1/1 integration test passed. It reset only the explicitly test-named database and covered legacy JSON migration, two legacy Custom/Draft formats, shared membership and ownership ordering, league/team/draft relationships, retry-safe idempotence, transaction rollback, concurrent compare-and-swap and restart persistence.
+- Complete Playwright suite against a clean `nrl_fantasy_test` PostgreSQL schema: 37/37 passed in 7.4 minutes. All mutating browser traffic was local and PostgreSQL-backed. A preliminary run correctly exposed test-fixture contamination from the migration seed (`owner@example.com`); after resetting only the disposable schema, the definitive complete run was green.
+- Multi-league coverage passed for multiple independent Custom and Draft leagues, explicit switching, same-player cross-league independence, owner/member authorization, invitation validation, IDOR denial, stale same-league edits, simultaneous different-league edits, server-authoritative Draft turns, shared reload, migration and restart persistence. Desktop/mobile switchers and cards were overflow-free at 320, 375, 390, 768, 1024, 1440 and 1920 pixels.
+- Players Hub and Game History coverage passed for all required widths, themes and strict 375/1440 visuals; search focus, combined filters/reset/sort, Watch, bounded three-player Compare, truthful injury distinctions, empty/stale states, profile/back restoration, current/2025 seasons, per-match positions/roles, summaries, missing details, mobile round navigation and readable expanded components.
+- Round 19 pipeline summary/details passed: seven final fixtures, 238/238 scorers non-zero and 14/14 club detail samples with components. `npm audit --omit=dev` reported zero vulnerabilities.
+
+### Read-only production verification
+
+Production health, readiness and application-shell GET checks passed; `/ready` reported PostgreSQL storage. A global browser route guard aborted every production request not using GET or HEAD. Desktop 1440×1000 and mobile 390×844 then passed Players Hub, Nicholas Hynes 2026/2025 Game History, Custom and Draft league directories, Round 19 final state and horizontal-overflow/error checks. The guard intercepted two attempted `PUT /api/app-state` autosaves per viewport; none reached production. No production account, league, team, pick, score or preference was created, read through a real identity, or modified.
+
+The complete production player audit checked 379/379 players successfully with zero unresolved identities, ambiguity, missing expected rounds, component gaps, upstream failures or effective failures. Updated evidence is in `reports/player-stats-production-audit.json` and `.md`.
+
+### Separated findings and limitations
+
+- Application defects: none confirmed at critical or high severity. No lower-severity regression failed a required gate.
+- Upstream data: FootyStatistics current-season detail is stale for all 379 audited players. The authorised official NRL fallback supplied complete identity-safe current rows and components, so effective application results remained 379/379. This dependency still requires scheduled monitoring.
+- Legal/licensing: no new source, scraper, data redistribution or licensing behavior was introduced or changed. Existing official NRL/FootyStatistics usage was functionally tested, but this engineering audit is not a legal opinion; formal rights review remains outside repository-verifiable scope.
+- Railway/GitHub platform: Railway handover continuity and GitHub protected-branch enforcement are externally controlled. The audit can confirm CI, merge, deployment health/readiness and the served commit behavior, but cannot guarantee interruption-free Railway edge routing or independently prove provider policy beyond their reported state.
+- Unsafe/unfinished checks: no production mutation, physical iOS/Android device test, real email-delivery test, destructive restore, production migration replay or production database inspection was attempted. Those checks remain deliberately excluded. The missing `design/FULL_PRODUCT_AUDIT.md` remains the only unavailable requested audit artifact.
 
 ## Approved Players Hub and Player Stats regressions (14 July 2026)
 
