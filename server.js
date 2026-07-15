@@ -22,6 +22,7 @@ const ALLOWED_ORIGIN = new URL(APP_URL).origin;
 const SESSION_TTL_MS = Math.max(1000, Number(process.env.SESSION_TTL_MS) || 30 * 24 * 60 * 60 * 1000);
 const COOKIE_SECURE = process.env.NODE_ENV === 'production' || APP_URL.startsWith('https://');
 const BODY_LIMIT = 100000;
+const MAX_FANTASY_LEAGUES = Math.max(1, Math.min(100, Number(process.env.MAX_FANTASY_LEAGUES_PER_USER) || 20));
 const rateBuckets = new Map();
 setInterval(() => {
   const now = Date.now();
@@ -72,9 +73,11 @@ function sendEmail(to, subject, html) {
 /* Data storage */
 const DATA_DIR    = process.env.DATA_DIR || path.join(__dirname, 'data');
 const LEAGUE_FILE = path.join(DATA_DIR, 'soo-leagues.json');
+const FANTASY_LEAGUE_FILE = path.join(DATA_DIR, 'fantasy-leagues.json');
 const USERS_FILE  = path.join(DATA_DIR, 'soo-users.json');
 const SCORES_FILE = path.join(DATA_DIR, 'soo-scores.json');
 let leagues = {};
+let fantasyLeagues = {};
 let users   = {};  /* keyed by email (lowercase) */
 let tokens  = {};  /* hashed token -> email */
 const pendingRegistrations = new Set();
@@ -86,6 +89,7 @@ let storageMutation = Promise.resolve();
 
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch(e) {}
 try { leagues = JSON.parse(fs.readFileSync(LEAGUE_FILE, 'utf8')); } catch(e) {}
+try { fantasyLeagues = JSON.parse(fs.readFileSync(FANTASY_LEAGUE_FILE, 'utf8')); } catch(e) {}
 try { sooScores = JSON.parse(fs.readFileSync(SCORES_FILE, 'utf8')); } catch(e) {}
 try {
   users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
@@ -124,6 +128,17 @@ async function saveScores() {
   return queuedStorage(async () => { if (database) return database.saveScores(snapshot);
     try { atomicSave(SCORES_FILE, snapshot); } catch(e) { console.error('[storage] scores:', e.message); throw e; } });
 }
+async function persistFantasyLeagues(snapshot) {
+  if (database) return database.saveFantasyLeagues(snapshot);
+  atomicSave(FANTASY_LEAGUE_FILE, snapshot);
+}
+async function mutateFantasyLeagues(operation) {
+  return queuedStorage(async () => {
+    const previous=structuredClone(fantasyLeagues);
+    try { const result=await operation(fantasyLeagues);await persistFantasyLeagues(structuredClone(fantasyLeagues));return result; }
+    catch(error){fantasyLeagues=previous;throw error;}
+  });
+}
 async function saveAccountState() {
   const userSnapshot = structuredClone(users), leagueSnapshot = structuredClone(leagues);
   return queuedStorage(async () => {
@@ -140,6 +155,10 @@ function rebuildTokenIndex() {
 async function saveAccountStateOrRollback(previousUsers, previousLeagues) {
   try { return await saveAccountState(); }
   catch (error) { users = previousUsers; leagues = previousLeagues; rebuildTokenIndex(); throw error; }
+}
+async function saveCompleteAccountStateOrRollback(previousUsers,previousLeagues,previousFantasyLeagues){
+  try{return await queuedStorage(async()=>{if(database)return database.saveCompleteAccountState(structuredClone(users),structuredClone(leagues),structuredClone(fantasyLeagues));atomicSave(LEAGUE_FILE,structuredClone(leagues));atomicSave(USERS_FILE,structuredClone(users));atomicSave(FANTASY_LEAGUE_FILE,structuredClone(fantasyLeagues))})}
+  catch(error){users=previousUsers;leagues=previousLeagues;fantasyLeagues=previousFantasyLeagues;rebuildTokenIndex();throw error}
 }
 
 function hashPwd(password, salt, iterations) {
@@ -288,11 +307,11 @@ function changesLockedPicks(current, proposed) {
   return [...LOCKED_SOO_GAMES].some(game => JSON.stringify(current && current[game] || {}) !== JSON.stringify(proposed && proposed[game] || {}));
 }
 
-const APP_STATE_KEYS = new Set(['classic','customLeague','league','draft','settings','watchlist','teamNewsPrefs','corrections','origin','priceHistory','round','season']);
+const APP_STATE_KEYS = new Set(['classic','customLeague','customLeagues','league','draft','draftLeagues','activeCustomLeagueId','activeDraftLeagueId','settings','watchlist','teamNewsPrefs','corrections','origin','priceHistory','round','season']);
 function cleanAppState(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const clean = {};
-  const records = new Set(['classic','customLeague','league','draft','settings','teamNewsPrefs','corrections','origin','priceHistory','season']);
+  const records = new Set(['classic','customLeague','customLeagues','league','draft','draftLeagues','settings','teamNewsPrefs','corrections','origin','priceHistory','season']);
   for (const [key, item] of Object.entries(value)) {
     if (!APP_STATE_KEYS.has(key)) continue;
     if (key === 'watchlist') {
@@ -303,6 +322,13 @@ function cleanAppState(value) {
       if (!Number.isSafeInteger(Number(item)) || Number(item) < 1 || Number(item) > 100) return null;
       clean[key] = Number(item); continue;
     }
+    if(key==='customLeagues'||key==='draftLeagues'){
+      if(!Array.isArray(item)||item.length>100||item.some(entry=>!entry||typeof entry!=='object'||Array.isArray(entry)))return null;
+      clean[key]=item;continue;
+    }
+    if(key==='activeCustomLeagueId'||key==='activeDraftLeagueId'){
+      if(item!==null&&typeof item!=='string')return null;clean[key]=item==null?null:String(item).slice(0,40);continue;
+    }
     if (records.has(key) && item !== null && (typeof item !== 'object' || Array.isArray(item))) return null;
     clean[key] = item;
   }
@@ -312,6 +338,47 @@ function cleanAppState(value) {
 function safeName(value, fallback, max) {
   const name = String(value || '').trim().replace(/[\u0000-\u001f\u007f<>&]/g, '').slice(0, max);
   return name || fallback;
+}
+function fantasyError(status,message,extra={}){return Object.assign(new Error(message),{status,public:extra})}
+function optionalFantasyTimestamp(value){
+  if(value===null||value===''||value===undefined)return null;
+  const timestamp=+new Date(value);
+  if(!Number.isFinite(timestamp))throw fantasyError(400,'Invalid invitation expiry');
+  return timestamp;
+}
+function cleanLeagueState(value){
+  if(value==null)return {};
+  if(typeof value!=='object'||Array.isArray(value))throw fantasyError(400,'Invalid league state');
+  const serialized=JSON.stringify(value);if(serialized.length>500000)throw fantasyError(413,'League state is too large');
+  return JSON.parse(serialized);
+}
+function fantasyMembership(league,userId){return (league.members||[]).find(member=>member.userId===userId&&member.active!==false)}
+function fantasyTeam(league,userId){return (league.teams||[]).find(team=>team.userId===userId)}
+function fantasySummary(league,user){
+  const membership=fantasyMembership(league,user.userId),team=fantasyTeam(league,user.userId);
+  return {id:league.id,code:league.code,format:league.format,name:league.name,role:membership&&membership.role,memberCount:(league.members||[]).filter(member=>member.active!==false).length,maxMembers:league.maxMembers,status:league.status,teamId:team&&team.id,teamName:team&&team.name,teamVersion:team&&team.version,draftVersion:league.draftVersion,created:league.created,updated:league.updated};
+}
+function fantasyDetail(league,user){
+  const summary=fantasySummary(league,user),ownTeam=fantasyTeam(league,user.userId);
+  return {...summary,rules:league.rules||{},draftState:league.format==='draft'?league.draftState:null,draftPicks:league.format==='draft'?(league.draftPicks||[]):[],team:ownTeam?{...ownTeam,state:ownTeam.state||{}}:null,members:(league.members||[]).filter(member=>member.active!==false).map(member=>{const account=Object.values(users).find(value=>value.userId===member.userId),team=fantasyTeam(league,member.userId);return {id:member.id,userId:member.userId,name:account&&account.name||'Member',role:member.role,team:team?{id:team.id,name:team.name,version:team.version}:null}}),fixtures:league.fixtures||[],scores:league.scores||[],inviteExpiresAt:league.inviteExpiresAt};
+}
+function uniqueFantasyCode(){let code;do{code=genCode(8)}while(Object.values(fantasyLeagues).some(league=>league.code===code));return code}
+function fantasyId(prefix){return prefix+genCode(14)}
+function requestKey(body){const value=String(body.requestId||'').trim();if(value&&!/^[a-zA-Z0-9_.:-]{8,80}$/.test(value))throw fantasyError(400,'Invalid request ID');return value||null}
+function legacyFantasyId(format,identity){return 'FL'+crypto.createHash('sha256').update(format+'|'+identity).digest('hex').slice(0,22).toUpperCase()}
+function migrateJsonFantasyLeagues(){
+  let changed=false;
+  const ownsLegacy=account=>['customLeague','draft'].some(key=>account.appState&&account.appState[key]&&account.appState[key].league&&account.appState[key].league.isOwner===true);
+  const accounts=Object.values(users).sort((a,b)=>Number(ownsLegacy(b))-Number(ownsLegacy(a)));
+  for(const account of accounts)for(const format of ['custom','draft']){
+    const legacy=account.appState&&(format==='custom'?account.appState.customLeague:account.appState.draft);if(!legacy||typeof legacy!=='object'||Array.isArray(legacy))continue;
+    const embedded=String(legacy.league&&legacy.league.code||legacy.code||'').toUpperCase(),identity=/^[A-Z2-9]{6,12}$/.test(embedded)?embedded:account.userId+'|'+(legacy.created||legacy.name||'legacy'),id=legacyFantasyId(format,identity);
+    let league=fantasyLeagues[id];
+    if(!league){const now=Number(legacy.created)||Date.now(),membershipId='FM'+genCode(14),teamId='FT'+genCode(14);let code=/^[A-Z2-9]{6,12}$/.test(embedded)?embedded:uniqueFantasyCode();if(Object.values(fantasyLeagues).some(item=>item.id!==id&&item.code===code))code=uniqueFantasyCode();league={id,code,format,name:safeName(legacy.name||legacy.league&&legacy.league.name,`Legacy ${format} league`,80),ownerId:account.userId,rules:format==='custom'?(legacy.settings||{}):{},draftState:format==='draft'?legacy:null,draftVersion:0,maxMembers:Number(legacy.league&&legacy.league.size)||20,status:'active',created:now,updated:now,members:[{id:membershipId,userId:account.userId,role:'owner',joined:now,active:true}],teams:[{id:teamId,membershipId,userId:account.userId,name:safeName(legacy.team&&legacy.team.name||account.name,'My Team',60),state:format==='custom'?legacy:{legacyDraft:legacy},version:0,created:now,updated:now}],draftPicks:[],fixtures:[],scores:[]};fantasyLeagues[id]=league;changed=true;continue}
+    if(legacy.league&&legacy.league.isOwner===true&&league.ownerId!==account.userId){(league.members||[]).forEach(member=>{member.role='member'});league.ownerId=account.userId;changed=true}
+    if(!fantasyMembership(league,account.userId)){const membershipId='FM'+genCode(14),teamId='FT'+genCode(14),now=Date.now();league.members.push({id:membershipId,userId:account.userId,role:league.ownerId===account.userId?'owner':'member',joined:now,active:true});league.teams.push({id:teamId,membershipId,userId:account.userId,name:safeName(legacy.team&&legacy.team.name||account.name,'My Team',60),state:format==='custom'?legacy:{legacyDraft:legacy},version:0,created:now,updated:now});changed=true}
+  }
+  return changed;
 }
 
 function escapeHtml(value) {
@@ -742,7 +809,7 @@ async function handleRequest(req, res) {
   const url = req.url.split('?')[0];
 
   if (req.method === 'OPTIONS') {
-    jsonRes(req, res, 204, {}, {'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,Authorization'}); return;
+    jsonRes(req, res, 204, {}, {'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type,Authorization,Idempotency-Key'}); return;
   }
 
   if (url === '/health') {
@@ -904,7 +971,7 @@ async function handleRequest(req, res) {
       if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected))
         return jsonRes(req, res, 403, {error: 'Incorrect password'});
 
-      const previousUsers = structuredClone(users), previousLeagues = structuredClone(leagues);
+      const previousUsers = structuredClone(users), previousLeagues = structuredClone(leagues), previousFantasyLeagues=structuredClone(fantasyLeagues);
       for (const [code, league] of Object.entries(leagues)) {
         league.teams = (league.teams || []).filter(team => team.userId !== user.userId);
         if (league.ownerId === user.userId) {
@@ -912,9 +979,21 @@ async function handleRequest(req, res) {
           else delete leagues[code];
         }
       }
+      for(const league of Object.values(fantasyLeagues)){
+        const removedTeam=fantasyTeam(league,user.userId);
+        if(league.format==='draft'&&league.draftState){const participants=league.draftState.league&&league.draftState.league.participants,slot=Array.isArray(participants)?participants.findIndex(item=>item&&item.userId===user.userId):-1;if(slot>=0)participants[slot]={name:'Open slot',isMe:false,isAI:false,isEmpty:true};}
+        league.members=(league.members||[]).filter(member=>member.userId!==user.userId);
+        league.teams=(league.teams||[]).filter(team=>team.userId!==user.userId);
+        if(removedTeam)league.draftPicks=(league.draftPicks||[]).filter(pick=>pick.teamId!==removedTeam.id);
+        if(league.ownerId===user.userId){
+          const successor=(league.members||[]).find(member=>member.active!==false);
+          if(successor){successor.role='owner';league.ownerId=successor.userId;league.updated=Date.now()}
+          else delete fantasyLeagues[league.id];
+        }
+      }
       revokeAllSessions(user);
       delete users[user.email];
-      await saveAccountStateOrRollback(previousUsers, previousLeagues);
+      await saveCompleteAccountStateOrRollback(previousUsers,previousLeagues,previousFantasyLeagues);
       jsonRes(req, res, 200, {ok: true}, {'Set-Cookie': 'session=; Path=/; HttpOnly' + (COOKIE_SECURE ? '; Secure' : '') + '; SameSite=Lax; Max-Age=0'});
     });
     return;
@@ -962,6 +1041,101 @@ async function handleRequest(req, res) {
       jsonRes(req, res, 200, {ok:true, updatedAt:user.appStateUpdated, version:user.appStateVersion});
     }, 1000000);
     return;
+  }
+
+  /* Multi Custom/Draft League API. All resources are scoped by immutable league ID. */
+  if(url==='/api/fantasy-leagues'&&req.method==='GET'){
+    const user=authUser(req,{});if(!user)return jsonRes(req,res,401,{error:'Login required'});
+    const items=Object.values(fantasyLeagues).filter(league=>fantasyMembership(league,user.userId)).map(league=>fantasySummary(league,user)).sort((a,b)=>b.updated-a.updated);
+    return jsonRes(req,res,200,{leagues:items,limit:MAX_FANTASY_LEAGUES});
+  }
+  if(url==='/api/fantasy-leagues'&&req.method==='POST'){
+    readBody(req,async(err,body)=>{
+      if(err)return bodyError(req,res,err);const user=authUser(req,body);if(!user)return jsonRes(req,res,401,{error:'Login required'});
+      try{
+        const result=await mutateFantasyLeagues(async all=>{
+          const format=String(body.format||'');if(!['custom','draft'].includes(format))throw fantasyError(400,'Format must be custom or draft');
+          const key=requestKey(body),existing=key&&Object.values(all).find(league=>league.ownerId===user.userId&&league.createKey===key);
+          if(existing)return {league:fantasyDetail(existing,user),idempotent:true};
+          const joined=Object.values(all).filter(league=>fantasyMembership(league,user.userId)).length;if(joined>=MAX_FANTASY_LEAGUES)throw fantasyError(409,`League limit reached (${MAX_FANTASY_LEAGUES})`,{limit:MAX_FANTASY_LEAGUES});
+          const now=Date.now(),id=fantasyId('FL'),membershipId=fantasyId('FM'),teamId=fantasyId('FT'),maxMembers=Math.max(2,Math.min(30,Number(body.maxMembers)||20));
+          const draftState=format==='draft'?cleanLeagueState(body.draftState||{}):null;
+          if(draftState&&Array.isArray(draftState.league&&draftState.league.participants)){let ownerSlot=draftState.league.participants.findIndex(item=>item&&item.isMe);if(ownerSlot<0)ownerSlot=0;draftState.league.participants=draftState.league.participants.map((item,index)=>({...item,isMe:false,...(index===ownerSlot?{userId:user.userId,name:safeName(body.teamName||user.name,'My Team',60),isAI:false,isEmpty:false}:{})}));draftState.me=ownerSlot;}
+          const league={id,code:uniqueFantasyCode(),format,name:safeName(body.name,format==='custom'?'Custom League':'Draft League',80),ownerId:user.userId,rules:cleanLeagueState(body.rules||{}),draftState,draftVersion:0,maxMembers,inviteExpiresAt:optionalFantasyTimestamp(body.inviteExpiresAt),status:'active',createKey:key,created:now,updated:now,members:[{id:membershipId,userId:user.userId,role:'owner',joined:now,active:true}],teams:[{id:teamId,membershipId,userId:user.userId,name:safeName(body.teamName||user.name,'My Team',60),state:cleanLeagueState(body.teamState||{}),version:0,created:now,updated:now}],draftPicks:[],fixtures:[],scores:[]};
+          all[id]=league;return {league:fantasyDetail(league,user),idempotent:false};
+        });
+        jsonRes(req,res,result.idempotent?200:201,result);
+      }catch(error){jsonRes(req,res,error.status||500,{error:error.message,...error.public});}
+    },1000000);return;
+  }
+  if(url==='/api/fantasy-leagues/join'&&req.method==='POST'){
+    readBody(req,async(err,body)=>{
+      if(err)return bodyError(req,res,err);const user=authUser(req,body);if(!user)return jsonRes(req,res,401,{error:'Login required'});
+      try{
+        const result=await mutateFantasyLeagues(async all=>{
+          const code=String(body.code||'').trim().toUpperCase();if(!/^[A-Z2-9]{6,12}$/.test(code))throw fantasyError(400,'Invalid league code');
+          const league=Object.values(all).find(item=>item.code===code);if(!league)throw fantasyError(404,'League not found');
+          if(body.format&&body.format!==league.format)throw fantasyError(409,`This invitation is for a ${league.format} league`,{format:league.format});
+          if(league.status!=='active')throw fantasyError(410,'League is inactive');if(league.inviteExpiresAt&&league.inviteExpiresAt<Date.now())throw fantasyError(410,'Invitation has expired');
+          const existing=fantasyMembership(league,user.userId),key=requestKey(body);if(existing){if(key&&existing.joinKey===key)return {league:fantasyDetail(league,user),idempotent:true};throw fantasyError(409,'You already belong to this league',{leagueId:league.id});}
+          const joined=Object.values(all).filter(item=>fantasyMembership(item,user.userId)).length;if(joined>=MAX_FANTASY_LEAGUES)throw fantasyError(409,`League limit reached (${MAX_FANTASY_LEAGUES})`,{limit:MAX_FANTASY_LEAGUES});
+          if(league.members.filter(member=>member.active!==false).length>=league.maxMembers)throw fantasyError(409,'League is full');
+          const now=Date.now(),membershipId=fantasyId('FM'),teamId=fantasyId('FT'),teamName=safeName(body.teamName||user.name,'My Team',60);
+          if(league.format==='draft'&&league.draftState){if(league.draftState.phase&&league.draftState.phase!=='lobby')throw fantasyError(409,'This Draft league is already in progress');const participants=league.draftState.league&&league.draftState.league.participants;if(Array.isArray(participants)){let slot=participants.findIndex(item=>item&&(item.isEmpty||item.isAI));if(slot<0&&participants.length<league.maxMembers){slot=participants.length;participants.push({})}if(slot<0)throw fantasyError(409,'Draft lobby has no open slot');participants[slot]={name:teamName,userId:user.userId,isMe:false,isAI:false,isEmpty:false};league.draftVersion++;}}
+          league.members.push({id:membershipId,userId:user.userId,role:'member',joinKey:key,joined:now,active:true});league.teams.push({id:teamId,membershipId,userId:user.userId,name:teamName,state:cleanLeagueState(body.teamState||{}),version:0,created:now,updated:now});league.updated=now;return {league:fantasyDetail(league,user),idempotent:false};
+        });jsonRes(req,res,result.idempotent?200:201,result);
+      }catch(error){jsonRes(req,res,error.status||500,{error:error.message,...error.public});}
+    },1000000);return;
+  }
+  const fantasyRoute=url.match(/^\/api\/fantasy-leagues\/([A-Z0-9]+)$/);
+  if(fantasyRoute&&req.method==='GET'){
+    const user=authUser(req,{});if(!user)return jsonRes(req,res,401,{error:'Login required'});const league=fantasyLeagues[fantasyRoute[1]];if(!league)return jsonRes(req,res,404,{error:'League not found'});if(!fantasyMembership(league,user.userId))return jsonRes(req,res,403,{error:'League membership required'});return jsonRes(req,res,200,{league:fantasyDetail(league,user)});
+  }
+  if(fantasyRoute&&req.method==='PATCH'){
+    readBody(req,async(err,body)=>{if(err)return bodyError(req,res,err);const user=authUser(req,body);if(!user)return jsonRes(req,res,401,{error:'Login required'});
+      try{const result=await mutateFantasyLeagues(async all=>{const league=all[fantasyRoute[1]];if(!league)throw fantasyError(404,'League not found');if(league.ownerId!==user.userId)throw fantasyError(403,'Only the league owner can manage this league');if(body.name)league.name=safeName(body.name,league.name,80);if(body.rules)league.rules=cleanLeagueState(body.rules);if(body.status&&['active','inactive'].includes(body.status))league.status=body.status;if(body.inviteExpiresAt!==undefined)league.inviteExpiresAt=optionalFantasyTimestamp(body.inviteExpiresAt);if(body.transferOwnerId){const next=fantasyMembership(league,String(body.transferOwnerId));if(!next)throw fantasyError(400,'New owner must be an active member');const current=fantasyMembership(league,user.userId);current.role='member';next.role='owner';league.ownerId=next.userId;}league.updated=Date.now();return fantasyDetail(league,user)});jsonRes(req,res,200,{league:result});}catch(error){jsonRes(req,res,error.status||500,{error:error.message,...error.public});}
+    });return;
+  }
+  const fantasyTeamRoute=url.match(/^\/api\/fantasy-leagues\/([A-Z0-9]+)\/team$/);
+  if(fantasyTeamRoute&&req.method==='PUT'){
+    readBody(req,async(err,body)=>{if(err)return bodyError(req,res,err);const user=authUser(req,body);if(!user)return jsonRes(req,res,401,{error:'Login required'});
+      try{const result=await mutateFantasyLeagues(async all=>{const league=all[fantasyTeamRoute[1]];if(!league)throw fantasyError(404,'League not found');if(!fantasyMembership(league,user.userId))throw fantasyError(403,'League membership required');const team=fantasyTeam(league,user.userId);if(!team)throw fantasyError(404,'Team not found');const baseVersion=Number(body.baseVersion);if(!Number.isSafeInteger(baseVersion)||baseVersion<0)throw fantasyError(428,'A valid baseVersion is required',{version:team.version});if(baseVersion!==team.version)throw fantasyError(409,'Team changed on another device',{version:team.version,team:{...team,state:team.state||{}}});team.state=cleanLeagueState(body.state);if(body.teamName)team.name=safeName(body.teamName,team.name,60);team.version++;team.updated=Date.now();league.updated=team.updated;return {version:team.version,updatedAt:team.updated}});jsonRes(req,res,200,{ok:true,...result});}catch(error){jsonRes(req,res,error.status||500,{error:error.message,...error.public});}
+    },1000000);return;
+  }
+  const fantasyDraftRoute=url.match(/^\/api\/fantasy-leagues\/([A-Z0-9]+)\/draft$/);
+  if(fantasyDraftRoute&&req.method==='PUT'){
+    readBody(req,async(err,body)=>{if(err)return bodyError(req,res,err);const user=authUser(req,body);if(!user)return jsonRes(req,res,401,{error:'Login required'});
+      try{const result=await mutateFantasyLeagues(async all=>{const league=all[fantasyDraftRoute[1]];if(!league)throw fantasyError(404,'League not found');if(league.format!=='draft')throw fantasyError(409,'Not a Draft league');if(league.ownerId!==user.userId)throw fantasyError(403,'Only the league owner can update Draft state');const base=Number(body.baseVersion);if(!Number.isSafeInteger(base)||base<0)throw fantasyError(428,'A valid baseVersion is required',{version:league.draftVersion});if(base!==league.draftVersion)throw fantasyError(409,'Draft changed on another device',{version:league.draftVersion,draftState:league.draftState});league.draftState=cleanLeagueState(body.state);league.draftVersion++;league.updated=Date.now();return {version:league.draftVersion}});jsonRes(req,res,200,{ok:true,...result});}catch(error){jsonRes(req,res,error.status||500,{error:error.message,...error.public});}
+    },1000000);return;
+  }
+  const fantasyPickRoute=url.match(/^\/api\/fantasy-leagues\/([A-Z0-9]+)\/draft\/picks$/);
+  if(fantasyPickRoute&&req.method==='POST'){
+    readBody(req,async(err,body)=>{if(err)return bodyError(req,res,err);const user=authUser(req,body);if(!user)return jsonRes(req,res,401,{error:'Login required'});
+      try{const result=await mutateFantasyLeagues(async all=>{const league=all[fantasyPickRoute[1]];if(!league)throw fantasyError(404,'League not found');if(league.format!=='draft')throw fantasyError(409,'Not a Draft league');if(!fantasyMembership(league,user.userId))throw fantasyError(403,'League membership required');const base=Number(body.baseVersion);if(!Number.isSafeInteger(base)||base<0)throw fantasyError(428,'A valid baseVersion is required',{version:league.draftVersion});if(base!==league.draftVersion)throw fantasyError(409,'Draft changed on another device',{version:league.draftVersion,draftState:league.draftState});const team=fantasyTeam(league,user.userId),playerId=Number(body.playerId),pickNumber=Number(body.pickNumber);if(!Number.isSafeInteger(playerId)||playerId<0)throw fantasyError(400,'Invalid player');if(!Number.isSafeInteger(pickNumber)||pickNumber<0)throw fantasyError(400,'Invalid pick number');if((league.draftPicks||[]).some(pick=>pick.playerId===playerId))throw fantasyError(409,'Player has already been drafted in this league');if((league.draftPicks||[]).some(pick=>pick.pickNumber===pickNumber))throw fantasyError(409,'Draft pick number is already recorded');
+        const draft=league.draftState;
+        if(draft&&draft.phase==='draft'&&Array.isArray(draft.teams)){
+          const size=Number(draft.size)||draft.teams.length,currentPick=Number(draft.pickNo);
+          if(!Number.isSafeInteger(size)||size<2||size!==draft.teams.length||currentPick!==pickNumber)throw fantasyError(409,'Draft turn has changed',{version:league.draftVersion,draftState:draft});
+          const round=Math.floor(currentPick/size),offset=currentPick%size,teamIndex=round%2===0?offset:size-1-offset;
+          const participant=draft.league&&Array.isArray(draft.league.participants)&&draft.league.participants[teamIndex];
+          if(!participant||participant.userId!==user.userId)throw fantasyError(403,'It is not your Draft turn');
+          const draftTeam=draft.teams[teamIndex];if(!draftTeam||!Array.isArray(draftTeam.roster))throw fantasyError(409,'Draft roster is unavailable');
+          if(draft.teams.some(item=>item&&Array.isArray(item.roster)&&item.roster.includes(playerId)))throw fantasyError(409,'Player has already been drafted in this league');
+          draftTeam.roster.push(playerId);draft.log=Array.isArray(draft.log)?draft.log:[];draft.log.unshift({pick:pickNumber+1,team:teamIndex,pid:playerId});draft.pickNo=pickNumber+1;
+        }
+        const pick={playerId,teamId:team.id,pickNumber,created:Date.now()};league.draftPicks.push(pick);league.draftVersion++;league.updated=Date.now();return {pick,version:league.draftVersion,draftState:league.draftState}});jsonRes(req,res,201,result);}catch(error){jsonRes(req,res,error.status||500,{error:error.message,...error.public});}
+    });return;
+  }
+  const fantasyLeaveRoute=url.match(/^\/api\/fantasy-leagues\/([A-Z0-9]+)\/membership$/);
+  if(fantasyLeaveRoute&&req.method==='DELETE'){
+    readBody(req,async(err,body)=>{if(err)body={};const user=authUser(req,body);if(!user)return jsonRes(req,res,401,{error:'Login required'});
+      try{await mutateFantasyLeagues(async all=>{const league=all[fantasyLeaveRoute[1]];if(!league)throw fantasyError(404,'League not found');const member=fantasyMembership(league,user.userId);if(!member)throw fantasyError(404,'Membership not found');if(league.ownerId===user.userId)throw fantasyError(409,'Transfer ownership or delete the league before leaving');if(league.format==='draft'&&league.draftState){if(league.draftState.phase&&league.draftState.phase!=='lobby')throw fantasyError(409,'You cannot leave while the Draft is in progress');const participants=league.draftState.league&&league.draftState.league.participants,slot=Array.isArray(participants)?participants.findIndex(item=>item&&item.userId===user.userId):-1;if(slot>=0){participants[slot]={name:'Open slot',isMe:false,isAI:false,isEmpty:true};league.draftVersion++;}}league.members=league.members.filter(item=>item.userId!==user.userId);league.teams=league.teams.filter(item=>item.userId!==user.userId);league.draftPicks=(league.draftPicks||[]).filter(pick=>league.teams.some(team=>team.id===pick.teamId));league.updated=Date.now();});jsonRes(req,res,200,{ok:true});}catch(error){jsonRes(req,res,error.status||500,{error:error.message,...error.public});}
+    });return;
+  }
+  if(fantasyRoute&&req.method==='DELETE'){
+    readBody(req,async(err,body)=>{if(err)body={};const user=authUser(req,body);if(!user)return jsonRes(req,res,401,{error:'Login required'});
+      try{await mutateFantasyLeagues(async all=>{const league=all[fantasyRoute[1]];if(!league)throw fantasyError(404,'League not found');if(league.ownerId!==user.userId)throw fantasyError(403,'Only the league owner can delete this league');if(body.confirmName!==league.name)throw fantasyError(400,'League name confirmation is required');delete all[league.id];});jsonRes(req,res,200,{ok:true});}catch(error){jsonRes(req,res,error.status||500,{error:error.message,...error.public});}
+    });return;
   }
 
   /* League API (all require authentication) */
@@ -1213,12 +1387,13 @@ async function start() {
   if (database) {
     await database.migrate();
     const loaded = await database.load();
-    users = loaded.users; leagues = loaded.leagues; sooScores = loaded.scores; tokens = {};
+    users = loaded.users; leagues = loaded.leagues; sooScores = loaded.scores; fantasyLeagues = loaded.fantasyLeagues || {}; tokens = {};
     Object.values(users).forEach(user => {
       user.sessions = (user.sessions || []).filter(session => session.expires >= Date.now());
       user.sessions.forEach(session => { tokens[session.hash] = user.email; });
     });
   }
+  else if(migrateJsonFantasyLeagues())await persistFantasyLeagues(structuredClone(fantasyLeagues));
   storageReady = true;
   server.listen(PORT, function() { console.log('NRL Fantasy on :' + PORT + ' using ' + (database ? 'PostgreSQL' : 'local JSON')); });
 }

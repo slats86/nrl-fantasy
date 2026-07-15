@@ -146,7 +146,7 @@ Automated browser coverage uses independent Playwright contexts at 320, 375, 390
 - First-login appearance choice, two-step tutorial, theme persistence after reload, account-level cross-device state, and all five colour schemes.
 - Classic auto-complete, full 21-player squad, unique players, starter position eligibility, salary-cap arithmetic, captain/vice-captain uniqueness, trades, clearing, and saving.
 - Custom league creation through the UI, custom auto-complete, captaincy, trades, clearing, cap handling, and strict isolation from Classic state.
-- Classic AI league creation, ladder data setup, local Draft creation/start with AI opponents, and truthful local-only Draft labelling.
+- Classic AI league creation and ladder setup; multiple Custom and Draft league creation/joining, independent Draft lobbies, AI fill, player availability and per-league state.
 - State of Origin league creation/joining, malformed/unknown codes, duplicate joins/creates, owner-only removal, member restrictions, locked-game picks, scoring administration authorization, simultaneous owner/member saves, duplicate prevention, and stale-version rejection.
 - Cross-device Classic and Custom changes in both directions, independent user cookies, one-device logout, successful disjoint team saves, and detection of competing writes from the same account.
 - Dashboard, primary/secondary navigation, loading/error states, settings/help, browser back-compatible page state, modal close/Escape/focus trapping, and mobile bottom navigation.
@@ -188,7 +188,8 @@ Match Centre modals and Player profile game logs passed for all three players on
 | High | Cloud state and SoO team saves used last-write-wins, allowing stale tabs to overwrite newer devices. | Added monotonic versions, transactional compare-and-swap, `428` preconditions, `409` conflict payloads, and client conflict recovery. | Concurrent API/PostgreSQL writes and two-browser conflict test. |
 | High | Custom auto-complete, clear, captaincy, chips, trades, bye planning, and round rollover referenced Classic state. | Routed every shared operation through the active team state and persisted Custom history/counters independently. | UI creation, auto-complete, captain/vice, trade, clear, cross-device isolation. |
 | High | Completed State of Origin picks could be changed by calling the API directly. | Validate pick keys/IDs and reject changes to locked games server-side with `423`. | API and browser locked-pick assertions. |
-| High | Draft UI offered invitation codes although Draft state was local-only. | Removed the misleading join/invite journey and code sharing, labelled Draft as a local AI sandbox, and prefilled opponents with AI coaches. | Local Draft create/start browser journey. |
+| High | Custom and Draft state was singular per account, so a second same-format league could overwrite teams, picks, rules and Draft state from the first. | Added immutable league-scoped records, memberships, teams, picks, fixtures and scores; ID-aware authorization; per-league client contexts; and a lossless legacy migration. Draft invitations now assign authenticated members to independent lobby slots. | Three-user API lifecycle, isolated PostgreSQL migration, all-width league UI, multi-context disjoint/stale writes and same-player cross-league Draft tests. |
+| High | A member's Draft pick persisted in the pick ledger but did not advance the shared Draft snapshot, so another device could reload the pre-pick roster. | Made live Draft turns server-authoritative: the API validates the current snake-draft slot, records the pick, updates the correct roster/log/turn atomically, and returns the new shared state. League switching refreshes only the selected league. | Owner/member turn authorization, two sequential live picks, shared-state reload, stale-version and cross-league isolation assertions. |
 | Medium | A trade adjusted bank in shared slot helpers and then debited the price difference a second time. | Removed the duplicate adjustment and retained one atomic old-price/new-price calculation. | Exact bank arithmetic assertion. |
 | Medium | Concurrent registration and league creation could create duplicate state; storage writes could interleave. | Added pending-registration/league guards, serialized snapshot writes, and combined account-state persistence. | Duplicate and simultaneous submission tests. |
 | Medium | Signing out from a page whose last auth tab was Register left Forgot Password inaccessible. | Reset the auth view to Sign In on logout. | Complete UI account lifecycle. |
@@ -214,10 +215,28 @@ Round 19 gate results: 35 core/unit/API tests passed with one PostgreSQL test sk
 
 Player Stats redesign gate results: `npm run check` passed 35/35 executed core/unit/API tests (with the isolated PostgreSQL case intentionally skipped by that generic command); the explicit disposable PostgreSQL suite passed 1/1; and the complete Playwright suite passed 19/19. The browser run includes the seven viewport widths, cross-device/product flows, both approved visual baselines, mobile round selection, all themes, unavailable components, no unexpected console errors, and horizontal-overflow checks.
 
+## Multiple Custom and Draft leagues
+
+The singular Custom/Draft account fields remain as compatibility aliases only. The authoritative model is an addressable collection of immutable league IDs, and every active screen binds explicitly to one selected league. Successful switches flush changed team state before rebinding; unchanged state is content-hashed so ordinary navigation does not create version churn.
+
+PostgreSQL now stores league identity/rules/lifecycle, memberships and roles, user teams and versions, Draft picks, fixtures and scores in league-scoped tables with foreign keys, uniqueness constraints and lookup indexes. The `002_multi_custom_draft_leagues` migration reads existing application state without deleting it, groups shared legacy codes into one league, retains the complete Custom/Draft payload, preserves explicit ownership even when member rows are encountered first, and is transactional/idempotent. JSON development storage performs the equivalent compatibility import.
+
+The new API provides authenticated create/list/detail/join/manage/delete/leave, team compare-and-swap saves, Draft compare-and-swap state and league-scoped Draft picks. It rejects IDOR reads, non-owner management, incompatible/invalid/expired/full invitations, duplicate membership, duplicate same-league players, stale devices and missing version preconditions. Creation/join requests are idempotent, rapid UI submissions are deduplicated, and the configurable account limit is returned by the server and displayed in My Leagues.
+
+Draft participants carry authenticated user identity in shared state. Joining replaces one open/AI lobby slot, each browser derives its own `me` index, and the live pick endpoint atomically validates the current human turn before advancing the roster, log and pick number. The same player remains independently draftable in separate leagues, and leaving restores only that member's lobby slot. Custom rules, corrections, layouts, teams, lineups, captaincy, history and scoring remain isolated from Classic and every other Custom league.
+
+Validation evidence:
+
+- `npm run check`: 47 executed tests passed; the PostgreSQL test was intentionally skipped by this generic command.
+- Disposable PostgreSQL `nrl_fantasy_test`: 1/1 passed, covering two legacy formats, shared membership, ownership order, record relationships, rollback, retry-safe migration and restart persistence.
+- Complete Playwright suite: 37/37 passed in 7.6 minutes, covering 320, 375, 390, 768, 1024, 1440 and 1920 pixels.
+- The three-user API suite creates multiple Custom and Draft leagues for one owner, joins additional leagues owned by another user, verifies independent names/selections, identical Custom players across leagues, same-player Draft isolation, owner/member turn enforcement and shared Draft persistence after reload, owner transfer, permissions, invitations, IDOR and stale conflicts.
+- Multiple browser contexts save different leagues concurrently without collision; competing saves to one league produce a recoverable conflict instead of silent overwrite. League cards and switchers have no horizontal overflow at every supported width.
+
 ## Remaining risks and manual checks
 
 - Playwright covers browser viewport emulation, touch-sized controls, and keyboard focus; a final physical iOS Safari and Android Chrome pass remains useful for OS keyboard, safe-area, and installed-PWA behavior.
 - Password-reset content and the full UI flow are tested through a permission-restricted test capture. Actual Resend inbox delivery is an external-service smoke and must not expose the reset link in logs.
 - FootyStatistics and NRL feeds are external, mutable services. The resolver caches successful identity mappings in-process and rejects incomplete identity/detail payloads, but continued scheduled audit/monitoring is required.
-- Draft is intentionally a local AI sandbox. Networked multiplayer Draft is not advertised or represented as implemented.
+- Draft timers and AI auto-picks run in the active browser while authoritative rosters/picks and Draft state are league-scoped on the server. A future horizontally scaled deployment should add a server-side Draft clock/coordinator before enabling multiple application instances for one live room.
 - Production verification is restricted to read-only health/data checks and browser-local authentication interception; it creates or modifies no production account, league, team or database data.

@@ -6,6 +6,7 @@ async function openHub(browser,width){
   const page=await context.newPage(),errors=[];
   await page.route('**/api/soo/me',route=>route.fulfill({json:{userId:'players-hub-ui',name:'Players Hub',email:'players-hub-ui@example.test'}}));
   await page.route('**/api/app-state',route=>route.fulfill({json:route.request().method()==='GET'?{version:0,state:null}:{version:1}}));
+  await page.route('**/api/fantasy-leagues**',route=>route.fulfill({json:{leagues:[],limit:20}}));
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error')errors.push(message.text())});
   await page.goto('/');

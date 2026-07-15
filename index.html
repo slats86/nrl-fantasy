@@ -194,6 +194,12 @@ tr:hover td{background:rgba(0,230,118,.04)}
 .set-item label{display:block;font-size:11px;color:var(--dim);margin-bottom:5px}
 .set-item input{width:100%}
 .draft-pick-log{max-height:280px;overflow-y:auto;font-size:12px}
+.league-context{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:12px;border:1px solid var(--line);border-radius:11px;background:var(--card2)}
+.league-context label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.league-context select{min-width:210px;max-width:360px;font-weight:700}.league-context-meta{font-size:12px;color:var(--dim)}
+.league-directory{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.league-directory-card{padding:14px;border:1px solid var(--line);border-radius:11px;background:var(--card);cursor:pointer;min-height:118px}.league-directory-card:hover,.league-directory-card:focus-visible{border-color:var(--acc)}
+.league-code{font:700 12px/1.4 ui-monospace,SFMono-Regular,monospace;letter-spacing:.12em;color:var(--acc)}
+@media(max-width:600px){.league-context{align-items:stretch;flex-direction:column}.league-context select{width:100%;max-width:none;min-width:0}.league-directory{grid-template-columns:1fr}.league-directory-card{min-height:108px}}
 .onclock{animation:pulse 1.2s infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,.5)}50%{box-shadow:0 0 0 8px rgba(0,230,118,0)}}
 .ladder-pos{font-weight:800;color:var(--dim);width:24px;display:inline-block}
@@ -605,47 +611,49 @@ function playedIn(pid,r){
   return false;
 }
 /* official points, or recomputed from real stat line under custom rules */
+function activeScoringSettings(){return S.ui&&S.ui.page==='custom'&&S.customLeague?customSettings():S.ui&&S.ui.page==='draft'&&S.draft?draftSettings():S.settings}
+function activeCorrections(){return S.ui&&S.ui.page==='custom'&&S.customLeague?(S.customLeague.corrections||{}):(S.corrections||{})}
 function playerPts(pid,r){
   if(!playedIn(pid,r))return null;
   /* commissioner correction overrides everything */
-  if(S.corrections&&S.corrections[r]&&S.corrections[r][pid]!=null)return S.corrections[r][pid];
+  const corrections=activeCorrections();if(corrections[r]&&corrections[r][pid]!=null)return corrections[r][pid];
   const off=OFFS[pid]?OFFS[pid][r-1]:null;
-  if(S.settings.scoreMode!=='custom')return off!=null?off:ptsFromStats(RST[pid]&&RST[pid][r]);
+  if(activeScoringSettings().scoreMode!=='custom')return off!=null?off:ptsFromStats(RST[pid]&&RST[pid][r]);
   const st=RST[pid]&&RST[pid][r];
   if(st)return ptsFromStats(st);
   return off;
 }
 function ptsFromStats(arr){
   if(!arr)return null;
-  let t=0;for(let i=0;i<STAT_KEYS.length;i++)t+=(arr[i]||0)*(S.settings.rules[STAT_KEYS[i]]||0);
+  const settings=activeScoringSettings();let t=0;for(let i=0;i<STAT_KEYS.length;i++)t+=(arr[i]||0)*(settings.rules[STAT_KEYS[i]]||0);
   return Math.round(t);
 }
 
 /* ===== BONUS SCORING HELPERS ===== */
 /* Extra points for milestone stat events (200+ run metres, 50+ tackles, 3+ try involvements) */
 function bonusPts(pid,r){
-  if(!S.settings.bonusEvents)return 0;
+  const settings=activeScoringSettings();if(!settings.bonusEvents)return 0;
   const st=RST[pid]&&RST[pid][r];if(!st)return 0;
   let b=0;
   // STAT_KEYS index: MG=14(run metres), TCK=7(tackles), T=0,TS=1,TA=4(try involvements)
-  if((st[14]||0)>=200)b+=S.settings.bonusMetre||5;
-  if((st[7]||0)>=50)b+=S.settings.bonusTackle||5;
-  if((st[0]||0)+(st[1]||0)+(st[4]||0)>=3)b+=S.settings.bonusTryInv||5;
+  if((st[14]||0)>=200)b+=settings.bonusMetre||5;
+  if((st[7]||0)>=50)b+=settings.bonusTackle||5;
+  if((st[0]||0)+(st[1]||0)+(st[4]||0)>=3)b+=settings.bonusTryInv||5;
   return b;
 }
 /* Multiplier for players scoring above their season avg for X consecutive rounds */
 function consistencyMult(pid,r){
-  if(!S.settings.consistencyBonus)return 1;
-  const streak=S.settings.consistencyStreak||3;
+  const settings=activeScoringSettings();if(!settings.consistencyBonus)return 1;
+  const streak=settings.consistencyStreak||3;
   const avg=PLAYERS[pid].avg;if(!avg||avg<=0)return 1;
   for(let i=r-1;i>=Math.max(1,r-streak);i--){
     const pts=playerPts(pid,i);if(pts==null||pts<avg)return 1;
   }
-  return S.settings.consistencyMult||1.1;
+  return settings.consistencyMult||1.1;
 }
 /* Extra points if player scored well in a losing team */
 function upsetBonus(pid,r){
-  if(!S.settings.upsetBonus)return 0;
+  const settings=activeScoringSettings();if(!settings.upsetBonus)return 0;
   const p=PLAYERS[pid];
   const fix=RFIX[r]&&RFIX[r].games;if(!fix)return 0;
   const game=fix.find(g=>g[0]===p.sq||g[1]===p.sq);
@@ -654,7 +662,7 @@ function upsetBonus(pid,r){
   const myScore=isHome?game[2]:game[3];const oppScore=isHome?game[3]:game[2];
   if(myScore>=oppScore)return 0; // team won or drew
   const pts=playerPts(pid,r);if(pts==null)return 0;
-  return pts>=(S.settings.upsetThreshold||60)?(S.settings.upsetBonusPts||10):0;
+  return pts>=(settings.upsetThreshold||60)?(settings.upsetBonusPts||10):0;
 }
 /* helper: get the chips belonging to the team currently being managed */
 function getChips(){
@@ -664,7 +672,7 @@ function getChips(){
 
 /* team score for a classic lineup snapshot at round r (official results) */
 function lineupScore(line,r,bestBallOverride){
-  if(bestBallOverride||S.settings.bestBall){
+  const settings=activeScoringSettings();if(bestBallOverride||settings.bestBall){
     /* best ball: extract all pids from lineup or roster array, pick top STARTERS_N */
     const allPids=[];
     if(Array.isArray(line)){allPids.push(...line.filter(x=>x!=null));}
@@ -679,13 +687,13 @@ function lineupScore(line,r,bestBallOverride){
   if(!S.season.rounds[r])return {total:0,detail:[]};
   const chips=getChips();const active=chips.active||{};
   const detail=[];let total=0;
-  const captainMult=S.settings.captainMult||2;
+  const captainMult=settings.captainMult||2;
   const resAvail=line.res.filter(x=>x!=null&&playedIn(x,r)).sort((a,b)=>(playerPts(b,r)||0)-(playerPts(a,r)||0));
   const subUsed=new Set();
   /* build scorer list */
   const scorers=[];
   for(const [posId,]of FIELD_STRUCT){for(const pid of line.starters[posId]){scorers.push({pid,posId,slot:'field'})}}
-  if(S.settings.benchScores)for(const pid of line.bench)scorers.push({pid,posId:0,slot:'bench'});
+  if(settings.benchScores)for(const pid of line.bench)scorers.push({pid,posId:0,slot:'bench'});
   /* resolve actual players (with auto-subs) */
   const resolved=[];
   for(const sc of scorers){
@@ -797,6 +805,7 @@ function autoPickSquad(rng,quality=1){
 }
 
 /* ---------- advance to next real round ---------- */
+function withLeagueLayout(state,operation){const prior=S.settings.layout;S.settings.layout=state&&state.settings&&state.settings.layout||prior;applyLayout();try{return operation()}finally{S.settings.layout=prior;applyLayout()}}
 function simulateRound(){
   const r=S.round;
   if(r>MAXR){
@@ -805,28 +814,20 @@ function simulateRound(){
   }
   S.season.rounds[r]={fix:RFIX[r].games,byes:RFIX[r].byes,real:true};
   S.classic.history[r]=JSON.parse(JSON.stringify(S.classic.line));
-  if(S.customLeague&&S.customLeague.team){
-    const T=S.customLeague.team;
-    if(T.squad.length)T.history[r]=JSON.parse(JSON.stringify(T.line));
-  }
+  (S.customLeagues||[]).forEach(entry=>{const T=entry.state&&entry.state.team;if(T&&T.squad&&T.squad.length)T.history[r]=JSON.parse(JSON.stringify(T.line))});
   if(S.league){
     S.league.history=S.league.history||{};
     S.league.history[r]=S.league.teams.map(t=>JSON.parse(JSON.stringify(t.line)));
   }
-  if(S.draft&&S.draft.done){
-    S.draft.teams.forEach(t=>{if(t.ai)autoSetDraftLineup(t)});
-    S.draft.history=S.draft.history||{};
-    S.draft.history[r]=S.draft.teams.map(t=>JSON.parse(JSON.stringify(t.line)));
-  }
+  (S.draftLeagues||[]).forEach(entry=>withLeagueLayout(entry.state,()=>{const draft=entry.state;if(draft&&draft.done&&draft.teams){draft.teams.forEach(t=>{if(t.ai)autoSetDraftLineup(t)});draft.history=draft.history||{};draft.history[r]=draft.teams.map(t=>JSON.parse(JSON.stringify(t.line)))}}));
   S.classic.tradesRound=0;
-  if(S.customLeague&&S.customLeague.team)S.customLeague.team.tradesRound=0;
+  (S.customLeagues||[]).forEach(entry=>{if(entry.state&&entry.state.team)entry.state.team.tradesRound=0});
   /* clear round-only chips after each round */
   const ch=S.classic.chips;
   if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
-  const customChips=S.customLeague&&S.customLeague.team&&S.customLeague.team.chips;
-  if(customChips&&customChips.active){for(const id of Object.keys(customChips.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete customChips.active[id];}}
+  (S.customLeagues||[]).forEach(entry=>{const customChips=entry.state&&entry.state.team&&entry.state.team.chips;if(customChips&&customChips.active){for(const id of Object.keys(customChips.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete customChips.active[id]}}});
   /* clear expired waivers — players become FA after 1 round */
-  if(S.draft&&S.draft.waivers)S.draft.waivers=S.draft.waivers.filter(w=>w.round>=r);
+  (S.draftLeagues||[]).forEach(entry=>{if(entry.state&&entry.state.waivers)entry.state.waivers=entry.state.waivers.filter(w=>w.round>=r)});
   /* price history snapshot */
   const ph={};PLAYERS.forEach(p=>ph[p.id]=price(p.id));
   S.priceHistory[r]=ph;
@@ -850,28 +851,21 @@ function autoAdvanceRounds(oldMax){
       if(S.league)S.league.teams[0].line=JSON.parse(JSON.stringify(S.classic.line));
       S.classic.history[r]=JSON.parse(JSON.stringify(S.classic.line));
     }
-    if(S.customLeague&&S.customLeague.team&&S.customLeague.team.squad.length&&!S.customLeague.team.history[r]){
-      S.customLeague.team.history[r]=JSON.parse(JSON.stringify(S.customLeague.team.line));
-    }
+    (S.customLeagues||[]).forEach(entry=>{const T=entry.state&&entry.state.team;if(T&&T.squad&&T.squad.length&&!T.history[r])T.history[r]=JSON.parse(JSON.stringify(T.line))});
     /* league history */
     if(S.league){S.league.history=S.league.history||{};
       if(!S.league.history[r])S.league.history[r]=S.league.teams.map(t=>JSON.parse(JSON.stringify(t.line)));}
     /* draft history */
-    if(S.draft&&S.draft.done){
-      S.draft.teams.forEach(t=>{if(t.ai)autoSetDraftLineup(t);});
-      S.draft.history=S.draft.history||{};
-      if(!S.draft.history[r])S.draft.history[r]=S.draft.teams.map(t=>JSON.parse(JSON.stringify(t.line)));
-    }
+    (S.draftLeagues||[]).forEach(entry=>withLeagueLayout(entry.state,()=>{const draft=entry.state;if(draft&&draft.done&&draft.teams){draft.teams.forEach(t=>{if(t.ai)autoSetDraftLineup(t)});draft.history=draft.history||{};if(!draft.history[r])draft.history[r]=draft.teams.map(t=>JSON.parse(JSON.stringify(t.line)))}}));
     /* reset per-round counters */
     S.classic.tradesRound=0;
-    if(S.customLeague&&S.customLeague.team)S.customLeague.team.tradesRound=0;
+    (S.customLeagues||[]).forEach(entry=>{if(entry.state&&entry.state.team)entry.state.team.tradesRound=0});
     /* expire round-only chips */
     const ch=S.classic.chips;
     if(ch&&ch.active){for(const id of Object.keys(ch.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete ch.active[id];}}
-    const customChips=S.customLeague&&S.customLeague.team&&S.customLeague.team.chips;
-    if(customChips&&customChips.active){for(const id of Object.keys(customChips.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete customChips.active[id];}}
+    (S.customLeagues||[]).forEach(entry=>{const customChips=entry.state&&entry.state.team&&entry.state.team.chips;if(customChips&&customChips.active){for(const id of Object.keys(customChips.active)){if(CHIP_DEFS[id]&&CHIP_DEFS[id].roundOnly)delete customChips.active[id]}}});
     /* expire waivers */
-    if(S.draft&&S.draft.waivers)S.draft.waivers=S.draft.waivers.filter(w=>w.round>=r);
+    (S.draftLeagues||[]).forEach(entry=>{if(entry.state&&entry.state.waivers)entry.state.waivers=entry.state.waivers.filter(w=>w.round>=r)});
     /* price history snapshot */
     const ph={};PLAYERS.forEach(p=>ph[p.id]=price(p.id));
     S.priceHistory[r]=ph;
@@ -1633,10 +1627,10 @@ function renderHome(){
   const alertHTML=alerts.length?alerts.map(n=>`<div class="dash-list-item"><div class="dash-list-icon">${n.icon}</div><div class="dash-list-main"><b>${n.title}</b><span>${n.sub}</span></div><span class="muted">›</span></div>`).join(''):'<p class="muted">No urgent alerts. Your team is ready.</p>';
   const modes=[];
   if(S.league)modes.push({name:S.league.name||'Classic league',type:'Classic',page:'leagues'});
-  if(S.customLeague)modes.push({name:S.customLeague.name||S.customLeague.n||'Custom league',type:'Custom',page:'custom'});
-  if(S.draft&&S.draft.league)modes.push({name:S.draft.league.name||'Draft league',type:'Draft',page:'draft'});
+  (S.customLeagues||[]).forEach(entry=>modes.push({name:entry.name||'Custom league',type:'Custom',page:'custom',leagueId:entry.id}));
+  (S.draftLeagues||[]).forEach(entry=>modes.push({name:entry.name||'Draft league',type:'Draft',page:'draft',leagueId:entry.id}));
   if(S.origin&&S.origin.league&&S.origin.league.code)modes.push({name:S.origin.league.name||'State of Origin league',type:'Origin',page:'origin'});
-  const leagueHTML=modes.length?modes.slice(0,4).map((x,i)=>`<div class="dash-list-item" onclick="setPage('${x.page}')"><div class="dash-list-icon">${i+1}</div><div class="dash-list-main"><b>${esc(x.name)}</b><span>${x.type} · Open competition</span></div><span class="panel-link">View ›</span></div>`).join(''):
+  const leagueHTML=modes.length?modes.slice(0,4).map((x,i)=>`<div class="dash-list-item" onclick="${x.leagueId?`bindActiveLeague('${x.page}','${x.leagueId}');save();`:''}setPage('${x.page}')"><div class="dash-list-icon">${i+1}</div><div class="dash-list-main"><b>${esc(x.name)}</b><span>${x.type} · Open competition</span></div><span class="panel-link">View ›</span></div>`).join(''):
     `<p class="muted" style="margin-bottom:12px">You haven't joined a league yet.</p><button class="btn sec" onclick="setPage('leagues')">Create or join a league</button>`;
   const games=(RFIX[S.round]&&RFIX[S.round].games)||[];
   const matchHTML=games.length?games.slice(0,4).map(g=>`<div class="dash-list-item"><div class="dash-list-main"><b>${CLUBS[g[0]].s} <span class="muted">vs</span> ${CLUBS[g[1]].s}</b><span>Round ${S.round}${g[2]!=null?' · '+g[2]+'–'+g[3]:''}</span></div><span class="panel-link" onclick="setPage('match')">Details</span></div>`).join(''):'<p class="muted">Fixtures will appear when round data is available.</p>';
@@ -1867,9 +1861,14 @@ function customLeagueSetupHTML(){
     </div>
    </div>
    <button class="btn" style="width:100%;padding:13px;font-size:15px" onclick="createCustomLeague()">Create Custom League →</button>
+   <div class="navsep" style="margin:18px 0"></div>
+   <h4 style="margin-bottom:8px">Join an existing Custom league</h4>
+   <div class="flex"><input id="cl-joincode" aria-label="Custom league invitation code" placeholder="8-character code" maxlength="12" style="text-transform:uppercase;letter-spacing:2px;flex:1"><input id="cl-joinname" aria-label="Custom team name" value="My Team" style="flex:1"><button class="btn sec" onclick="joinFantasyLeague('custom')">Join</button></div>
   </div>`;
 }
-function createCustomLeague(){
+async function createCustomLeague(){
+  if(window._customCreatePending)return;window._customCreatePending=true;
+  try{
   const name=($('#cl-name').value||'My Custom League').trim();
   const cap=+$('#cl-cap').value||S.settings.cap;
   const captainMult=+$('#cl-capmult').value||2;
@@ -1877,19 +1876,24 @@ function createCustomLeague(){
   const tradesPerRound=+$('#cl-tpr').value||2;
   const seasonTrades=+$('#cl-tps').value||30;
   const chipsEnabled=$('#cl-chips').value==='1';
-  /* scoring rules go to S.settings (custom mode reads them) */
-  S.settings.scoreMode=$('#cl-scoremode').value;
-  S.settings.bonusEvents=$('#cl-bonus').value==='1';
-  S.settings.consistencyBonus=$('#cl-consist').value==='1';
-  S.settings.upsetBonus=$('#cl-upset').value==='1';
-  S.settings.chipRules=chipsEnabled?{}:Object.fromEntries(Object.keys(CHIP_DEFS).map(k=>[k,0]));
-  /* cap/trades/bank stored in customLeague — Classic settings untouched */
-  S.customLeague={name,created:Date.now(),chipsEnabled,cap,captainMult,benchScores,
+  const settings=JSON.parse(JSON.stringify(S.settings));
+  settings.scoreMode=$('#cl-scoremode').value;
+  settings.bonusEvents=$('#cl-bonus').value==='1';
+  settings.consistencyBonus=$('#cl-consist').value==='1';
+  settings.upsetBonus=$('#cl-upset').value==='1';
+  settings.chipRules=chipsEnabled?{}:Object.fromEntries(Object.keys(CHIP_DEFS).map(k=>[k,0]));
+  const state={name,created:Date.now(),settings,corrections:{},chipsEnabled,cap,captainMult,benchScores,
     tradesPerRound,seasonTrades,bank:cap,tradesRound:0,tradesSeason:0,
     team:{squad:[],line:emptyLine(),bank:cap,history:{},startRound:S.round,tradesRound:0,tradesSeason:0,chips:{active:{},used:{},injured:[]}}};
+  const entry=await createFantasyLeagueRecord('custom',name,'My Team',state,settings);
+  S.customLeagues.push(entry);bindActiveLeague('custom',entry.id);
   S.ui.customTab='team';
   save();renderCustom();
+  }catch(error){alert(error.message||'Custom league could not be created')}finally{window._customCreatePending=false}
 }
+
+function customSettings(){return S.customLeague&&S.customLeague.settings||S.settings}
+function draftSettings(){return S.draft&&S.draft.settings||S.settings}
 
 /* ===== STAT CORRECTION HELPERS ===== */
 let _corrSearch=[];
@@ -1910,9 +1914,9 @@ function applyCorrection(){
   const q=nameEl.value.toLowerCase().trim();
   const player=PLAYERS.find(p=>p.name.toLowerCase()===q)||PLAYERS.find(p=>p.name.toLowerCase().includes(q));
   if(!player){alert('Player not found: '+nameEl.value);return;}
-  if(!S.corrections)S.corrections={};
-  if(!S.corrections[r])S.corrections[r]={};
-  S.corrections[r][player.id]=pts;
+  const corrections=S.customLeague.corrections||(S.customLeague.corrections={});
+  if(!corrections[r])corrections[r]={};
+  corrections[r][player.id]=pts;
   save();renderCustom();
 }
 
@@ -1925,16 +1929,17 @@ function renderCustom(){
     return;
   }
   const tab=S.ui.customTab||'team';
-  const st=S.settings;
+  const st=customSettings();
   const cl=S.customLeague;
   el.innerHTML=`
+  ${leagueContextHTML('custom')}
   <div class="mode-hdr flex" style="margin-bottom:14px;align-items:flex-start">
    <div>
     <h3 style="font-size:17px;margin-bottom:2px">⚙ ${esc(cl.name)}</h3>
     <span class="muted" style="font-size:12px">Custom league · Cap: ${fmtK(clCap())} · Scoring: <b>${st.scoreMode==='custom'?'Custom rules':'Official NRL Fantasy'}</b></span>
    </div>
    <span class="spacer"></span>
-   <button class="btn sec" style="font-size:12px" onclick="if(confirm('Delete custom league and reset settings?')){S.customLeague=null;save();renderCustom()}">Delete league</button>
+   <button class="btn sec" style="font-size:12px" onclick="removeFantasyLeague('custom')">${activeLeagueEntry('custom')&&activeLeagueEntry('custom').role==='owner'?'Delete':'Leave'} league</button>
   </div>
   <div class="mode-tabs" style="margin-bottom:14px">
    <button class="${tab==='team'?'on':''}" onclick="S.ui.customTab='team';renderCustom()">👥 My Team</button>
@@ -1948,7 +1953,7 @@ function renderCustom(){
   ${tab==='settings'?`
   <div class="card"><h3>Scoring mode</h3>
    <div class="flex">
-    <select onchange="S.settings.scoreMode=this.value;save();renderCustom()">
+    <select onchange="customSettings().scoreMode=this.value;save();renderCustom()">
      <option value="official" ${st.scoreMode!=='custom'?'selected':''}>Official — exact NRL Fantasy points</option>
      <option value="custom" ${st.scoreMode==='custom'?'selected':''}>Custom — recompute from real stat lines with my rules</option>
     </select>
@@ -1957,46 +1962,46 @@ function renderCustom(){
   </div>
   <div class="card"><h3>Points per stat</h3>
    <div class="settings-grid">
-   ${STAT_KEYS.map(k=>`<div class="set-item"><label>${STAT_LABELS[k]}</label><input type="number" step="0.01" value="${st.rules[k]}" onchange="S.settings.rules['${k}']=+this.value;save()"></div>`).join('')}
+   ${STAT_KEYS.map(k=>`<div class="set-item"><label>${STAT_LABELS[k]}</label><input type="number" step="0.01" value="${st.rules[k]}" onchange="customSettings().rules['${k}']=+this.value;save()"></div>`).join('')}
    </div>
-   <button class="btn sec" style="margin-top:10px" onclick="S.settings.rules={...DEFAULT_RULES};save();renderCustom()">Reset to defaults</button>
+   <button class="btn sec" style="margin-top:10px" onclick="customSettings().rules={...DEFAULT_RULES};save();renderCustom()">Reset to defaults</button>
   </div>`:''}
   ${tab==='settings'?`
   <div class="card"><h3>🎯 Bonus point events <span class="tag">extra pts for milestone performances</span></h3>
    <div class="notice" style="margin-bottom:10px">Rewards players who hit major stat milestones — stacks with regular scoring.</div>
    <div class="settings-grid">
     <div class="set-item"><label>Enable bonus events</label>
-     <select onchange="S.settings.bonusEvents=this.value==='1';save();renderCustom()">
+     <select onchange="customSettings().bonusEvents=this.value==='1';save();renderCustom()">
       <option value="0" ${st.bonusEvents?'':'selected'}>Off</option><option value="1" ${st.bonusEvents?'selected':''}>On</option>
      </select></div>
     ${st.bonusEvents?`
-    <div class="set-item"><label>200+ run metres bonus (pts)</label><input type="number" value="${st.bonusMetre}" onchange="S.settings.bonusMetre=+this.value;save()"></div>
-    <div class="set-item"><label>50+ tackles bonus (pts)</label><input type="number" value="${st.bonusTackle}" onchange="S.settings.bonusTackle=+this.value;save()"></div>
-    <div class="set-item"><label>3+ try involvements bonus (pts)</label><input type="number" value="${st.bonusTryInv}" onchange="S.settings.bonusTryInv=+this.value;save()"></div>`:''}
+    <div class="set-item"><label>200+ run metres bonus (pts)</label><input type="number" value="${st.bonusMetre}" onchange="customSettings().bonusMetre=+this.value;save()"></div>
+    <div class="set-item"><label>50+ tackles bonus (pts)</label><input type="number" value="${st.bonusTackle}" onchange="customSettings().bonusTackle=+this.value;save()"></div>
+    <div class="set-item"><label>3+ try involvements bonus (pts)</label><input type="number" value="${st.bonusTryInv}" onchange="customSettings().bonusTryInv=+this.value;save()"></div>`:''}
    </div>
   </div>
   <div class="card"><h3>📈 Consistency bonus <span class="tag">streak multiplier</span></h3>
    <div class="notice" style="margin-bottom:10px">Players above their season avg for X consecutive rounds earn a multiplier.</div>
    <div class="settings-grid">
     <div class="set-item"><label>Enable consistency bonus</label>
-     <select onchange="S.settings.consistencyBonus=this.value==='1';save();renderCustom()">
+     <select onchange="customSettings().consistencyBonus=this.value==='1';save();renderCustom()">
       <option value="0" ${st.consistencyBonus?'':'selected'}>Off</option><option value="1" ${st.consistencyBonus?'selected':''}>On</option>
      </select></div>
     ${st.consistencyBonus?`
-    <div class="set-item"><label>Rounds above avg needed</label><input type="number" min="1" max="10" value="${st.consistencyStreak}" onchange="S.settings.consistencyStreak=+this.value;save()"></div>
-    <div class="set-item"><label>Multiplier (e.g. 1.1 = +10%)</label><input type="number" step="0.05" min="1" max="2" value="${st.consistencyMult}" onchange="S.settings.consistencyMult=+this.value;save()"></div>`:''}
+    <div class="set-item"><label>Rounds above avg needed</label><input type="number" min="1" max="10" value="${st.consistencyStreak}" onchange="customSettings().consistencyStreak=+this.value;save()"></div>
+    <div class="set-item"><label>Multiplier (e.g. 1.1 = +10%)</label><input type="number" step="0.05" min="1" max="2" value="${st.consistencyMult}" onchange="customSettings().consistencyMult=+this.value;save()"></div>`:''}
    </div>
   </div>
   <div class="card"><h3>⚡ Upset bonus <span class="tag">reward standout losers</span></h3>
    <div class="notice" style="margin-bottom:10px">Extra points for a high score in a losing team's game.</div>
    <div class="settings-grid">
     <div class="set-item"><label>Enable upset bonus</label>
-     <select onchange="S.settings.upsetBonus=this.value==='1';save();renderCustom()">
+     <select onchange="customSettings().upsetBonus=this.value==='1';save();renderCustom()">
       <option value="0" ${st.upsetBonus?'':'selected'}>Off</option><option value="1" ${st.upsetBonus?'selected':''}>On</option>
      </select></div>
     ${st.upsetBonus?`
-    <div class="set-item"><label>Min player score to trigger</label><input type="number" value="${st.upsetThreshold}" onchange="S.settings.upsetThreshold=+this.value;save()"></div>
-    <div class="set-item"><label>Bonus pts awarded</label><input type="number" value="${st.upsetBonusPts}" onchange="S.settings.upsetBonusPts=+this.value;save()"></div>`:''}
+    <div class="set-item"><label>Min player score to trigger</label><input type="number" value="${st.upsetThreshold}" onchange="customSettings().upsetThreshold=+this.value;save()"></div>
+    <div class="set-item"><label>Bonus pts awarded</label><input type="number" value="${st.upsetBonusPts}" onchange="customSettings().upsetBonusPts=+this.value;save()"></div>`:''}
    </div>
   </div>
 
@@ -2004,7 +2009,7 @@ function renderCustom(){
    <div class="notice" style="margin-bottom:10px">When enabled, each round automatically uses your top ${STARTERS_N} scoring players — no lineup decisions needed. Great for set-and-forget leagues.</div>
    <div class="settings-grid">
     <div class="set-item"><label>Best Ball mode</label>
-     <select onchange="S.settings.bestBall=this.value==='1';save();renderCustom()">
+     <select onchange="customSettings().bestBall=this.value==='1';save();renderCustom()">
       <option value="0" ${st.bestBall?'':'selected'}>Off — use set lineup</option>
       <option value="1" ${st.bestBall?'selected':''}>On — auto pick top scorers</option>
      </select></div>
@@ -2014,7 +2019,7 @@ function renderCustom(){
    <div class="notice" style="margin-bottom:10px">Accumulate scores across multiple rounds before deciding a winner. Reduces luck from a single bad week.</div>
    <div class="settings-grid">
     <div class="set-item"><label>Rounds per period</label>
-     <select onchange="S.settings.scoringPeriod=+this.value;save();renderCustom()">
+     <select onchange="customSettings().scoringPeriod=+this.value;save();renderCustom()">
       <option value="1" ${st.scoringPeriod===1?'selected':''}>Weekly (1 round)</option>
       <option value="2" ${st.scoringPeriod===2?'selected':''}>Bi-weekly (2 rounds)</option>
       <option value="4" ${st.scoringPeriod===4?'selected':''}>Monthly (4 rounds)</option>
@@ -2024,10 +2029,10 @@ function renderCustom(){
   <div class="card"><h3>✏️ Stat corrections <span class="tag">commissioner overrides</span></h3>
    <div class="notice" style="margin-bottom:10px">Override a player's score for a specific round. Useful for correcting stat errors or disputed results.</div>
    ${(()=>{
-     const entries=Object.entries(S.corrections||{}).flatMap(([r,pids])=>Object.entries(pids).map(([pid,pts])=>({r:+r,pid:+pid,pts})));
+     const entries=Object.entries(cl.corrections||{}).flatMap(([r,pids])=>Object.entries(pids).map(([pid,pts])=>({r:+r,pid:+pid,pts})));
      return entries.length?`<div style="margin-bottom:12px;max-height:160px;overflow-y:auto"><table><thead><tr><th>Round</th><th>Player</th><th>Override pts</th><th></th></tr></thead><tbody>
       ${entries.map(e=>`<tr><td>Rd ${e.r}</td><td>${esc(PLAYERS[e.pid]?.name||e.pid)}</td><td><b>${e.pts}</b></td>
-        <td><button class="btn danger" style="padding:2px 8px;font-size:11px" onclick="delete S.corrections[${e.r}][${e.pid}];save();renderCustom()">✕</button></td></tr>`).join('')}
+        <td><button class="btn danger" style="padding:2px 8px;font-size:11px" onclick="delete S.customLeague.corrections[${e.r}][${e.pid}];save();renderCustom()">✕</button></td></tr>`).join('')}
      </tbody></table></div>`:'<p class="muted" style="margin-bottom:10px">No corrections applied.</p>';
    })()}
    <div class="settings-grid" style="grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end">
@@ -2044,10 +2049,10 @@ function renderCustom(){
    ${Object.values(CHIP_DEFS).map(def=>{const cur=(st.chipRules||{})[def.id]!=null?(st.chipRules||{})[def.id]:def.uses;
     return `<div class="set-item"><label>${def.icon} ${def.name}</label>
      <input type="number" min="0" max="99" value="${cur>=999?99:cur}"
-      onchange="if(!S.settings.chipRules)S.settings.chipRules={};S.settings.chipRules['${def.id}']=+this.value===99?999:+this.value;save()">
+      onchange="if(!customSettings().chipRules)customSettings().chipRules={};customSettings().chipRules['${def.id}']=+this.value===99?999:+this.value;save()">
     </div>`;}).join('')}
    </div>
-   <button class="btn sec" style="margin-top:10px" onclick="S.settings.chipRules={};save();renderCustom()">Reset chip rules</button>
+   <button class="btn sec" style="margin-top:10px" onclick="customSettings().chipRules={};save();renderCustom()">Reset chip rules</button>
   </div>`:''}
   ${tab==='settings'?`
   <div class="card"><h3>Squad layout</h3>
@@ -2063,8 +2068,8 @@ function renderCustom(){
     <div class="set-item"><label>Salary cap ($)</label><input type="number" step="100000" value="${clCap()}" onchange="const d=+this.value-clCap();if(S.customLeague){if(S.customLeague.team&&S.customLeague.team.bank!=null)S.customLeague.team.bank+=d;S.customLeague.cap=+this.value;}save()"></div>
     <div class="set-item"><label>Trades per round</label><input type="number" value="${clTpr()}" onchange="if(S.customLeague)S.customLeague.tradesPerRound=+this.value;save()"></div>
     <div class="set-item"><label>Season trade limit</label><input type="number" value="${clSts()}" onchange="if(S.customLeague)S.customLeague.seasonTrades=+this.value;save()"></div>
-    <div class="set-item"><label>Captain multiplier</label><input type="number" step="0.5" value="${clCaptMult()}" onchange="if(S.customLeague)S.customLeague.captainMult=+this.value;S.settings.captainMult=+this.value;save()"></div>
-    <div class="set-item"><label>Interchange scores</label><select onchange="if(S.customLeague)S.customLeague.benchScores=this.value==='1';S.settings.benchScores=this.value==='1';save()"><option value="1" ${clBenchScores()?'selected':''}>On</option><option value="0" ${!clBenchScores()?'selected':''}>Off</option></select></div>
+    <div class="set-item"><label>Captain multiplier</label><input type="number" step="0.5" value="${clCaptMult()}" onchange="if(S.customLeague)S.customLeague.captainMult=+this.value;customSettings().captainMult=+this.value;save()"></div>
+    <div class="set-item"><label>Interchange scores</label><select onchange="if(S.customLeague)S.customLeague.benchScores=this.value==='1';customSettings().benchScores=this.value==='1';save()"><option value="1" ${clBenchScores()?'selected':''}>On</option><option value="0" ${!clBenchScores()?'selected':''}>Off</option></select></div>
    </div>
   </div>`:''}
   `;
@@ -2280,14 +2285,14 @@ function renderDraft(){
   const el=$('#pg-draft');
   el.classList.add('secondary-screen','draft-screen');
   if(!S.draft){el.innerHTML=draftLandingHTML();return}
+  let content;
   /* legacy saves: no phase field */
   if(!S.draft.phase){
-    if(!S.draft.done){el.innerHTML=draftRoomHTML();return}
-    el.innerHTML=draftLeagueHTML();return;
-  }
-  if(S.draft.phase==='lobby'){el.innerHTML=draftLobbyHTML();return}
-  if(S.draft.phase==='draft'){el.innerHTML=draftRoomHTML();return}
-  el.innerHTML=draftLeagueHTML();
+    content=!S.draft.done?draftRoomHTML():draftLeagueHTML();
+  }else if(S.draft.phase==='lobby')content=draftLobbyHTML();
+  else if(S.draft.phase==='draft')content=draftRoomHTML();
+  else content=draftLeagueHTML();
+  el.innerHTML=leagueContextHTML('draft')+content;
 }
 function draftLandingHTML(){
   const flow=S.ui.draftFlow||'';
@@ -2297,9 +2302,9 @@ function draftLandingHTML(){
    <div class="home-kicker" style="margin-bottom:6px">Build your competition</div>
    <div style="font-size:48px;margin-bottom:10px">🏉</div>
    <h3 style="font-size:20px;margin-bottom:6px">Draft Leagues</h3>
-   <p class="muted" style="margin-bottom:20px">Create a private draft sandbox with AI opponents. Online multiplayer draft invitations are not currently offered.</p>
+   <p class="muted" style="margin-bottom:20px">Create or join independent Draft leagues. Every competition keeps its own roster, picks and Draft state.</p>
    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-    <button class="btn" style="padding:12px 28px;font-size:15px" onclick="S.ui.draftFlow='create';renderDraft()">＋ Create local draft</button>
+    <button class="btn" style="padding:12px 28px;font-size:15px" onclick="S.ui.draftFlow='create';renderDraft()">＋ Create Draft league</button><button class="btn sec" style="padding:12px 28px;font-size:15px" onclick="S.ui.draftFlow='join';renderDraft()">Join with code</button>
    </div>
   </div>
   ${flow==='create'?`
@@ -2313,13 +2318,13 @@ function draftLandingHTML(){
     <div class="set-item"><label>Your draft pick position</label>
      <select id="dr-pick" onchange="S.ui.draftForm=S.ui.draftForm||{};S.ui.draftForm.pick=this.value"><option value="-1" ${form.pick==null||+form.pick===-1?'selected':''}>Random</option>${[...Array(12).keys()].map(i=>`<option value="${i}" ${+form.pick===i?'selected':''}>${i+1}</option>`).join('')}</select></div>
    </div>
-   <button class="btn" onclick="createDraftLeague()">Create local draft</button>
+   <button class="btn" onclick="createDraftLeague()">Create Draft league</button>
   </div>`:flow==='join'?`
   <div class="card">
    <h3>Join a league</h3>
-   <p class="muted" style="margin-bottom:12px">Enter the 6-character code your league commissioner shared with you.</p>
+   <p class="muted" style="margin-bottom:12px">Enter the invitation code your league commissioner shared with you.</p>
    <div class="settings-grid" style="margin-bottom:14px">
-    <div class="set-item"><label>League code</label><input id="dr-joincode" placeholder="e.g. ABCD12" style="text-transform:uppercase;letter-spacing:2px;font-family:monospace;font-size:18px" maxlength="6"></div>
+    <div class="set-item"><label>League code</label><input id="dr-joincode" placeholder="e.g. ABCD2345" style="text-transform:uppercase;letter-spacing:2px;font-family:monospace;font-size:18px" maxlength="12"></div>
     <div class="set-item"><label>Your team name</label><input id="dr-joinname" value="My Team"></div>
    </div>
    <button class="btn" onclick="joinDraftLeague()">Join league</button>
@@ -2330,7 +2335,9 @@ function genLeagueCode(){
   const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s='';for(let i=0;i<6;i++)s+=c[Math.floor(Math.random()*c.length)];return s;
 }
-function createDraftLeague(){
+async function createDraftLeague(){
+  if(window._draftCreatePending)return;window._draftCreatePending=true;
+  try{
   const lgName=($('#dr-lgname').value||'').trim()||'My League';
   const myName=($('#dr-name').value||'').trim()||'My Team';
   const size=+$('#dr-size').value;
@@ -2339,24 +2346,13 @@ function createDraftLeague(){
   const names=AI_NAMES.slice().sort(()=>Math.random()-.5);
   const participants=Array.from({length:size},()=>({name:names.pop()||'AI Coach',isMe:false,isAI:true}));
   participants[myPick]={name:myName,isMe:true,isAI:false};
-  S.draft={phase:'lobby',league:{code:genLeagueCode(),name:lgName,size,draftDate:null,participants,isOwner:true,allowAI:true,localOnly:true},
-    size,me:myPick,teams:null,pickNo:0,done:false,log:[],history:{}};
+  const state={phase:'lobby',settings:JSON.parse(JSON.stringify(S.settings)),league:{code:genLeagueCode(),name:lgName,size,draftDate:null,participants,isOwner:true,allowAI:true,localOnly:!(S.sooAuth&&S.sooAuth.authenticated)},size,me:myPick,teams:null,pickNo:0,done:false,log:[],history:{}};
+  const entry=await createFantasyLeagueRecord('draft',lgName,myName,state,{});S.draftLeagues.push(entry);bindActiveLeague('draft',entry.id);
   S.ui.draftFlow=null;S.ui.draftForm=null;S.ui.draftLobbyTab='overview';
   save();renderDraft();
+  }catch(error){alert(error.message||'Draft league could not be created')}finally{window._draftCreatePending=false}
 }
-function joinDraftLeague(){
-  const code=($('#dr-joincode').value||'').trim().toUpperCase();
-  if(!/^[A-Z2-9]{6}$/.test(code)){alert('Please enter a valid 6-character league code.');return}
-  const myName=($('#dr-joinname').value||'').trim()||'My Team';
-  const size=8;
-  const myPick=Math.floor(Math.random()*size);
-  const participants=[{name:myName,isMe:true,isAI:false}];
-  for(let i=1;i<size;i++)participants.push({name:'Open slot',isMe:false,isAI:false,isEmpty:true});
-  S.draft={phase:'lobby',league:{code,name:'League '+code,size,draftDate:null,participants,isOwner:false,allowAI:false},
-    size,me:myPick,teams:null,pickNo:0,done:false,log:[],history:{}};
-  S.ui.draftFlow=null;S.ui.draftLobbyTab='overview';
-  save();renderDraft();
-}
+function joinDraftLeague(){return joinFantasyLeague('draft')}
 function draftPickOrder(pickNo){
   const n=S.draft.size,rd=Math.floor(pickNo/n),i=pickNo%n;
   return rd%2===0?i:n-1-i;
@@ -2403,7 +2399,7 @@ function runAIPicks(){
   };
   step();
 }
-function myDraftPick(pid){
+async function myDraftPick(pid){
   stopPickTimer();
   const D=S.draft;
   const ti=draftPickOrder(D.pickNo);
@@ -2414,6 +2410,11 @@ function myDraftPick(pid){
   const needTotal=Object.values(need).reduce((a,b)=>a+b,0);
   const p=PLAYERS[pid];
   if(needTotal>=picksLeft&&!p.pos.some(x=>need[x]>0)){alert('You must fill your remaining starting positions: '+POS_IDS.filter(x=>need[x]>0).map(x=>need[x]+'× '+POSN[x]).join(', '));return}
+  const entry=activeLeagueEntry('draft');
+  if(entry&&!entry.id.startsWith('LOCAL-')&&S.sooAuth&&S.sooAuth.authenticated){
+    try{const recorded=await fantasyApi('/api/fantasy-leagues/'+encodeURIComponent(entry.id)+'/draft/picks',{method:'POST',body:JSON.stringify({baseVersion:entry.draftVersion,playerId:pid,pickNumber:D.pickNo})});entry.draftVersion=recorded.version;if(D._league)D._league.draftVersion=recorded.version}
+    catch(error){alert(error.message);renderDraft();return}
+  }
   team.roster.push(pid);
   D.log.unshift({pick:D.pickNo+1,team:ti,pid});
   D.pickNo++;
@@ -2462,7 +2463,7 @@ function draftLobbyHTML(){
      <h3 style="margin:0;font-size:18px">${esc(lg.name)}</h3>
      <div class="muted" style="font-size:13px">${lg.size}-team draft · ${humanCount} human${humanCount!==1?'s':''} joined</div>
     </div>
-    <span class="tag">Local AI sandbox</span>
+    <span class="tag">${activeLeagueEntry('draft')&&!activeLeagueEntry('draft').id.startsWith('LOCAL-')?'Synced league':'Local AI sandbox'}</span>
    </div>
   </div>
   <div class="tabs2" style="margin-bottom:14px">
@@ -2493,7 +2494,7 @@ function draftLobbyOverview(lg){
     <div class="flex"><span class="muted">Teams</span><b>${lg.size}</b></div>
     <div class="flex"><span class="muted">Roster</span><b>${DRAFT_ROSTER} players (${STARTERS_N} starters + ${BENCH_N} bench)</b></div>
     <div class="flex"><span class="muted">Format</span><b>Snake draft · Head-to-head</b></div>
-    <div class="flex"><span class="muted">Scoring</span><b>${S.settings.scoreMode==='custom'?'Custom rules':'Official NRL Fantasy'}</b></div>
+    <div class="flex"><span class="muted">Scoring</span><b>${draftSettings().scoreMode==='custom'?'Custom rules':'Official NRL Fantasy'}</b></div>
    </div>
   </div>
   </div>
@@ -2502,7 +2503,7 @@ function draftLobbyOverview(lg){
    <p class="muted" style="margin-bottom:14px">Start when you're ready. AI coaches control every other team.</p>
    <div style="display:flex;gap:10px;flex-wrap:wrap">
     ${isOwner?`<button class="btn" style="font-size:15px;padding:10px 28px" onclick="startDraftFromLobby()">🏉 Start Draft</button>`:''}
-    <button class="btn danger" style="margin-left:auto" onclick="if(confirm('Leave this league?')){S.draft=null;save();renderDraft()}">Leave league</button>
+    <button class="btn danger" style="margin-left:auto" onclick="removeFantasyLeague('draft')">${activeLeagueEntry('draft')&&activeLeagueEntry('draft').role==='owner'?'Delete':'Leave'} league</button>
    </div>
   </div>`;
 }
@@ -2532,7 +2533,7 @@ function draftLobbyParticipants(lg){
   </div>`;
 }
 function draftLobbySettingsHTML(lg){
-  const st=S.settings;
+  const st=draftSettings();
   const open=lg.participants.filter(p=>p.isEmpty).length;
   return `
   <div class="card"><h3>⚙ League Settings <span class="tag">Commissioner only</span></h3>
@@ -2548,22 +2549,22 @@ function draftLobbySettingsHTML(lg){
   <h4 style="font-size:13px;margin:14px 0 8px">Scoring</h4>
   <div class="settings-grid">
    <div class="set-item"><label>Score mode</label>
-    <select onchange="S.settings.scoreMode=this.value;save();renderDraft()">
+    <select onchange="draftSettings().scoreMode=this.value;save();renderDraft()">
      <option value="official" ${st.scoreMode!=='custom'?'selected':''}>Official NRL Fantasy points</option>
      <option value="custom" ${st.scoreMode==='custom'?'selected':''}>Custom rules</option>
     </select>
    </div>
    <div class="set-item"><label>Captain multiplier</label>
-    <input type="number" step="0.5" value="${st.captainMult}" onchange="S.settings.captainMult=+this.value;save()">
+    <input type="number" step="0.5" value="${st.captainMult}" onchange="draftSettings().captainMult=+this.value;save()">
    </div>
   </div>
   <h4 style="font-size:13px;margin:14px 0 8px">Free agency (between rounds)</h4>
   <div class="settings-grid">
    <div class="set-item"><label>Pickups per round</label>
-    <input type="number" min="0" max="20" value="${st.tradesPerRound}" onchange="S.settings.tradesPerRound=+this.value;save()">
+    <input type="number" min="0" max="20" value="${st.tradesPerRound}" onchange="draftSettings().tradesPerRound=+this.value;save()">
    </div>
    <div class="set-item"><label>Season pickup limit</label>
-    <input type="number" min="0" max="100" value="${st.seasonTrades}" onchange="S.settings.seasonTrades=+this.value;save()">
+    <input type="number" min="0" max="100" value="${st.seasonTrades}" onchange="draftSettings().seasonTrades=+this.value;save()">
    </div>
   </div>
   </div>`;
@@ -4577,7 +4578,7 @@ function sooPoolClick(pid,g){
 /* ================= LEAGUES (CLASSIC) ================= */
 /* ── leagues hub helpers ── */
 function leagueRulesHTML(mode){
-  const st=S.settings;
+  const st=mode==='custom'&&S.customLeague?customSettings():S.settings;
   if(mode==='classic'){
     return `<div class="settings-grid" style="margin-top:10px">
      <div class="set-item"><label>Scoring</label><b>Official NRL Fantasy</b></div>
@@ -4658,6 +4659,12 @@ function lgModeCard(mode,icon,title,league,createBtn){
    </div>
   </div>`;
 }
+function fantasyLeagueDirectoryHTML(format){
+  const entries=leagueEntries(format),label=format==='custom'?'Custom':'Draft';
+  return `<div class="flex" style="margin-bottom:12px;align-items:center"><div><h3 style="margin:0">${label} leagues</h3><div class="muted" style="font-size:12px">${entries.length} competition${entries.length===1?'':'s'} · ${leagueEntries('custom').length+leagueEntries('draft').length}/${S.fantasyLeagueLimit||20} account limit · each team, selection and score is independent</div></div><span class="spacer"></span><button class="btn" onclick="setPage('${format}');startNewFantasyLeague('${format}')">＋ Create</button></div>
+  ${entries.length?`<div class="league-directory">${entries.map(entry=>`<div class="league-directory-card" role="button" tabindex="0" onclick="bindActiveLeague('${format}','${entry.id}');save();setPage('${format}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"><div class="flex"><b>${esc(entry.name)}</b><span class="tag">${entry.role==='owner'?'Owner':'Member'}</span></div><div class="league-code" style="margin:8px 0">${esc(entry.code||'LOCAL')}</div><div class="muted" style="font-size:12px">${entry.memberCount||1}/${entry.maxMembers||20} members · ${entry.state&&entry.state.team&&entry.state.team.squad&&entry.state.team.squad.length||entry.state&&entry.state.teams&&entry.state.teams[entry.state.me]&&entry.state.teams[entry.state.me].roster.length||0} players selected</div><div class="muted" style="font-size:12px;margin-top:4px">${entry.status==='inactive'?'Inactive':'Active'} · Rank available when scoring begins</div><div style="margin-top:9px;color:var(--acc);font-weight:700;font-size:13px">Open league →</div></div>`).join('')}</div>`:`<div class="card notice" style="text-align:center;padding:24px">No ${label} leagues yet.</div>`}
+  <div class="card" style="margin-top:12px"><h3>Join a ${label} league</h3><div class="flex"><input id="${format==='custom'?'cl':'dr'}-joincode" aria-label="${label} invitation code" placeholder="Invitation code" maxlength="12" style="text-transform:uppercase;letter-spacing:2px;flex:1"><input id="${format==='custom'?'cl':'dr'}-joinname" aria-label="Your team name" value="My Team" style="flex:1"><button class="btn sec" onclick="joinFantasyLeague('${format}')">Join</button></div></div>`;
+}
 function renderLeagues(){
   const el=$('#pg-leagues');
   const tab=S.ui.leaguesTab||'classic';
@@ -4703,49 +4710,9 @@ function renderLeagues(){
       </div>`;
     }
   } else if(tab==='draft'){
-    const draftLg=S.draft&&S.draft.league;
-    if(draftLg){
-      content=`<div class="card league-overview-card">
-        <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(draftLg.name||'Draft League')}</div>
-        <div class="muted" style="font-size:12px">${draftLg.size||''} teams · Round ${S.round}</div>
-        <div class="league-team-link" onclick="setPage('draft')">
-          <div class="league-avatar">D</div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:14px">My Draft Team</div>
-            <div class="muted" style="font-size:12px">Tap to manage your team</div>
-          </div>
-          <span style="color:var(--acc);font-size:20px">›</span>
-        </div>
-      </div>`;
-    } else {
-      content=`<div class="card notice" style="text-align:center;padding:24px">
-        <div style="font-size:28px;margin-bottom:8px">📋</div>
-        <div style="font-weight:600;margin-bottom:12px">No Draft league yet</div>
-        <button class="btn" onclick="setPage('cgames')">Go to Custom Games →</button>
-      </div>`;
-    }
+    content=fantasyLeagueDirectoryHTML('draft');
   } else {
-    const cl=S.customLeague;
-    if(cl){
-      content=`<div class="card league-overview-card">
-        <div style="font-weight:700;font-size:15px;margin-bottom:2px">${esc(cl.n||cl.name||'Custom League')}</div>
-        <div class="muted" style="font-size:12px">Round ${S.round}</div>
-        <div class="league-team-link" onclick="setPage('custom')">
-          <div class="league-avatar">${esc(cl.n||cl.name||'C').charAt(0)}</div>
-          <div style="flex:1">
-            <div style="font-weight:600;font-size:14px">My Custom Team</div>
-            <div class="muted" style="font-size:12px">Tap to manage your team</div>
-          </div>
-          <span style="color:var(--acc);font-size:20px">›</span>
-        </div>
-      </div>`;
-    } else {
-      content=`<div class="card notice" style="text-align:center;padding:24px">
-        <div style="font-size:28px;margin-bottom:8px">⚙️</div>
-        <div style="font-weight:600;margin-bottom:12px">No Custom league yet</div>
-        <button class="btn" onclick="setPage('cgames')">Go to Custom Games →</button>
-      </div>`;
-    }
+    content=fantasyLeagueDirectoryHTML('custom');
   }
   el.innerHTML=`<div class="league-hub"><div class="leagues-head"><div><div class="home-kicker">Competition centre</div><h1>My Leagues</h1></div><span class="muted">Round ${S.round}</span></div>${tabsHTML}${content}</div>`;
 }
@@ -4864,16 +4831,16 @@ function renderTrades(){
 
 /* ── Custom league setting accessors (fallback to S.settings for old saves) ── */
 function cl(){return S.customLeague||{}}
-function clCap(){return cl().cap??S.settings.cap}
-function clTpr(){return cl().tradesPerRound??S.settings.tradesPerRound}
-function clSts(){return cl().seasonTrades??S.settings.seasonTrades}
+function clCap(){return cl().cap??customSettings().cap}
+function clTpr(){return cl().tradesPerRound??customSettings().tradesPerRound}
+function clSts(){return cl().seasonTrades??customSettings().seasonTrades}
 function clBank(){
   const T=S.customLeague&&S.customLeague.team;
   if(T&&T.bank==null)T.bank=clCap()-T.squad.reduce((sum,pid)=>sum+price(pid),0);
   return T&&T.bank!=null?T.bank:S.classic.bank;
 }
-function clCaptMult(){return cl().captainMult??S.settings.captainMult??2}
-function clBenchScores(){return cl().benchScores??S.settings.benchScores}
+function clCaptMult(){return cl().captainMult??customSettings().captainMult??2}
+function clBenchScores(){return cl().benchScores??customSettings().benchScores}
 
 function refreshTrades(){
   const m=S.ui.trPage||'classic';
@@ -5216,8 +5183,10 @@ function teamNewsPid(item){const name=typeof item==='string'?item:item&&item.pla
 function currentPlayerNews(pid){return (TEAM_NEWS?.availability||[]).find(item=>teamNewsPid(item)===pid)||null}
 function teamNewsPrefs(){return S.teamNewsPrefs||(S.teamNewsPrefs={followedPlayers:[],followedClubs:[],lastVisitedAt:null})}
 function teamNewsPersonalIds(){
-  const ids=new Set([...(S.watchlist||[]),...(S.classic?.squad||[]),...(S.customLeague?.team?.squad||[]),...(teamNewsPrefs().followedPlayers||[])]);
-  const leagueTeams=[...(S.league?.teams||[]),...(S.customLeague?.league?.teams||[])];leagueTeams.forEach(team=>(team.squad||[]).forEach(id=>ids.add(id)));return ids;
+  const ids=new Set([...(S.watchlist||[]),...(S.classic?.squad||[]),...(teamNewsPrefs().followedPlayers||[])]);
+  (S.customLeagues||[]).forEach(entry=>{(entry.state?.team?.squad||[]).forEach(id=>ids.add(id));(entry.state?.league?.teams||[]).forEach(team=>(team.squad||[]).forEach(id=>ids.add(id)))});
+  (S.draftLeagues||[]).forEach(entry=>(entry.state?.teams||[]).forEach(team=>(team.roster||[]).forEach(id=>ids.add(id))));
+  (S.league?.teams||[]).forEach(team=>(team.squad||[]).forEach(id=>ids.add(id)));return ids;
 }
 function isRelevantNews(item){const prefs=teamNewsPrefs(),ids=teamNewsPersonalIds(),related=[item,...(item.sequence||[]).map(x=>x.player),item.relationship?.unavailable,item.relationship?.replacement].filter(Boolean).map(teamNewsPid).filter(x=>x!=null);return related.some(pid=>ids.has(pid))||(prefs.followedClubs||[]).includes(item.club)||(prefs.lastVisitedAt&&new Date(item.sourceUpdatedAt||item.capturedAt)>new Date(prefs.lastVisitedAt))}
 function teamNewsNewCount(){const last=teamNewsPrefs().lastVisitedAt;if(!last||!TEAM_NEWS)return 0;return [...(TEAM_NEWS.availability||[]),...(TEAM_NEWS.changes||[])].filter(item=>new Date(item.sourceUpdatedAt||item.capturedAt)>new Date(last)).length}
@@ -5821,10 +5790,13 @@ function importSave(inp){
 }
 
 function setLayout(k,v){
-  S.settings.layout[k]=Math.max(0,Math.min(12,+v||0));
+  const settings=S.ui.page==='custom'&&S.customLeague?customSettings():S.settings;
+  settings.layout[k]=Math.max(0,Math.min(12,+v||0));
+  const previous=S.settings.layout;S.settings.layout=settings.layout;
   applyLayout();
-  applyLayoutToTeams();
-  save();renderSettings();
+  if(S.ui.page==='custom'&&S.customLeague&&S.customLeague.team){const T=S.customLeague.team,overflow=resizeLine(T.line);overflow.forEach(pid=>{if(!seatInLine(T.line,pid)){T.squad=T.squad.filter(id=>id!==pid);T.bank=(T.bank||0)+price(pid);if(T.line.c===pid)T.line.c=null;if(T.line.vc===pid)T.line.vc=null}})}else applyLayoutToTeams();
+  S.settings.layout=previous;
+  save();S.ui.page==='custom'?renderCustom():renderSettings();
 }
 
 /* ================= MODAL & NAV ================= */
@@ -5895,6 +5867,7 @@ function setPage(pg){
   if(['custom','draft','origin'].includes(pg))window._cgamesLastTab=pg;
   if(pg!=='match')stopMcPoll();
   S.ui.page=pg;
+  if((pg==='custom'&&S.customLeague)||(pg==='draft'&&S.draft)){const globalLayout=S.settings.layout;S.settings.layout=(pg==='custom'?customSettings():draftSettings()).layout||globalLayout;applyLayout();S.settings.layout=globalLayout}else applyLayout();
   const pageTitles={classic:'My Team',leagues:'Leagues',players:'Players',match:'Match Centre',teamnews:'Team News',custom:'Custom Games',draft:'Draft Leagues',origin:'State of Origin',settings:'Settings & Help'};
   const topbarTitle=document.getElementById('topbar-title');if(topbarTitle&&pg!=='home')topbarTitle.textContent=pageTitles[pg]||'The Squad';
   $$('#sidebar-nav .navitem').forEach(b=>b.classList.toggle('on',b.dataset.pg===pg));
@@ -5958,6 +5931,88 @@ if(!isNaN(MAXR)){/* dataPatch applied — advance any rounds the load() pass mis
   if(S.round<MAXR+1)S.round=MAXR+1;
 }
 if(S.classic.bank==null)S.classic.bank=S.settings.cap-squadValue(); /* migrate: bank = cap - current value */
+const _fantasySaveTimers={custom:null,draft:null};
+const _fantasySyncedState={};
+function fantasyRequestId(){return (crypto&&crypto.randomUUID?crypto.randomUUID():'req-'+Date.now()+'-'+Math.random().toString(36).slice(2))}
+async function fantasyApi(path,options={}){
+  const response=await fetch(path,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){const error=new Error(data.error||`League request failed (${response.status})`);error.status=response.status;error.data=data;throw error}
+  return data;
+}
+function leagueEntryFromApi(detail){
+  let state;
+  if(detail.format==='custom'){
+    const saved=detail.team&&detail.team.state||{};
+    state=saved.team?saved:{name:detail.name,created:detail.created,settings:{...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...(detail.rules||{})},corrections:{},cap:detail.rules&&detail.rules.cap||S.settings.cap,tradesPerRound:S.settings.tradesPerRound,seasonTrades:S.settings.seasonTrades,captainMult:S.settings.captainMult,benchScores:S.settings.benchScores,team:saved};
+    state.name=detail.name;state.settings=state.settings||{...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...(detail.rules||{})};state.corrections=state.corrections||{};
+  }else{
+    state=detail.draftState&&Object.keys(detail.draftState).length?detail.draftState:detail.team&&detail.team.state||{};
+    state.league=state.league||{name:detail.name,code:detail.code,size:detail.maxMembers,participants:[],isOwner:detail.role==='owner',allowAI:false};
+    state.league.name=detail.name;state.league.code=detail.code;state.league.isOwner=detail.role==='owner';
+    if(Array.isArray(state.league.participants)){const userId=S.sooAuth&&S.sooAuth.userId,hasIdentity=state.league.participants.some(item=>item&&item.userId);state.league.participants=state.league.participants.map(item=>({...item,isMe:hasIdentity?item.userId===userId:detail.role==='owner'&&!!item.isMe}));const mySlot=state.league.participants.findIndex(item=>item.isMe);if(mySlot>=0)state.me=mySlot;}
+  }
+  state._league={id:detail.id,code:detail.code,name:detail.name,role:detail.role,memberCount:detail.memberCount,maxMembers:detail.maxMembers,teamVersion:detail.teamVersion,draftVersion:detail.draftVersion,updated:detail.updated};
+  _fantasySyncedState[detail.id]=JSON.stringify(state);
+  return {id:detail.id,code:detail.code,format:detail.format,name:detail.name,role:detail.role,memberCount:detail.memberCount,maxMembers:detail.maxMembers,status:detail.status||'active',teamVersion:Number(detail.teamVersion)||0,draftVersion:Number(detail.draftVersion)||0,state,updated:detail.updated};
+}
+async function createFantasyLeagueRecord(format,name,teamName,state,rules={}){
+  if(!(S.sooAuth&&S.sooAuth.authenticated))return {id:localLeagueId(format,state),code:state.league&&state.league.code||genLeagueCode(),format,name,role:'owner',memberCount:1,maxMembers:state.league&&state.league.size||20,status:'active',teamVersion:0,draftVersion:0,state,updated:Date.now()};
+  const data=await fantasyApi('/api/fantasy-leagues',{method:'POST',body:JSON.stringify({format,name,teamName,maxMembers:state.league&&state.league.size||20,rules,teamState:state,draftState:format==='draft'?state:null,requestId:fantasyRequestId()})});
+  return leagueEntryFromApi(data.league);
+}
+async function loadFantasyLeagues(){
+  if(!(S.sooAuth&&S.sooAuth.authenticated)){ensureMultiLeagueState();return}
+  try{
+    let listing=await fantasyApi('/api/fantasy-leagues');S.fantasyLeagueLimit=Number(listing.limit)||20;
+    const legacyEntries=[...(S.customLeagues||[]),...(S.draftLeagues||[])].filter(entry=>entry.id&&entry.id.startsWith('LOCAL-'));
+    if(legacyEntries.length){
+      for(const entry of legacyEntries){const state=entry.state||{},format=entry.format;await fantasyApi('/api/fantasy-leagues',{method:'POST',body:JSON.stringify({format,name:entry.name,teamName:state.team&&state.team.name||S.user&&S.user.name||'My Team',maxMembers:entry.maxMembers||state.league&&state.league.size||20,rules:format==='custom'?(state.settings||{}):{},teamState:state,draftState:format==='draft'?state:null,requestId:`legacy.${format}.${entry.id}`.slice(0,80)})})}
+      listing=await fantasyApi('/api/fantasy-leagues');
+    }
+    const details=await Promise.all(listing.leagues.map(item=>fantasyApi('/api/fantasy-leagues/'+encodeURIComponent(item.id)).then(data=>leagueEntryFromApi(data.league))));
+    const previous={custom:S.activeCustomLeagueId,draft:S.activeDraftLeagueId};
+    S.customLeagues=details.filter(entry=>entry.format==='custom');S.draftLeagues=details.filter(entry=>entry.format==='draft');
+    bindActiveLeague('custom',previous.custom);bindActiveLeague('draft',previous.draft);save();
+  }catch(error){console.warn('League sync unavailable',error.message);if(error.status!==401)showCloudSaveError()}
+}
+function leagueContextHTML(format){
+  const entries=leagueEntries(format),active=activeLeagueEntry(format);if(!active)return '';
+  return `<div class="league-context" data-format="${format}"><label for="${format}-league-switch">Active ${format} league</label><select id="${format}-league-switch" onchange="switchFantasyLeague('${format}',this.value)">${entries.map(entry=>`<option value="${esc(entry.id)}" ${entry.id===active.id?'selected':''}>${esc(entry.name)} · ${entry.role==='owner'?'Owner':'Member'}</option>`).join('')}</select><span class="league-context-meta"><span class="league-code">${esc(active.code||'LOCAL')}</span> · ${active.memberCount||1}/${active.maxMembers||20} members</span><span class="spacer"></span><button class="btn sec" onclick="startNewFantasyLeague('${format}')">＋ New</button></div>`;
+}
+async function switchFantasyLeague(format,id){
+  if(id===(format==='custom'?S.activeCustomLeagueId:S.activeDraftLeagueId))return;
+  await saveActiveFantasyLeague(format,true).catch(error=>{console.warn(error.message)});bindActiveLeague(format,id);
+  if(S.sooAuth&&S.sooAuth.authenticated&&!String(id).startsWith('LOCAL-')){
+    try{const data=await fantasyApi('/api/fantasy-leagues/'+encodeURIComponent(id)),fresh=leagueEntryFromApi(data.league),entries=leagueEntries(format),index=entries.findIndex(entry=>entry.id===id);if(index>=0)entries[index]=fresh;else entries.push(fresh);bindActiveLeague(format,id)}catch(error){console.warn('League refresh unavailable',error.message)}
+  }
+  if(format==='custom'&&S.customLeague){const prior=S.settings.layout;S.settings.layout=customSettings().layout||prior;applyLayout();S.settings.layout=prior}
+  save();format==='custom'?renderCustom():renderDraft();
+}
+function startNewFantasyLeague(format){syncActiveLeagueEntry(format);if(format==='custom'){S.activeCustomLeagueId=null;S.customLeague=null;S.ui.customTab='team';renderCustom()}else{S.activeDraftLeagueId=null;S.draft=null;S.ui.draftFlow='create';renderDraft()}}
+async function joinFantasyLeague(format){
+  const codeEl=document.getElementById(format==='custom'?'cl-joincode':'dr-joincode'),nameEl=document.getElementById(format==='custom'?'cl-joinname':'dr-joinname');
+  const code=(codeEl&&codeEl.value||'').trim().toUpperCase(),teamName=(nameEl&&nameEl.value||'My Team').trim();
+  if(!/^[A-Z2-9]{6,12}$/.test(code)){alert('Enter a valid league invitation code.');return}
+  if(!(S.sooAuth&&S.sooAuth.authenticated)){alert('Sign in to join a league shared by another user.');return}
+  window._fantasyJoinPending=window._fantasyJoinPending||{};if(window._fantasyJoinPending[format])return;window._fantasyJoinPending[format]=true;
+  try{const data=await fantasyApi('/api/fantasy-leagues/join',{method:'POST',body:JSON.stringify({code,format,teamName,requestId:fantasyRequestId(),teamState:{}})}),entry=leagueEntryFromApi(data.league),entries=leagueEntries(format);if(!entries.some(item=>item.id===entry.id))entries.push(entry);bindActiveLeague(format,entry.id);save();format==='custom'?renderCustom():renderDraft()}catch(error){alert(error.message)}finally{window._fantasyJoinPending[format]=false}
+}
+async function removeFantasyLeague(format){
+  const entry=activeLeagueEntry(format);if(!entry)return;
+  const verb=entry.role==='owner'?'delete':'leave';if(!confirm(`${verb[0].toUpperCase()+verb.slice(1)} ${entry.name}? Other leagues will not be affected.`))return;
+  try{if(!entry.id.startsWith('LOCAL-'))await fantasyApi('/api/fantasy-leagues/'+encodeURIComponent(entry.id)+(entry.role==='owner'?'':'/membership'),{method:'DELETE',body:JSON.stringify(entry.role==='owner'?{confirmName:entry.name}:{})});const entries=leagueEntries(format),index=entries.findIndex(item=>item.id===entry.id);if(index>=0)entries.splice(index,1);bindActiveLeague(format,null);save();format==='custom'?renderCustom():renderDraft()}catch(error){alert(error.message)}
+}
+window.queueFantasyLeagueSave=function(){for(const format of ['custom','draft']){if(!activeLeagueEntry(format))continue;clearTimeout(_fantasySaveTimers[format]);_fantasySaveTimers[format]=setTimeout(()=>saveActiveFantasyLeague(format).catch(error=>console.warn('League save unavailable',error.message)),700)}};
+async function saveActiveFantasyLeague(format,immediate=false){
+  clearTimeout(_fantasySaveTimers[format]);const entry=activeLeagueEntry(format);if(!entry||entry.id.startsWith('LOCAL-')||!(S.sooAuth&&S.sooAuth.authenticated))return;
+  syncActiveLeagueEntry(format);const state=entry.state,serialized=JSON.stringify(state);if(_fantasySyncedState[entry.id]===serialized)return;
+  try{
+    const team=await fantasyApi('/api/fantasy-leagues/'+encodeURIComponent(entry.id)+'/team',{method:'PUT',body:JSON.stringify({baseVersion:entry.teamVersion,state,teamName:format==='custom'&&state.team&&state.team.name||undefined})});entry.teamVersion=team.version;if(state._league)state._league.teamVersion=team.version;
+    if(format==='draft'&&entry.role==='owner'){const draft=await fantasyApi('/api/fantasy-leagues/'+encodeURIComponent(entry.id)+'/draft',{method:'PUT',body:JSON.stringify({baseVersion:entry.draftVersion,state})});entry.draftVersion=draft.version;if(state._league)state._league.draftVersion=draft.version}
+    _fantasySyncedState[entry.id]=JSON.stringify(state);
+  }catch(error){if(error.status===409){openModal(`<h2>Newer league changes found</h2><p>This league changed on another device. Your stale browser was not allowed to overwrite it.</p><button class="btn" onclick="location.reload()">Reload newest version</button>`)}else showCloudSaveError();throw error}
+}
 /* LOGIN DISABLED — set a guest user so the app loads directly */
 if(!S.user)S.user={name:'Guest',email:'',method:'guest',initials:'G'};
 window._cloudReady=false;
@@ -5977,10 +6032,11 @@ function showCloudSaveError(){
 }
 function clearCloudSaveError(){const el=document.getElementById('cloud-sync-error');if(el)el.style.display='none';}
 function cloudPayload(){
-  const keys=['classic','customLeague','league','draft','settings','watchlist','teamNewsPrefs','corrections','origin','priceHistory','round','season'];
+  syncActiveLeagueEntry('custom');syncActiveLeagueEntry('draft');
+  const keys=['classic','customLeague','customLeagues','activeCustomLeagueId','league','draft','draftLeagues','activeDraftLeagueId','settings','watchlist','teamNewsPrefs','corrections','origin','priceHistory','round','season'];
   return Object.fromEntries(keys.filter(k=>S[k]!==undefined).map(k=>[k,S[k]]));
 }
-function hasLocalGameData(){return !!(S.classic&&S.classic.squad&&S.classic.squad.length||S.customLeague||S.league||S.draft);}
+function hasLocalGameData(){return !!(S.classic&&S.classic.squad&&S.classic.squad.length||S.customLeague||S.customLeagues&&S.customLeagues.length||S.league||S.draft||S.draftLeagues&&S.draftLeagues.length);}
 window.queueCloudSave=function(){
   clearTimeout(_cloudSaveTimer);
   _cloudSaveTimer=setTimeout(()=>{
@@ -6012,7 +6068,7 @@ async function syncCloudState(){
     _cloudVersion=Number(d.version)||0;
     if(d.state&&typeof d.state==='object'){
       const auth=S.sooAuth,user=S.user,ui=S.ui,dataPatch=S.dataPatch;
-      Object.assign(S,d.state);S.sooAuth=auth;S.user=user;S.ui=ui||S.ui;S.dataPatch=dataPatch||S.dataPatch;
+      Object.assign(S,d.state);S.sooAuth=auth;S.user=user;S.ui=ui||S.ui;S.dataPatch=dataPatch||S.dataPatch;ensureMultiLeagueState();
       applyTheme((S.settings&&S.settings.theme)||'lime',false);applyLayout();
       localStorage.setItem(STORE_KEY,JSON.stringify(S));
     }else if(hasLocalGameData()){
@@ -6028,7 +6084,7 @@ async function bootstrapAuth(){
   const legacy=S.sooAuth&&S.sooAuth.token;
   try{
     const r=await fetch('/api/soo/me',{headers:legacy?{'Authorization':'Bearer '+legacy}:{}});
-    if(r.ok){const d=await r.json();S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};save();await syncCloudState();}
+    if(r.ok){const d=await r.json();S.sooAuth={authenticated:true,userId:d.userId,name:d.name,email:d.email,isAdmin:!!d.isAdmin};save();await syncCloudState();await loadFantasyLeagues();}
     else if(S.sooAuth){S.sooAuth=null;save();}
   }catch(e){console.warn('Session check failed',e);}
   showApp();setPage(SOO_STANDALONE?'origin':(S.ui.page||'classic'));
