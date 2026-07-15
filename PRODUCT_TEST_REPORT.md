@@ -3,6 +3,37 @@
 Date: 15 July 2026
 Branches: `agent/round19-live-data-pipeline`, production-verification follow-ups, `agent/player-stats-approved-design`, `agent/team-news-hub`, `agent/players-hub-approved`, `agent/player-game-history`, and `agent/complete-players-hub`
 
+## Home command centre release delta from PR #66 / `a1653d1` (15 July 2026)
+
+### Delivered scope
+
+Home is now a server-authoritative cross-competition command centre. Its global Sydney-time round header, independently resilient urgent-alert queue, and deterministic competition grid cover Classic plus every membership-derived Custom, Draft and Origin team without accepting user-supplied league IDs. Cards retain league-specific score, rank, matchup, Draft-turn, freshness and deep-link state; the duplicated Classic player-by-player live panel is removed. Team News is a distinct, cursor-paginated feed ordered by My players, Watchlist, represented clubs and league-wide relevance, with attribution, confirmation and freshness states. User-scoped Home responses are authenticated and private/no-store; the public status route exposes coverage without internal source failures.
+
+Automatic ingestion now uses a frequent UTC workflow with an `Australia/Sydney` guard: five-minute checks from Tuesday 15:55–16:30, fifteen-minute checks through 18:00 when incomplete, and early exit once fixture-aware expected-club coverage is valid. Schema-v2 snapshots record attempt/success, source version/hash, expected/received clubs and validation errors. Invalid, partial, empty and older candidates preserve the verified snapshot; publication is atomic and unchanged content is idempotent.
+
+### Defects found and fixed
+
+| Severity | Finding | Resolution and regression coverage |
+|---|---|---|
+| High | Identical Team News fetches produced different hashes because volatile per-fetch `checkedAt` fields were included, defeating idempotency and risking duplicate publication work. | Hashing now excludes retrieval-only metadata recursively. A live changed publication followed by an identical authorised-source fetch returned `changed:false`; unit coverage varies top-level and nested retrieval times. |
+| High | A rapid first-login appearance save could race the debounced cloud write, so reload on another device could reopen onboarding. | Onboarding completion now queues its authoritative cloud save immediately. The complete multi-device browser suite covers persistence and stale/concurrent edits. |
+| Test contract | Round 20/schema-v2 ingestion exposed two assertions hardcoded to Round 19/schema v1. | Assertions now validate current/previous-round bounds, schema-v2 hash and complete expected/received club coverage. |
+
+### Verification before publication
+
+- `npm run check`: 51/51 applicable static, unit and API tests passed; the separately gated PostgreSQL test was the only skip.
+- Isolated PostgreSQL 18 database `nrl_fantasy_test`: 1/1 integration test passed after a disposable-schema reset, including migration, transactional persistence, rollback, compare-and-swap and restart behavior.
+- Complete Playwright suite against a second clean isolated PostgreSQL schema: 41/41 passed in 4.9 minutes. New coverage includes Classic plus two Custom and two Draft cards, owned/joined membership, score/matchup/Draft isolation, stale-device and disjoint concurrent edits, widget failure isolation, alerts/news separation, acknowledgement/dismissal, all four themes, keyboard/status semantics, 200% zoom, reduced motion, 44px mobile targets and zero overflow at 320, 375, 390, 768, 1024, 1440 and 1920px.
+- Focused ingestion audit: live authorised NRL Round 20 import validated 16/16 expected clubs with zero source or validation failures; the immediate repeat was unchanged. Deterministic AEST/AEDT boundary tests passed. Round pipeline remained Round 19 complete with seven finals and 238/238 non-zero scorers. `npm audit --omit=dev` reported zero vulnerabilities.
+
+### Separation of findings and deliberate limits
+
+- Application defects: the two confirmed high defects above were fixed with regression coverage. No unresolved critical or high application defect remains before publication.
+- Upstream data: the authorised NRL source supplied 15 Round 19/20 matches, 93 availability records and one suspension at verification time. Source completeness and timestamps remain externally controlled; invalid/partial/outage states now preserve the last verified snapshot and surface operational status.
+- Legal/licensing: only concise factual records and links from the existing authorised NRL sources are stored/displayed; no private, premium or full-article content was accessed or reproduced. Formal rights review remains outside this engineering audit.
+- Railway/GitHub limitations: protected checks, merge, Railway handover and served health can be observed but provider policy and interruption-free edge routing cannot be independently guaranteed.
+- Unsafe/unfinished checks before deployment: no production identity, database, account, league, team, pick, score or preference was read or modified; no production mutation, physical-device test, destructive restore or provider database inspection was attempted. Deployment, CI, monitor and guarded read-only desktop/mobile production results are recorded below after they occur.
+
 ## Full product audit of current main (15 July 2026)
 
 ### Scope and audit-contract limitation

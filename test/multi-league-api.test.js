@@ -37,6 +37,10 @@ test('multiple Custom and Draft leagues remain independent across users and stal
   const draftOne=await create(owner.cookie,'draft','Draft Alpha','create-draft-alpha');
   const draftTwo=await create(owner.cookie,'draft','Draft Beta','create-draft-beta');
   assert.equal((await request('/api/fantasy-leagues',{cookie:owner.cookie})).data.leagues.length,4);
+  const home=await request('/api/home/summary',{cookie:owner.cookie});assert.equal(home.response.status,200);assert.equal(home.data.competitions.length,4);assert.deepEqual(home.data.competitions.filter(item=>item.format==='custom').map(item=>item.id).sort(),[customOne.league.id,customTwo.league.id].sort());assert.deepEqual(home.data.competitions.filter(item=>item.format==='draft').map(item=>item.id).sort(),[draftOne.league.id,draftTwo.league.id].sort());assert.match(home.response.headers.get('cache-control'),/private/);
+  assert.equal((await request('/api/home/summary')).response.status,401);assert.equal((await request('/api/home/alerts')).response.status,401);assert.equal((await request('/api/home/team-news?scope=my-players')).response.status,401);
+  const news=await request('/api/home/team-news?scope=all&limit=2',{cookie:owner.cookie});assert.equal(news.response.status,200);assert.ok(news.data.items.length<=2);assert.equal((await request('/api/home/team-news?scope=invalid',{cookie:owner.cookie})).response.status,400);
+  const status=await request('/api/team-news/status');assert.equal(status.response.status,200);assert.equal(typeof status.data.receivedClubCount,'number');assert.ok(!JSON.stringify(status.data).includes('cookie'));
 
   const repeated=await create(owner.cookie,'custom','Ignored duplicate name','create-custom-alpha');
   assert.equal(repeated.league.id,customOne.league.id);assert.equal(repeated.idempotent,true);

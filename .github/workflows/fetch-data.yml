@@ -2,7 +2,7 @@ name: Fetch NRL Fantasy Data
 
 on:
   schedule:
-    - cron: '*/15 5-12 * * 2'       # Tuesday official team-list release window
+    - cron: '*/5 4-8 * * 2'         # frequent UTC trigger; Australia/Sydney guard selects 15:55-18:00 cadence across AEST/AEDT
     - cron: '*/10 3-13 * * 4,5,6,0' # active NRL match window (UTC / Australia east coast)
     - cron: '0 */4 * * *'            # pre-game, corrections and off-days
   workflow_dispatch:
@@ -34,10 +34,20 @@ jobs:
 
       - run: npm ci
 
+      - name: Apply Australia/Sydney team-list cadence guard
+        id: team_news_schedule
+        run: node scripts/team-news-scheduler.js
+
+      - name: Stop an out-of-window Tuesday trigger
+        if: github.event_name == 'schedule' && github.event.schedule == '*/5 4-8 * * 2' && steps.team_news_schedule.outputs.due != 'true'
+        run: echo 'Sydney-time guard reports that no team-list refresh is due.'
+
       - name: Fetch, validate and transform official NRL data
+        if: github.event_name != 'schedule' || github.event.schedule != '*/5 4-8 * * 2' || steps.team_news_schedule.outputs.due == 'true'
         run: npm run fetch:nrl-data
 
       - name: Audit the current round pipeline
+        if: github.event_name != 'schedule' || github.event.schedule != '*/5 4-8 * * 2' || steps.team_news_schedule.outputs.due == 'true'
         run: npm run audit:round-pipeline
 
       - name: Prepare the dedicated refresh branch
