@@ -3,6 +3,21 @@
 Date: 15 July 2026
 Branches: `agent/round19-live-data-pipeline`, production-verification follow-ups, `agent/player-stats-approved-design`, `agent/team-news-hub`, `agent/players-hub-approved`, `agent/player-game-history`, and `agent/complete-players-hub`
 
+## Compact My competitions UI delta (16 July 2026)
+
+The approved `design/COMPETITIONS_SECTION_REDESIGN.md` and `design/competitions-section-approved.png` were imported unchanged. Only the Home `My competitions` presentation changed: the oversized tiled grid is now one compact, semantic full-width list with four initially visible rows, a competition-count chip, quiet Manage link, hidden-count footer, `Show all N`/`Show fewer` control and stacked mobile rows. Existing Home APIs, server-authoritative membership model, alerts, Team News, polling, scheduler, ingestion and persistence code were not modified.
+
+Rows retain explicit competition, team and league IDs and derive action-required, Draft-turn, live/matchup, ready, scheduled, final/season-complete, stale and partial-data presentations from the existing summary. Missing concepts are omitted rather than rendered as `—`, `Awaiting lockout` or `No matchup`. Stable client presentation ordering keeps unresolved actions visible in the initial four. Buttons name the exact league/team destination, and expansion exposes `aria-expanded`/`aria-controls` without adding requests or polling.
+
+Verification before publication:
+
+- `npm run check`: 51/51 applicable static, unit and API tests passed; the separately gated PostgreSQL case was the only skip.
+- Isolated PostgreSQL 18 `nrl_fantasy_test`: 1/1 migration, transaction, persistence and concurrency test passed.
+- Focused Home Playwright: 6/6 passed, covering six competitions as four initial rows, expansion/collapse, action priority, duplicate display names, actual Classic/two Custom/two Draft/Origin deep-link calls, every required visual state, alerts/news isolation, all four themes, reduced motion, keyboard semantics, 200% zoom, 44px mobile targets and zero overflow at 320, 375, 390, 768, 1024, 1440 and 1920px.
+- Definitive complete Playwright suite against a freshly reset isolated PostgreSQL schema: 43/43 passed in 7.1 minutes. An earlier run exposed a pre-existing test race in which a prior device's queued 700 ms save could advance the mock version after deliberate stale/current contexts loaded. The test now lets that queue settle before taking the two snapshots; the application multi-device behavior was not changed, and the focused scenario plus complete suite passed.
+
+No critical or high application defect was found in this presentation-only change. No upstream-data or legal/licensing behavior changed. Railway/GitHub provider limitations and the deliberate exclusions from the PR #67/#68 audit remain applicable. Protected CI, Railway handover, monitor and strictly read-only 1440px/390px production results are appended after deployment.
+
 ## Home command centre release delta from PR #66 / `a1653d1` (15 July 2026)
 
 ### Delivered scope
