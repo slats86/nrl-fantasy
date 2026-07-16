@@ -3,6 +3,21 @@
 Date: 15 July 2026
 Branches: `agent/round19-live-data-pipeline`, production-verification follow-ups, `agent/player-stats-approved-design`, `agent/team-news-hub`, `agent/players-hub-approved`, `agent/player-game-history`, and `agent/complete-players-hub`
 
+## Live My Team scoring delta (16 July 2026)
+
+The confirmed My Team inconsistency was an application defect: team cards always selected `current round - 1` and stored lineup history while Match Centre selected the verified in-memory live feed. A single canonical selector now distinguishes verified `LIVE` (including a genuine zero), `FINAL`, `YET TO PLAY`, `BYE`, `DNP` and retained `STALE` values. Match Centre, Classic, every Custom league, every completed Draft league and the supported Origin team view consume that selector. No scheduler, ingestion, membership, lineup, Draft, preference or production-data write path changed.
+
+Every team screen now places an accessible provisional-score panel directly below its competition heading. It reports completed/playing/to-play counts, freshness and stale/reconciliation state, and an expandable contribution breakdown. Player cards retain raw points while the total independently applies the explicit league's captain multiplier, vice-captain DNP fallback, bench scoring, position-eligible emergencies and existing active chip rules. The compact mobile panel is sticky without covering cards or navigation; the central poll refresh preserves scroll and an open breakdown and does not save live-derived state.
+
+Pre-publication verification:
+
+- Focused deterministic Playwright: 5/5 scenarios passed, including Match Centre parity, scheduled versus live zero, captain/vice fallback, bench/emergency rules, corrections, stale/final lifecycle, passive no-write behavior, mobile stickiness and Classic/two Custom/two Draft isolation.
+- `npm run check`: 51/51 applicable static, unit and API tests passed; the isolated PostgreSQL case was the only intentional generic-run skip.
+- Isolated PostgreSQL 18 `nrl_fantasy_test`: 1/1 migration, transaction, concurrency and restart-persistence integration test passed.
+- Complete Playwright regression suite: 48/48 passed at the release head across the existing desktop, mobile, accessibility, multi-device and product-flow matrix.
+
+No upstream-data defect or new legal/licensing concern was found during implementation. Live values remain dependent on the existing upstream feed and are labelled stale rather than replaced when refresh fails. Production verification is constrained to GET/HEAD with a global browser request guard and browser-local response interception; it does not authenticate as, read, or modify a real production user.
+
 ## Compact My competitions UI delta (16 July 2026)
 
 The approved `design/COMPETITIONS_SECTION_REDESIGN.md` and `design/competitions-section-approved.png` were imported unchanged. Only the Home `My competitions` presentation changed: the oversized tiled grid is now one compact, semantic full-width list with four initially visible rows, a competition-count chip, quiet Manage link, hidden-count footer, `Show all N`/`Show fewer` control and stacked mobile rows. Existing Home APIs, server-authoritative membership model, alerts, Team News, polling, scheduler, ingestion and persistence code were not modified.
