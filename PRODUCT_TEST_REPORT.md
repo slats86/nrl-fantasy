@@ -18,6 +18,8 @@ Pre-publication verification:
 
 Protected CI initially exposed a moving-upstream fixture assumption in the existing Match Centre test: Round 20 was marked scheduled only at round level while its real, now-live match statuses remained active, so the generic selector correctly chose Round 20 instead of the synthetic Round 19. The fixture now normalizes match statuses before activating its target round; the exact affected scenario passed locally before the PR rerun. This was a test-contract correction, not an application defect.
 
+The rerun then confirmed an application robustness defect: the canonical selector evaluated cached bye metadata before an explicit verified fixture, hiding a scored player when those inputs briefly disagreed. Verified round fixtures now take precedence and BYE applies only without a fixture. Focused coverage deliberately supplies conflicting bye metadata and confirms both My Team and Match Centre retain the genuine live zero.
+
 No upstream-data defect or new legal/licensing concern was found during implementation. Live values remain dependent on the existing upstream feed and are labelled stale rather than replaced when refresh fails. Production verification is constrained to GET/HEAD with a global browser request guard and browser-local response interception; it does not authenticate as, read, or modify a real production user.
 
 ## Compact My competitions UI delta (16 July 2026)

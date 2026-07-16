@@ -1433,9 +1433,9 @@ async function fetchLiveScores(btnEl){
 function livePts(pid){return LIVE.scores[pid]??null;}
 function liveMatchForPlayer(pid){const club=PLAYERS[pid]?.sq;return (LIVE.matches||[]).find(match=>match.home===club||match.away===club)||null}
 function canonicalPlayerScore(pid,r=S.round){
-  const player=PLAYERS[pid],round=Number(r),bye=(RFIX[round]?.byes||S.season.rounds[round]?.byes||[]).includes(player?.sq);
+  const player=PLAYERS[pid],round=Number(r),match=LIVE.round===round?liveMatchForPlayer(pid):null,bye=!match&&(RFIX[round]?.byes||S.season.rounds[round]?.byes||[]).includes(player?.sq);
   if(bye)return {pid,round,score:null,state:'BYE',started:false,final:true,stale:false};
-  if(LIVE.round===round){const match=liveMatchForPlayer(pid),matchState=match?.status||(LIVE.status==='final'?'complete':LIVE.status),hasScore=Object.prototype.hasOwnProperty.call(LIVE.scores||{},pid),score=hasScore?Number(LIVE.scores[pid]):null,stale=_refreshFailures>0;
+  if(LIVE.round===round){const matchState=match?.status||(LIVE.status==='final'?'complete':LIVE.status),hasScore=Object.prototype.hasOwnProperty.call(LIVE.scores||{},pid),score=hasScore?Number(LIVE.scores[pid]):null,stale=_refreshFailures>0;
     if(matchState==='scheduled'||LIVE.status==='scheduled')return {pid,round,score:null,state:'YET TO PLAY',started:false,final:false,stale:false};
     if(matchState==='live'||LIVE.status==='live'&&!match){return {pid,round,score,state:stale&&hasScore?'STALE':'LIVE',started:true,final:false,stale};}
     if(matchState==='complete'||LIVE.status==='final')return hasScore?{pid,round,score,state:stale?'STALE':'FINAL',started:true,final:true,stale}:{pid,round,score:null,state:'DNP',started:true,final:true,stale};
