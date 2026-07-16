@@ -253,7 +253,7 @@ test('Match Centre advances generically, refreshes live scores/components, pause
   const away=sourceRounds.flatMap(round=>round.matches||[]).flatMap(match=>[match.home_squad_id,match.away_squad_id]).find(id=>id!==home);
   player.stats=player.stats||{};player.stats.scores=player.stats.scores||{};player.stats.scores[19]=61;
   const round18=sourceRounds.find(round=>round.id===18),round19=sourceRounds.find(round=>round.id===19),round20=sourceRounds.find(round=>round.id===20);
-  sourceRounds.forEach(round=>round.status='scheduled');round18.status='complete';
+  sourceRounds.forEach(round=>{round.status='scheduled';(round.matches||[]).forEach(match=>match.status='scheduled')});round18.status='complete';
   round19.status='active';round19.start=new Date(Date.now()-3600000).toISOString();round19.end=new Date(Date.now()+3600000).toISOString();
   round19.matches=[{id:1901,round:19,status:'active',home_squad_id:home,away_squad_id:away,home_score:12,away_score:8,date:new Date(Date.now()-1800000).toISOString()}];
   let playersBody=sourcePlayers,roundsBody=sourceRounds,fail=false,playerRequests=0,roundRequests=0;

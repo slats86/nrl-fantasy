@@ -435,6 +435,8 @@ input,select,textarea{font-size:16px!important}
 @media(max-width:1100px){.home-competition-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:768px){.home-global-hero{grid-template-columns:1fr;padding:15px}.home-global-hero h1{font-size:24px}.home-round{text-align:left}.home-dashboard-section{padding:11px}.home-section-head{align-items:start}.home-competition-grid,.home-news-list{grid-template-columns:1fr}.home-alert{grid-template-columns:1fr}.home-alert-actions{width:100%}.home-command button{min-height:44px}.home-alert-actions .btn{flex:1}.home-no-actions{align-items:start;flex-direction:column}.home-news-filters{overflow-x:auto}.home-news-filters button{flex:0 0 auto}}
 @media(max-width:768px){.home-competitions-head{align-items:center}.home-competitions-head h2{flex-wrap:wrap}.home-competition-row{grid-template-columns:auto minmax(0,1fr) auto;gap:7px 10px;padding:12px}.home-competition-format{grid-column:1}.home-competition-format span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.home-competition-icon{width:34px;height:34px}.home-competition-identity{grid-column:2}.home-competition-status{grid-column:3}.home-competition-context{grid-column:2/4;font-size:12px}.home-competition-action{grid-column:1/4;width:100%;margin-top:2px}.home-competition-footer{padding:8px 12px}.home-manage-link{font-size:11px}}
+.team-live-score-panel{margin:0 0 14px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(110deg,color-mix(in srgb,var(--acc) 9%,var(--card)),var(--card));overflow:hidden}.team-live-score-main{display:grid;grid-template-columns:minmax(180px,1.2fr) minmax(150px,.8fr) repeat(3,minmax(78px,.42fr)) auto;gap:14px;align-items:center;padding:14px 16px}.team-live-round{color:var(--dim);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.6px}.team-live-round strong{color:var(--red)}.team-live-total span,.team-live-count span{display:block;color:var(--dim);font-size:10px;text-transform:uppercase}.team-live-total b{display:block;color:var(--acc);font-size:30px;line-height:1.1}.team-live-count b{font-size:18px}.team-live-fresh{color:var(--dim);font-size:10px;text-align:right}.team-live-fresh .stale{color:var(--amber);font-weight:900}.team-score-breakdown{border-top:1px solid var(--line)}.team-score-breakdown summary{display:flex;align-items:center;min-height:44px;padding:0 16px;color:var(--acc);font-size:12px;font-weight:800;cursor:pointer}.team-score-breakdown-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:5px;padding:0 16px 14px}.team-score-breakdown-row{display:flex;justify-content:space-between;gap:8px;padding:5px 8px;border-radius:6px;background:var(--card2);font-size:11px}.team-score-breakdown-row small{color:var(--dim)}.pcard .live-player-score{margin-top:5px;padding-top:5px;border-top:1px solid var(--line);font-size:12px;font-weight:900}.pcard .live-player-score span{display:block;color:var(--dim);font-size:9px;letter-spacing:.4px}.pcard .live-player-score.live{color:var(--red)}.pcard .live-player-score.final{color:var(--green)}.pcard .live-player-score.stale{color:var(--amber)}
+@media(max-width:768px){.team-live-score-panel{position:sticky;top:6px;z-index:18;box-shadow:0 8px 24px rgba(0,0,0,.28)}.team-live-score-main{grid-template-columns:minmax(0,1fr) repeat(3,48px);gap:7px;padding:10px}.team-live-total{grid-column:1}.team-live-total b{font-size:24px}.team-live-count{text-align:center}.team-live-count b{font-size:15px}.team-live-round{grid-column:1/5}.team-live-fresh{grid-column:1/5;text-align:left}.team-score-breakdown summary{min-height:44px}.team-score-breakdown-list{grid-template-columns:1fr;max-height:210px;overflow:auto;padding:0 10px 10px}}
 @media(prefers-reduced-motion:reduce){.home-command *{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 </style>
 <body>
@@ -1407,6 +1409,7 @@ async function runAutoRefresh(manual){
   updateStatusChip();
   if(S.ui.page==='match')renderMatch();
   else if(S.ui.page==='origin')renderOrigin();
+  else if(['classic','custom','draft'].includes(S.ui.page))refreshLivePage();
   else renderAll();
 }
 
@@ -1428,23 +1431,45 @@ async function fetchLiveScores(btnEl){
   if(btnEl){btnEl.disabled=false;btnEl.textContent='⟳ Refresh';}
 }
 function livePts(pid){return LIVE.scores[pid]??null;}
-function liveTeamScore(line){
-  /* score the lineup using LIVE scores instead of stored official scores */
-  if(!line)return 0;
-  const chips=getChips();const active=chips.active||{};
-  const captainMult=S.settings.captainMult||2;
-  let total=0;
-  const benchAvail=(line.res||[]).filter(x=>x!=null&&livePts(x)!=null).sort((a,b)=>(livePts(b)||0)-(livePts(a)||0));
-  const subUsed=new Set();
-  for(const[posId,]of FIELD_STRUCT){for(const pid of (line.starters[posId]||[])){
-    if(pid==null)continue;
-    let ap=pid;
-    if(livePts(pid)==null){const rep=benchAvail.find(x=>!subUsed.has(x)&&PLAYERS[x].pos.includes(posId));if(rep!=null){subUsed.add(rep);ap=rep;}else continue;}
-    let pts=livePts(ap)||0;
-    if(ap===(line.c!=null&&livePts(line.c)!=null?line.c:(line.vc!=null&&livePts(line.vc)!=null?line.vc:null)))pts=Math.round(pts*captainMult);
-    total+=pts;
-  }}
-  return total;
+function liveMatchForPlayer(pid){const club=PLAYERS[pid]?.sq;return (LIVE.matches||[]).find(match=>match.home===club||match.away===club)||null}
+function canonicalPlayerScore(pid,r=S.round){
+  const player=PLAYERS[pid],round=Number(r),match=LIVE.round===round?liveMatchForPlayer(pid):null,bye=!match&&(RFIX[round]?.byes||S.season.rounds[round]?.byes||[]).includes(player?.sq);
+  if(bye)return {pid,round,score:null,state:'BYE',started:false,final:true,stale:false};
+  if(LIVE.round===round){const matchState=match?.status||(LIVE.status==='final'?'complete':LIVE.status),hasScore=Object.prototype.hasOwnProperty.call(LIVE.scores||{},pid),score=hasScore?Number(LIVE.scores[pid]):null,stale=_refreshFailures>0;
+    if(matchState==='scheduled'||LIVE.status==='scheduled')return {pid,round,score:null,state:'YET TO PLAY',started:false,final:false,stale:false};
+    if(matchState==='live'||LIVE.status==='live'&&!match){return {pid,round,score,state:stale&&hasScore?'STALE':'LIVE',started:true,final:false,stale};}
+    if(matchState==='complete'||LIVE.status==='final')return hasScore?{pid,round,score,state:stale?'STALE':'FINAL',started:true,final:true,stale}:{pid,round,score:null,state:'DNP',started:true,final:true,stale};
+  }
+  const official=playerPts(pid,round);if(official!=null)return {pid,round,score:Number(official),state:'FINAL',started:true,final:true,stale:false};
+  return {pid,round,score:null,state:round>S.round?'YET TO PLAY':'DNP',started:false,final:round<S.round,stale:false};
+}
+function teamLineupPlayers(line,{draft=false}={}){const entries=[];if(!line)return entries;for(const[posId]of FIELD_STRUCT)for(const pid of line.starters?.[posId]||[])if(pid!=null)entries.push({pid,posId,slot:'field'});for(const pid of line.bench||[])if(pid!=null)entries.push({pid,posId:0,slot:draft?'emergency':'bench'});if(!draft)for(const pid of line.res||[])if(pid!=null)entries.push({pid,posId:0,slot:'reserve'});return entries}
+function liveLineupScore(line,{settings=S.settings,chips={},draft=false,round=S.round}={}){
+  if(!line)return {total:null,detail:[],counts:{completed:0,playing:0,toPlay:0},valid:false};
+  const all=teamLineupPlayers(line,{draft}),states=new Map(all.map(entry=>[entry.pid,canonicalPlayerScore(entry.pid,round)])),counts={completed:0,playing:0,toPlay:0};for(const state of states.values()){if(['FINAL','DNP','BYE'].includes(state.state))counts.completed++;else if(['LIVE','STALE'].includes(state.state))counts.playing++;else counts.toPlay++}
+  const active=chips.active||{},captainMult=Number(settings.captainMult)||2,emergencies=(draft?line.bench:line.res||[]).filter(pid=>pid!=null&&states.get(pid)?.score!=null).sort((a,b)=>states.get(b).score-states.get(a).score),used=new Set(),scorers=[];
+  for(const[posId]of FIELD_STRUCT)for(const pid of line.starters?.[posId]||[])if(pid!=null)scorers.push({pid,posId,slot:'field'});
+  if(!draft&&settings.benchScores)for(const pid of line.bench||[])if(pid!=null)scorers.push({pid,posId:0,slot:'bench'});
+  const resolved=[];for(const scorer of scorers){let pid=scorer.pid,sub=false;const state=states.get(pid);if(['DNP','BYE'].includes(state?.state)){const replacement=emergencies.find(candidate=>!used.has(candidate)&&(scorer.posId===0||PLAYERS[candidate].pos.includes(scorer.posId)));if(replacement!=null){used.add(replacement);pid=replacement;sub=true}else{resolved.push({...scorer,raw:null,applied:0,state,sub:false});continue}}const selected=states.get(pid)||canonicalPlayerScore(pid,round);resolved.push({...scorer,pid,origPid:scorer.pid,raw:selected.score,state:selected,sub})}
+  if(active.benchInsurance&&!draft){const included=new Set(resolved.map(item=>item.pid)),extra=(line.bench||[]).filter(pid=>pid!=null&&states.get(pid)?.score!=null&&!included.has(pid)).sort((a,b)=>states.get(b).score-states.get(a).score)[0];if(extra!=null)resolved.push({pid:extra,origPid:extra,posId:0,slot:'bench_ins',raw:states.get(extra).score,state:states.get(extra),sub:false})}
+  let captain=null,splitVice=null;if(active.splitCaptain){if(states.get(line.c)?.score!=null)captain=line.c;if(states.get(line.vc)?.score!=null)splitVice=line.vc}else if(active.posCaptain){captain=resolved.filter(item=>item.posId===(active.posCaptain.pos||1)&&item.raw!=null).sort((a,b)=>b.raw-a.raw)[0]?.pid??null}else if(active.vcLock){const cap=states.get(line.c),vice=states.get(line.vc),threshold=active.vcLock.threshold??30;if(cap?.score!=null)captain=cap.score<threshold&&vice?.score!=null?line.vc:line.c;else if(['DNP','BYE'].includes(cap?.state)&&vice?.score!=null)captain=line.vc}else{const cap=states.get(line.c),vice=states.get(line.vc);captain=cap?.score!=null?line.c:['DNP','BYE'].includes(cap?.state)&&vice?.score!=null?line.vc:null}
+  const splitMult=1+(captainMult-1)/2,detail=[];let total=0;for(const item of resolved){let applied=item.raw??0,multiplier=1;if(item.raw!=null&&active.splitCaptain&&(item.pid===captain||item.pid===splitVice)){multiplier=splitMult;applied=Math.round(item.raw*multiplier)}else if(item.raw!=null&&item.pid===captain){multiplier=captainMult;applied=Math.round(item.raw*multiplier)}total+=applied;detail.push({...item,applied,multiplier,cap:multiplier>1})}
+  return {total,detail,counts,valid:scorers.length>0,captain,round,stale:[...states.values()].some(state=>state.stale)};
+}
+function liveTeamScore(line,options={}){return liveLineupScore(line,options).total??0}
+function teamScorePanelHTML(context,line,{settings=S.settings,chips={},draft=false}={}){
+  const result=liveLineupScore(line,{settings,chips,draft,round:S.round}),status=LIVE.round===S.round?LIVE.status:'scheduled',age=LIVE.fetched?Math.max(0,Math.round((Date.now()-LIVE.fetched)/60000)):null,stale=result.stale||_refreshFailures>0;let roundLabel=`Round ${S.round}`,scoreLabel='Score available after lockout',score='—';
+  if(!result.valid){roundLabel+=` · Team incomplete`;scoreLabel='A valid lineup is required to calculate a score'}else if(status==='live'){roundLabel+=` · Live`;scoreLabel='Provisional score';score=String(result.total)}else if(status==='final'){const reconciled=MAXR>=S.round;roundLabel+=reconciled?' · Final':' · Provisional final';scoreLabel=reconciled?'Final score':'Awaiting reconciliation';score=String(result.total)}else if(status==='cors'&&LIVE.round===S.round&&result.total!=null){roundLabel+=` · Stale`;scoreLabel='Last verified provisional score';score=String(result.total)}else{roundLabel+=` starts ${LIVE.firstKickoff?homeTime(LIVE.firstKickoff):'soon'}`}
+  if(stale&&score!=='—'){roundLabel=roundLabel.replace(/ · (Live|Final|Provisional final)$/,' · Stale');scoreLabel='Last verified provisional score'}
+  const rows=result.detail.map(item=>{const player=PLAYERS[item.pid],raw=item.raw==null?item.state?.state:item.raw,adjustment=item.sub?'Emergency auto-sub':item.multiplier>1?`${item.multiplier}× captain applied`:item.slot==='bench_ins'?'Bench insurance':'';return `<div class="team-score-breakdown-row"><span>${esc(player?.name||'Player')}<small>${adjustment?' · '+esc(adjustment):''}</small></span><b>${esc(raw)}${item.raw!=null&&item.applied!==item.raw?` → ${item.applied}`:''}</b></div>`}).join('');
+  return `<section class="team-live-score-panel" data-team-score-context="${esc(context)}" aria-live="polite"><div class="team-live-score-main"><div class="team-live-round">● ${esc(roundLabel)}</div><div class="team-live-total"><span>${esc(scoreLabel)}</span><b data-live-team-total>${score}</b></div><div class="team-live-count"><span>Completed</span><b>${result.counts.completed}</b></div><div class="team-live-count"><span>Playing now</span><b>${result.counts.playing}</b></div><div class="team-live-count"><span>To play</span><b>${result.counts.toPlay}</b></div><div class="team-live-fresh">${stale?'<span class="stale">Stale · </span>':''}${age==null?'Waiting for verified data':`Updated ${age<1?'just now':age+'m ago'}`}</div></div>${result.valid?`<details class="team-score-breakdown"><summary>View score breakdown</summary><div class="team-score-breakdown-list">${rows||'<span class="muted">Score contributions will appear as matches begin.</span>'}</div></details>`:`<div style="padding:0 16px 14px"><button class="btn" onclick="setPage('${context==='draft'?'draft':context==='custom'?'custom':'classic'}')">Fix team</button></div>`}</section>`
+}
+function livePlayerScoreHTML(pid,result){const selected=canonicalPlayerScore(pid,S.round),contribution=result?.detail.find(item=>item.origPid===pid||item.pid===pid),sub=contribution?.sub?' · EMERGENCY AUTO-SUB':'',captain=contribution?.multiplier>1?` · ${contribution.multiplier}× IN TOTAL`:'';let value=selected.score==null?selected.state:selected.score,state=selected.state.toLowerCase().replaceAll(' ','-');return `<div class="live-player-score ${state}" data-live-player-id="${pid}">${esc(value)}<span>${esc(selected.state)}${sub}${captain}</span></div>`}
+function refreshLivePage(){
+  const y=window.scrollY,focusId=document.activeElement?.id,openBreakdown=Boolean(document.querySelector('.team-score-breakdown[open]'));
+  if(S.ui.page==='classic')renderClassic();else if(S.ui.page==='custom')renderCustom();else if(S.ui.page==='draft')renderDraft();else renderAll();
+  if(openBreakdown)document.querySelector('.team-score-breakdown')?.setAttribute('open','');
+  requestAnimationFrame(()=>{window.scrollTo(0,y);if(focusId)document.getElementById(focusId)?.focus({preventScroll:true})});
 }
 /* render a compact live scores card for the user's squad */
 function liveScoresHTML(){
@@ -1815,6 +1840,7 @@ function renderClassic(){
       <div class="mstat"><b>${fmtM(squadValue())}</b><span>Team value</span></div>
     </div>
   </div>
+  ${teamScorePanelHTML('classic',S.classic.history[S.round]||S.classic.line,{settings:S.settings,chips:S.classic.chips||{}})}
   ${notStarted?'<div class="notice" style="margin-bottom:14px">👋 Pick your squad below to join the season from <b>Round '+S.round+'</b>. Your scores will be tracked from that round onwards.</div>':''}
   <div class="mode-tabs">
     <button class="${tab==='team'?'on':''}" onclick="S.ui.classicTab='team';renderClassic()">Squad</button>
@@ -1966,6 +1992,7 @@ function renderCustom(){
    <span class="spacer"></span>
    <button class="btn sec" style="font-size:12px" onclick="removeFantasyLeague('custom')">${activeLeagueEntry('custom')&&activeLeagueEntry('custom').role==='owner'?'Delete':'Leave'} league</button>
   </div>
+  ${teamScorePanelHTML('custom',cl.team.history?.[S.round]||cl.team.line,{settings:st,chips:cl.team.chips||{}})}
   <div class="mode-tabs" style="margin-bottom:14px">
    <button class="${tab==='team'?'on':''}" onclick="S.ui.customTab='team';renderCustom()">👥 My Team</button>
    <button class="${tab==='trades'?'on':''}" onclick="S.ui.customTab='trades';S.ui.trPage='custom';renderCustom()">🔄 Trades</button>
@@ -2131,18 +2158,8 @@ function bestBallScore(roster,r){
 }
 
 function renderField(){
-  const T=activeTeamState(),L=T.line,lastR=S.round-1;
-  const sc=lastR>=1&&T.history[lastR]?lineupScore(T.history[lastR],lastR):null;
-  const liveR=LIVE.round>0?LIVE.round:null;
-  const scoreOf=pid=>{
-    if(!sc)return '';
-    const d=sc.detail.find(x=>x.orig===pid||x.pid===pid);
-    if(!d)return '';
-    if(d.pts==null)return `<div class="sc dnp">DNP</div>`;
-    const g=scoreGrade(d.orig||d.pid,lastR);
-    const gb=g?`<span class="grade ${gradeClass(g)}">${g}</span>`:'';
-    return `<div class="sc">${d.pts}${d.sub?'<span style="font-size:9px;color:var(--blue)"> sub</span>':''}${gb}</div>`;
-  };
+  const T=activeTeamState(),L=T.line,settings=activeScoringSettings(),liveResult=liveLineupScore(T.history?.[S.round]||L,{settings,chips:T.chips||{},round:S.round});
+  const scoreOf=pid=>livePlayerScoreHTML(pid,liveResult);
   const card=(pid,slot)=>{
     if(pid==null)return `<div class="pcard empty" onclick='openSlotPicker(${JSON.stringify(slot)})'><div style="font-size:22px">+</div><div style="font-size:10px">${slot.posId?POSN[slot.posId]:(slot.kind==='bench'?'INT':'RES')}</div></div>`;
     const p=PLAYERS[pid];
@@ -2163,7 +2180,7 @@ function renderField(){
   for(const[posId,label]of rows){
     html+=`<div class="frow">${L.starters[posId].map((pid,i)=>card(pid,{kind:'st',posId,i})).join('')}</div><div class="frow-label">${label}</div>`;
   }
-  html+=`<div class="bench-zone"><div class="ttl">INTERCHANGE (score${S.settings.benchScores?'':' OFF'})</div><div class="bench-row">${L.bench.map((pid,i)=>card(pid,{kind:'bench',posId:0,i})).join('')}</div></div>`;
+  html+=`<div class="bench-zone"><div class="ttl">INTERCHANGE (score${settings.benchScores?'':' OFF'})</div><div class="bench-row">${L.bench.map((pid,i)=>card(pid,{kind:'bench',posId:0,i})).join('')}</div></div>`;
   html+=`<div class="bench-zone"><div class="ttl">RESERVES (emergency cover — auto-sub for non-players)</div><div class="bench-row">${L.res.map((pid,i)=>card(pid,{kind:'res',posId:0,i})).join('')}</div></div>`;
   return html;
 }
@@ -2818,6 +2835,7 @@ function draftLeagueHTML(){
       <div class="mstat"><b>${oppI!=null?esc(D.teams[oppI].name):'Bye'}</b><span>Opponent</span></div>
     </div>
   </div>
+  ${teamScorePanelHTML('draft',me.line,{settings:draftSettings(),chips:me.chips||{},draft:true})}
   <div class="mode-tabs">
     <button class="${tab==='team'?'on':''}" onclick="S.ui.draftPostTab='team';renderDraft()">👥 My Team</button>
     <button class="${tab==='trades'?'on':''}" onclick="S.ui.draftPostTab='trades';renderDraft()">🔄 Waivers / FA</button>
@@ -2830,11 +2848,11 @@ function draftLeagueHTML(){
   ${tab==='history'?draftHistoryTabHTML():''}`;
 }
 function draftMyTeamHTML(){
-  const D=S.draft,me=D.teams[D.me];
+  const D=S.draft,me=D.teams[D.me],result=liveLineupScore(me.line,{settings:draftSettings(),chips:me.chips||{},draft:true,round:S.round});
   const slotCard=(pid,posId,bi)=>{
     if(pid==null)return `<div class="pcard empty" onclick="draftSlotMenu(null,${posId},${bi})"><div style="font-size:22px">+</div><div style="font-size:10px">${posId?POSN[posId]:'INT'}</div></div>`;
     const p=PLAYERS[pid];
-    return `<div class="pcard" onclick="draftSlotMenu(${pid},${posId},${bi})">${avatar(p,38)}<div class="nm">${esc(p.name)}</div><div class="meta">${CLUBS[p.sq].s}</div><div class="meta">avg ${p.avg||'–'}</div></div>`;
+    return `<div class="pcard" onclick="draftSlotMenu(${pid},${posId},${bi})">${me.line.c===pid?'<div class="badge">C</div>':me.line.vc===pid?'<div class="badge vc">VC</div>':''}${avatar(p,38)}<div class="nm">${esc(p.name)}</div><div class="meta">${CLUBS[p.sq].s}</div>${livePlayerScoreHTML(pid,result)}</div>`;
   };
   let field='';
   const rows=[[6,'WFB / WINGERS'],[5,'CENTRES'],[4,'HALVES'],[3,'EDGE FORWARDS'],[2,'MIDDLE FORWARDS'],[1,'HOOKER']];
@@ -3051,9 +3069,7 @@ function mcMatchStatus(r,h,a){
   return match?match.status:(LIVE.status==='final'?'complete':LIVE.status);
 }
 function mcPts(pid,r){
-  /* prefer live score for live round, otherwise official */
-  if(isLiveRound(r)){const lp=livePts(pid);if(lp!=null)return lp;}
-  return playerPts(pid,r);
+  return canonicalPlayerScore(pid,r).score;
 }
 function mcClubPts(ci,r){
   if(isLiveRound(r)){return clubLivePts(ci);}
@@ -3078,8 +3094,8 @@ function mcClubFantasy(ci,r,isLive){
 function mcPlayerRows(ci,r,isLive){
   let rows;
   if(isLive){
-    rows=PLAYERS.filter(p=>p.sq===ci&&LIVE.scores[p.id]!=null)
-                .map(p=>({p,pts:LIVE.scores[p.id]}));
+    rows=PLAYERS.filter(p=>p.sq===ci).map(p=>({p,selected:canonicalPlayerScore(p.id,r)})).filter(item=>item.selected.score!=null)
+                .map(({p,selected})=>({p,pts:selected.score,state:selected.state}));
   }else{
     /* Read directly from OFFS — avoids playedIn() dependency on S.season.rounds */
     rows=PLAYERS.filter(p=>p.sq===ci&&OFFS[p.id]&&OFFS[p.id][r-1]!=null)
@@ -3088,7 +3104,7 @@ function mcPlayerRows(ci,r,isLive){
   rows.sort((x,y)=>y.pts-x.pts);
   if(!rows.length)return`<tr><td colspan="3" class="muted" style="padding:12px;text-align:center">No score data</td></tr>`;
   const myIds=squadIds();
-  return rows.map(({p,pts})=>{
+  return rows.map(({p,pts,state})=>{
     const avg=p.avg||0;
     const g=avg>0?(pts/avg>=1.6?'A+':pts/avg>=1.2?'A':pts/avg>=0.85?'B':pts/avg>=0.5?'C':'D'):(pts>=50?'A+':pts>=30?'A':pts>=15?'B':'C');
     const gc=g==='A+'?'grade-aplus':g==='A'?'grade-a':g==='B'?'grade-b':g==='C'?'grade-c':'grade-d';
@@ -3097,7 +3113,7 @@ function mcPlayerRows(ci,r,isLive){
     return`<tr ${onclick}${inMy?' class="mc-mine"':''}>
       <td style="width:32px">${avatar(p,24)}</td>
       <td><b>${esc(p.name)}</b>${inMy?'<span class="tag" style="font-size:9px;margin-left:4px">MY</span>':''}
-        <div class="muted" style="font-size:11px">${posStr(p)}${currentPlayerNews(p.id)?` · <span class="bad">${esc(currentPlayerNews(p.id).status)}</span>`:''}</div></td>
+        <div class="muted" style="font-size:11px">${posStr(p)}${state?` · ${esc(state)}`:''}${currentPlayerNews(p.id)?` · <span class="bad">${esc(currentPlayerNews(p.id).status)}</span>`:''}</div></td>
       <td style="text-align:right;white-space:nowrap">
         <span class="grade ${gc}">${g}</span>
         <b class="${pts>=60?'good':pts<20?'bad':''}" style="min-width:28px;display:inline-block;text-align:right">${pts}</b>
@@ -3671,9 +3687,10 @@ function renderSooPicks(g){
   const slot=S.origin.sooSlotPick||null;
 
   /* ── Score banner ── */
-  const total=sooTeamTotal(g);
+  const originRound=SOO_ROUNDS[g],liveOrigin=originRound&&LIVE.round===originRound,originStates=SOO_POS.map(pos=>picks[pos.key]).filter(pid=>pid!=null).map(pid=>canonicalPlayerScore(pid,originRound)),originLiveTotal=originStates.reduce((sum,item)=>sum+(item.score||0),0),originCounts={completed:originStates.filter(item=>['FINAL','DNP','BYE'].includes(item.state)).length,playing:originStates.filter(item=>['LIVE','STALE'].includes(item.state)).length,toPlay:originStates.filter(item=>item.state==='YET TO PLAY').length};
+  const total=liveOrigin?originLiveTotal:sooTeamTotal(g);
   const pickedCount=SOO_POS.filter(p=>picks[p.key]!=null).length;
-  const scoreBanner=total!=null?`
+  const scoreBanner=liveOrigin?`<section class="team-live-score-panel" aria-live="polite"><div class="team-live-score-main"><div class="team-live-round">● Origin Game ${g} · ${LIVE.status==='live'?'LIVE':LIVE.status==='final'?'FINAL':'SCHEDULED'}</div><div class="team-live-total"><span>${LIVE.status==='live'?'Provisional score':'Team score'}</span><b>${originLiveTotal}</b></div><div class="team-live-count"><span>Completed</span><b>${originCounts.completed}</b></div><div class="team-live-count"><span>Playing now</span><b>${originCounts.playing}</b></div><div class="team-live-count"><span>To play</span><b>${originCounts.toPlay}</b></div><div class="team-live-fresh">Updated ${LIVE.fetched&&Date.now()-LIVE.fetched<60000?'just now':'recently'}</div></div></section>`:total!=null?`
     <div style="background:var(--card);border:1px solid var(--acc);border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
       <div style="font-size:13px;color:var(--dim)">Game 3 Total Score</div>
       <div style="font-size:30px;font-weight:900;color:var(--acc)">${total}<span style="font-size:14px;font-weight:400;color:var(--dim);margin-left:4px">pts</span></div>
