@@ -41,6 +41,7 @@ test('Custom and Draft league switchers isolate state across desktop, mobile and
 
   await page.evaluate(()=>{bindActiveLeague('custom','CUSTA');S.customLeague.team.squad=[41]});await mobile.page.evaluate(()=>{bindActiveLeague('custom','CUSTB');S.customLeague.team.squad=[42]});
   await Promise.all([page.evaluate(()=>saveActiveFantasyLeague('custom',true)),mobile.page.evaluate(()=>saveActiveFantasyLeague('custom',true))]);expect(backend.CUSTA.team.state.team.squad).toEqual([41]);expect(backend.CUSTB.team.state.team.squad).toEqual([42]);
+  await Promise.all([page.waitForTimeout(800),mobile.page.waitForTimeout(800)]);
 
   const current=await openDevice(browser,1024,backend),stale=await openDevice(browser,1024,backend);await stale.page.evaluate(()=>{bindActiveLeague('custom','CUSTB');S.customLeague.team.squad=[29]});
   await current.page.evaluate(()=>{bindActiveLeague('custom','CUSTB');S.customLeague.team.squad=[31]});await current.page.evaluate(()=>saveActiveFantasyLeague('custom',true));
