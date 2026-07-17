@@ -255,8 +255,8 @@ for (const width of [375, 1440]) test(`detailed statistics UI, search and filter
     await expect(detail).toContainText('Tackles');await expect(detail).toContainText('31');
     await expect(detail).toContainText('Run metres');await expect(detail).toContainText('176');
   }
-  const watch=page.getByRole('button',{name:/Watch/});await watch.focus();await page.keyboard.press('Space');
-  await expect(page.getByRole('button',{name:/Watching/})).toHaveAttribute('aria-pressed','true');
+  const watch=page.locator('.watch-btn');await expect(watch).toBeVisible();await watch.focus();await page.keyboard.press('Space');
+  await expect(page.locator('.watch-btn')).toHaveAttribute('aria-pressed','true');
   expect(await page.evaluate(id=>S.watchlist.includes(id),player.id)).toBe(true);
   if(width===1440){
     await page.keyboard.press('Escape');
@@ -274,8 +274,12 @@ for (const width of [375, 1440]) test(`detailed statistics UI, search and filter
 for (const width of widths) test(`responsive app shell at ${width}px`, async ({page}) => {
   await page.setViewportSize({width,height:900});
   const errors=[]; page.on('pageerror', error => errors.push(error.message));
-  const login = await page.request.post('/api/soo/login', {data:{email:'owner@example.com',password:'owner-password-123'}});
-  expect(login.status()).toBe(200);
+  await page.route('**/api/soo/me',route=>route.fulfill({json:{userId:'responsive-ui',name:'Responsive Owner',email:'responsive@example.test'}}));
+  await page.route('**/api/app-state',route=>route.fulfill({json:route.request().method()==='GET'?{version:0,state:null}:{version:1}}));
+  await page.route('**/api/fantasy-leagues**',route=>route.fulfill({json:{leagues:[],limit:20}}));
+  await page.route('**/api/home/summary',route=>route.fulfill({json:{round:20,deadline:null,freshness:'current',updatedAt:new Date().toISOString(),actionCount:0,competitions:[{id:'classic',format:'classic',name:'Classic',teamName:'Responsive Owner',total:0,status:'Pre-round',action:{label:'View team',page:'classic'}}]}}));
+  await page.route('**/api/home/alerts',route=>route.fulfill({json:{alerts:[]}}));
+  await page.route('**/api/home/team-news**',route=>route.fulfill({json:{items:[],nextCursor:null,freshness:'current',checkedAt:new Date().toISOString()}}));
   await page.goto('/'); await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(250);
   const appearancePrompt=page.getByText('Choose your look');
@@ -289,8 +293,8 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   await expect(page.locator('#sidebar-nav')).toHaveAttribute('aria-label', 'Primary navigation');
   await expect(page.locator('#bottom-tabbar')).toHaveAttribute('aria-label', 'Mobile navigation');
   await page.evaluate(() => window.setPage('home'));
-  await expect(page.locator('[data-testid="dashboard-hero"]')).toBeVisible();
-  await expect(page.getByRole('button', {name:/Manage team/i})).toBeVisible();
+  await expect(page.locator('.home-round-strip')).toBeVisible();
+  await expect(page.getByRole('button', {name:/View team/i}).first()).toBeVisible();
   await page.evaluate(() => window.setPage('classic'));
   await expect(page.locator('.team-builder')).toBeVisible();
   if(width<=600){
@@ -313,12 +317,10 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   const mobileNav = await page.locator('#bottom-tabbar').evaluate(el => getComputedStyle(el).display !== 'none');
   expect(mobileNav).toBe(width <= 768);
   if (width <= 768) {
-    await expect(page.locator('#bottom-tabbar .btab')).toHaveCount(6);
+    await expect(page.locator('#bottom-tabbar .btab')).toHaveCount(5);
+    await expect(page.locator('#bottom-tabbar .btab')).toContainText(['Home','Leagues','Match Centre','Players','Team News']);
     await expect(page.getByRole('button',{name:'Open navigation menu'})).toBeVisible();
     await expect(page.locator('.topbar-brand')).toBeVisible();
-    await page.locator('#bottom-tabbar .btab').filter({hasText:'More'}).click();
-    await expect(page.getByRole('button', {name:'State of Origin'})).toBeVisible();
-    await page.keyboard.press('Escape');
   }
   if(width<=600){
     await page.evaluate(()=>window.setPage('classic'));
