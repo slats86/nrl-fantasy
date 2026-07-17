@@ -51,7 +51,7 @@ test('Player Stats structure is responsive at every supported viewport',async({b
     }
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
     expect(overflow,`${width}px profile overflow`).toBeLessThanOrEqual(1);
-    const header=await page.locator('.player-profile-top').boundingBox();expect(header.x).toBeGreaterThanOrEqual(0);expect(header.x+header.width).toBeLessThanOrEqual(width);
+    await expect(page.locator('.player-profile-top')).toBeVisible();const header=await page.locator('.player-profile-top').boundingBox();expect(header).not.toBeNull();expect(header.x).toBeGreaterThanOrEqual(0);expect(header.x+header.width).toBeLessThanOrEqual(width);
     if(width<=768){
       await expect(page.locator('.player-recent')).toBeVisible();await expect(page.locator('.player-game-history-mobile')).toBeVisible();await expect(page.locator('.player-game-history-table-wrap')).toBeHidden();
       await expect(page.locator('#bottom-tabbar')).toBeVisible();await expect(page.getByRole('button',{name:'Back to players'})).toBeVisible();

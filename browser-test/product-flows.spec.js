@@ -259,6 +259,11 @@ test('Match Centre advances generically, refreshes live scores/components, pause
   let playersBody=sourcePlayers,roundsBody=sourceRounds,fail=false,playerRequests=0,roundRequests=0;
   await page.route('**/api/players',async route=>{playerRequests++;if(fail)return route.abort('timedout');await route.fulfill({json:playersBody});});
   await page.route('**/api/rounds',async route=>{roundRequests++;if(fail)return route.abort('timedout');await route.fulfill({json:roundsBody});});
+  await page.route('**/api/round-context',async route=>{
+    if(fail)return route.abort('timedout');
+    const active=round20.status==='active'?round20:round19,completed=active===round20?19:18;
+    await route.fulfill({json:{season:2026,currentRound:active.id,liveRound:active.id,lastCompletedRound:completed,state:'live',firstLockout:active.start,nextLockout:null,games:{complete:0,live:1,toPlay:0,total:1},updatedAt:new Date().toISOString(),cacheAgeMs:0,stale:false,fixtures:active.matches.map(match=>({id:match.id,status:'live',homeSquadId:match.home_squad_id,awaySquadId:match.away_squad_id,homeScore:match.home_score,awayScore:match.away_score})),appearances:[home,away]}});
+  });
   await page.route('**/api/player-stats/*',route=>route.fulfill({json:{stats:[{year:2026,match_type:'nrl',round_id:19,
     fantasy_points:61,tackles:17,metres_gained:123,tries:1,goals:2,time_on_ground:80}]}}));
   await page.goto('/');await finishOnboarding(page);await page.evaluate(()=>_refreshInFlight);

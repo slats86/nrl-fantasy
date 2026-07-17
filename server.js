@@ -9,6 +9,7 @@ const {createDatabase} = require('./db');
 const {validateFeed} = require('./live-data');
 const {freshness: teamNewsFreshness} = require('./lib/team-news');
 const {ids: homePlayerIds,competitionSummaries,teamNewsEvents,relevantNews,activeAlerts}=require('./lib/home-dashboard');
+const {currentRoundContext}=require('./lib/round-context');
 const {
   parseInitialPlayerId, hasSeasonStats, searchQueryVariants, searchPlayerSelection, findSearchPlayerPath,
   hasCompleteSeasonDetails, payloadMatchesPlayer, mergeHistoricalPlayerStats, buildOfficialPayload
@@ -577,12 +578,12 @@ function homeSnapshot(){
   try{return JSON.parse(fs.readFileSync(path.join(__dirname,'public','team-news.json'),'utf8'))}catch{return {availability:[],changes:[],lateMail:[],freshness:'source-unavailable',checkedAt:null,sourceAvailable:false}}
 }
 function homeRound(){
-  try{const rounds=JSON.parse(fs.readFileSync(path.join(__dirname,'public','rounds.json'),'utf8')),current=rounds.filter(item=>['active','scheduled'].includes(item.status)).sort((a,b)=>a.id-b.id)[0]||rounds.at(-1);return {round:Number(current.id)||0,status:current.status==='active'?'live':current.status==='complete'?'final':'scheduled',deadline:current.start||current.matches?.[0]?.date||null}}catch{return {round:0,status:'scheduled',deadline:null}}
+  try{const rounds=JSON.parse(fs.readFileSync(path.join(__dirname,'public','rounds.json'),'utf8')),context=currentRoundContext(rounds,{fetchedAt:fs.statSync(path.join(__dirname,'public','rounds.json')).mtimeMs});return {round:context.currentRound,status:context.state==='live'?'live':context.state==='final'?'final':'scheduled',deadline:context.nextLockout||context.firstLockout,context}}catch{return {round:0,status:'scheduled',deadline:null,context:null}}
 }
 function homeContext(user,scope='all'){
   const round=homeRound(),state=user.appState||{},originLeague=user.leagueCode&&leagues[user.leagueCode],originTeam=originLeague&&(originLeague.teams||[]).find(team=>team.userId===user.userId),classicState=state.classic||{};
   const classicTeam=state.classic?{id:'classic',name:classicState.name||state.user?.name||user.name,score:classicState.roundScore??classicState.score??null,rank:classicState.rank??null,rankMovement:classicState.rankMovement??null,players:classicState.players||null}:null;
-  const competitions=competitionSummaries({user,classicLeague:null,classicTeam,fantasyLeagues,round:round.round,liveStatus:round.status});if(originTeam)competitions.push({id:'origin:'+originLeague.code,teamId:originTeam.id,format:'origin',leagueName:originLeague.name||'State of Origin',teamName:originTeam.name,score:null,status:round.status,rank:null,rankMovement:null,players:null,matchup:null,updatedAt:originLeague.created||Date.now(),action:{label:'Open team',page:'origin'}});const order={live:1,scheduled:2,final:3};competitions.sort((a,b)=>(a.urgent?0:order[a.status]||3)-(b.urgent?0:order[b.status]||3)||a.format.localeCompare(b.format)||a.leagueName.localeCompare(b.leagueName)||a.id.localeCompare(b.id));
+  const competitions=competitionSummaries({user,classicLeague:null,classicTeam,fantasyLeagues,round:round.round,liveStatus:round.status});if(originTeam)competitions.push({id:'origin:'+originLeague.code,teamId:originTeam.id,format:'custom',competitionFormat:'origin',leagueName:originLeague.name||'State of Origin',teamName:originTeam.name,score:null,status:round.status,rank:null,rankMovement:null,players:null,matchup:null,updatedAt:originLeague.created||Date.now(),action:{label:'View team',page:'origin'}});const order={live:1,scheduled:2,final:3};competitions.sort((a,b)=>(a.urgent?0:order[a.status]||3)-(b.urgent?0:order[b.status]||3)||a.format.localeCompare(b.format)||a.leagueName.localeCompare(b.leagueName)||a.id.localeCompare(b.id));
   const teamIds=homePlayerIds(classicState);for(const league of Object.values(fantasyLeagues))if(fantasyMembership(league,user.userId)){const team=fantasyTeam(league,user.userId);if(team)homePlayerIds(team.state,teamIds)}
   if(originTeam)homePlayerIds(originTeam.picks,teamIds);const watchlist=new Set((state.watchlist||[]).map(Number)),clubs=new Set(state.teamNews?.followedClubs||[]),snapshot=homeSnapshot(),events=relevantNews(teamNewsEvents(snapshot),{teamPlayerIds:teamIds,watchlist,clubs,scope});
   const alerts=activeAlerts({competitions,events,teamPlayerIds:teamIds,deadline:round.deadline});
@@ -847,14 +848,17 @@ async function handleRequest(req, res) {
     return serveOfficialFeed(req, res, 'players').catch(error => requestError(req, res, error));
   if (url === '/api/rounds' && (req.method === 'GET' || req.method === 'HEAD'))
     return serveOfficialFeed(req, res, 'rounds').catch(error => requestError(req, res, error));
+  if(url==='/api/round-context'&&(req.method==='GET'||req.method==='HEAD')){
+    try{const feed=await officialFeed('rounds'),context=currentRoundContext(feed.value,{fetchedAt:feed.fetchedAt,stale:feed.stale});console.log(JSON.stringify({type:'round-context',requestId:req.id,round:context.currentRound,liveRound:context.liveRound,state:context.state,stale:context.stale,ageMs:context.cacheAgeMs}));return jsonReadRes(req,res,200,context,{'Cache-Control':'no-cache, max-age=0, must-revalidate','X-NRL-Data-Stale':context.stale?'true':'false'})}catch(error){return requestError(req,res,error)}
+  }
   if (url === '/api/team-news' && (req.method === 'GET' || req.method === 'HEAD')) return serveTeamNews(req,res);
   if(url==='/api/team-news/status'&&(req.method==='GET'||req.method==='HEAD')){
     const snapshot=homeSnapshot(),validationErrorCount=(snapshot.validationErrors||snapshot.failures||[]).length,body={freshness:teamNewsFreshness(snapshot.checkedAt,snapshot.sourceAvailable!==false),checkedAt:snapshot.checkedAt||null,lastSuccess:snapshot.lastSuccess||snapshot.generatedAt||snapshot.checkedAt||null,sourceVersion:snapshot.sourceVersion||snapshot.schemaVersion||null,sourceHash:snapshot.sourceHash||null,expectedClubCount:Number(snapshot.expectedClubCount)||16,receivedClubCount:Number(snapshot.receivedClubCount)||new Set((snapshot.teamLists||[]).flatMap(item=>[item.home,item.away]).filter(Boolean)).size,validationErrorCount,warning:validationErrorCount?'One or more authorised sources require operational attention':null};
     return jsonReadRes(req,res,200,body,{'Cache-Control':'public, max-age=60'});
   }
   if(url==='/api/home/summary'&&(req.method==='GET'||req.method==='HEAD')){
-    const user=authUser(req,{});if(!user)return jsonRes(req,res,401,{error:'Login required'});const model=homeContext(user);
-    return jsonReadRes(req,res,200,{round:model.round.round,deadline:model.round.deadline,freshness:teamNewsFreshness(model.snapshot.checkedAt,model.snapshot.sourceAvailable!==false),updatedAt:model.snapshot.checkedAt||null,actionCount:model.alerts.length,competitions:model.competitions},{'Cache-Control':'private, no-store'});
+    const user=authUser(req,{});if(!user)return jsonRes(req,res,401,{error:'Login required'});const feed=await officialFeed('rounds'),context=currentRoundContext(feed.value,{fetchedAt:feed.fetchedAt,stale:feed.stale}),model=homeContext(user),status=context.state==='live'?'live':context.state==='final'?'final':'scheduled',competitions=model.competitions.map(item=>({...item,status:item.status==='final'?'final':status,stale:item.stale||context.stale}));
+    return jsonReadRes(req,res,200,{round:context.currentRound,deadline:context.nextLockout||context.firstLockout,roundContext:context,freshness:context.stale?'stale':teamNewsFreshness(model.snapshot.checkedAt,model.snapshot.sourceAvailable!==false),updatedAt:context.updatedAt,actionCount:model.alerts.length,competitions},{'Cache-Control':'private, no-store'});
   }
   if(url==='/api/home/alerts'&&(req.method==='GET'||req.method==='HEAD')){
     const user=authUser(req,{});if(!user)return jsonRes(req,res,401,{error:'Login required'});const model=homeContext(user);

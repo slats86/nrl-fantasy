@@ -3,6 +3,25 @@
 Date: 15 July 2026
 Branches: `agent/round19-live-data-pipeline`, production-verification follow-ups, `agent/player-stats-approved-design`, `agent/team-news-hub`, `agent/players-hub-approved`, `agent/player-game-history`, and `agent/complete-players-hub`
 
+## Canonical live round, dashboard and navigation release (16 July 2026)
+
+The approved `design/LIVE_ROUND_DASHBOARD_NAVIGATION_IMPLEMENTATION.md` and `design/home-dashboard-navigation-approved.png` were imported unchanged on latest protected `main@354106c`. This coordinated release adds one server-authoritative, cache-aware round context consumed by Home and the central live refresh for Classic, every Custom and Draft league, Match Centre and supported Origin presentation. A verified live fixture takes precedence over stale saved rounds and bye metadata; corrections replace the shared context atomically without changing league-scoped lineups or scoring rules.
+
+Match Centre now groups verified live components into scoring, running, defence, discipline and kicking, displays each official rule and positive/negative contribution, and reconciles them against the official provisional total. A newer total retains real components and explicitly reports the remaining difference. Player Game History enumerates only seasons with verified rows, preserves partial fields and selected seasons, and continues to reject identity-mismatched records without substituting averages.
+
+Authenticated team mutations now expose `Saving...`, timestamped `Saved`, `Save failed - Retry` and stale-write conflict states while retaining existing compare-and-swap versions, league isolation and multi-device conflict handling. Passive polling and detailed-stat reads do not call save. Desktop navigation follows Home, Classic, Custom, Draft, Leagues, Match Centre, Players and Team News with Settings & Help separated at the bottom. Mobile permanently exposes Home, Leagues, Match Centre, Players and Team News plus the accessible Classic/Custom/Draft selector. State of Origin is presented as a Custom format without migrating, merging or rewriting its independent records.
+
+Home now follows the approved information hierarchy: canonical round/lockout strip, urgent needs-attention queue, four-row competition summary with consistent `View team` actions, official Team News and a concise fixture snapshot. Redundant shortcut/player-score content is absent. Existing Sydney-time ingestion and every colour theme remain intact.
+
+Pre-publication evidence:
+
+- `npm run check`: 55 applicable static/unit/API tests passed; the explicit PostgreSQL case is intentionally skipped only in the generic command.
+- Isolated PostgreSQL 18 `nrl_fantasy_test`: 1/1 migration, transaction, concurrency, legacy Origin preservation and restart-persistence integration gate passed.
+- Focused Playwright: 4/4 canonical-round/navigation/component/autosave scenarios and 6/6 Home scenarios passed.
+- Complete Playwright: 52 scenarios run against fresh isolated test storage across 320, 375, 390, 768, 1024, 1440 and 1920px, all themes, reduced motion and 200% zoom.
+
+No production data migration is introduced. Upstream official component availability and identity-safe historical coverage remain external-data limitations; missing or newer unmatched details are labelled unavailable or reconciliation pending. GitHub/Railway delivery and strict read-only production evidence are appended after protected deployment.
+
 ## Live My Team scoring delta (16 July 2026)
 
 The confirmed My Team inconsistency was an application defect: team cards always selected `current round - 1` and stored lineup history while Match Centre selected the verified in-memory live feed. A single canonical selector now distinguishes verified `LIVE` (including a genuine zero), `FINAL`, `YET TO PLAY`, `BYE`, `DNP` and retained `STALE` values. Match Centre, Classic, every Custom league, every completed Draft league and the supported Origin team view consume that selector. No scheduler, ingestion, membership, lineup, Draft, preference or production-data write path changed.

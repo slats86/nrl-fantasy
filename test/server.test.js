@@ -104,6 +104,11 @@ test('live feed routes support cache-safe HEAD requests', async () => {
   }
 });
 
+test('canonical round context is cache-safe and exposes one coherent decision',async()=>{
+  const response=await fetch(`http://127.0.0.1:${port}/api/round-context`);assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-cache, max-age=0, must-revalidate');const body=await response.json();assert.ok(Number(body.currentRound)>0);assert.ok(['pre_lockout','live','provisional_final','final'].includes(body.state));assert.equal(body.games.total,body.games.complete+body.games.live+body.games.toPlay);assert.ok(Array.isArray(body.fixtures));
+  const head=await fetch(`http://127.0.0.1:${port}/api/round-context`,{method:'HEAD'});assert.equal(head.status,200);assert.equal(await head.text(),'');
+});
+
 test('cacheable data assets are JavaScript and unknown assets are unavailable', async () => {
   const asset = await fetch(`http://127.0.0.1:${port}/assets/data-core.js`);
   assert.equal(asset.status, 200);
