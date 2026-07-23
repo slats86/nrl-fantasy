@@ -1,12 +1,12 @@
 {
   "schemaVersion": 2,
   "season": 2026,
-  "generatedAt": "2026-07-23T01:53:42.275Z",
-  "checkedAt": "2026-07-23T01:53:42.275Z",
-  "lastAttempt": "2026-07-23T01:53:42.275Z",
-  "lastSuccess": "2026-07-23T01:53:42.275Z",
+  "generatedAt": "2026-07-23T05:48:36.174Z",
+  "checkedAt": "2026-07-23T05:48:36.174Z",
+  "lastAttempt": "2026-07-23T05:48:36.174Z",
+  "lastSuccess": "2026-07-23T05:48:36.174Z",
   "sourceVersion": "nrl-21",
-  "sourceHash": "8336240606ad850a3e023685f4a37f0214ca6331fa82ff27844fa833f597790a",
+  "sourceHash": "428e7f68ddd3a42cdca95d1ace039a8f4d7998515c490c74c60d729e3eb8544d",
   "expectedClubCount": 16,
   "receivedClubCount": 16,
   "validationErrors": [],
@@ -43,7 +43,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -77,7 +77,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -103,7 +103,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -151,7 +151,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -185,7 +185,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -226,7 +226,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -252,7 +252,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -278,7 +278,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -312,7 +312,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -346,7 +346,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -394,7 +394,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -435,7 +435,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -469,7 +469,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -510,7 +510,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -544,7 +544,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -578,7 +578,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -612,7 +612,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -646,7 +646,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -680,7 +680,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -706,7 +706,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -732,7 +732,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -758,7 +758,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -792,7 +792,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -826,7 +826,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -867,7 +867,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -908,7 +908,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -934,7 +934,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -960,7 +960,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -986,7 +986,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1012,7 +1012,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1038,7 +1038,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1064,7 +1064,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1090,7 +1090,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1116,7 +1116,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -1157,7 +1157,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -1191,7 +1191,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1217,7 +1217,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1243,7 +1243,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1269,7 +1269,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1295,7 +1295,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1321,7 +1321,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1347,7 +1347,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -1395,7 +1395,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1421,7 +1421,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -1476,7 +1476,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1502,7 +1502,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -1557,7 +1557,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1583,7 +1583,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1609,7 +1609,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1635,7 +1635,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1661,7 +1661,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1687,7 +1687,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1713,7 +1713,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1739,7 +1739,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1765,7 +1765,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -1806,7 +1806,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -1840,7 +1840,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -1881,7 +1881,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1907,7 +1907,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1933,7 +1933,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1959,7 +1959,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -1985,7 +1985,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2011,7 +2011,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2037,7 +2037,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2063,7 +2063,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2089,7 +2089,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -2123,7 +2123,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2149,7 +2149,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2175,7 +2175,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2201,7 +2201,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2227,7 +2227,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -2263,19 +2263,19 @@
       "injury": "concussion",
       "status": "out",
       "firstReportedAt": "2026-07-22T22:49:10.000Z",
-      "returnLabel": "TBC",
-      "expectedReturnRound": null,
-      "expectedReturnRoundEnd": null,
+      "returnLabel": "Round 23-24",
+      "expectedReturnRound": 23,
+      "expectedReturnRoundEnd": 24,
       "returnConfirmed": false,
       "confidence": "high",
       "replacement": null,
       "identity": "matched",
-      "summary": "Lindsay Collins is unavailable for Roosters (concussion); return TBC.",
+      "summary": "Lindsay Collins is unavailable for Roosters (concussion); return Round 23-24.",
       "publisher": "NRL.com",
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -2290,6 +2290,13 @@
           "status": "out",
           "returnLabel": "Round 21",
           "sourceUpdatedAt": "2026-07-20T06:11:19.000Z",
+          "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/"
+        },
+        {
+          "injury": "concussion",
+          "status": "out",
+          "returnLabel": "TBC",
+          "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
           "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/"
         }
       ]
@@ -2316,7 +2323,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -2350,7 +2357,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2376,7 +2383,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2402,7 +2409,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2428,7 +2435,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -2469,7 +2476,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": [
         {
@@ -2503,7 +2510,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2529,7 +2536,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2555,7 +2562,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     },
@@ -2581,7 +2588,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-casualty-ward-how-your-club-is-shaping-heading-into-2026/",
       "publishedAt": "2026-07-22T22:49:10.000Z",
       "sourceUpdatedAt": "2026-07-22T22:49:10.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed",
       "history": []
     }
@@ -2596,9 +2603,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -3311,9 +3318,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -3323,6 +3330,371 @@
           "label": "Tuesday squad",
           "capturedAt": "2026-07-21T06:22:07.093Z",
           "sourceUpdatedAt": "2026-07-21T05:59:01.000Z",
+          "teams": {
+            "Knights": [
+              {
+                "playerId": 504870,
+                "playerName": "Kalyn Ponga",
+                "club": "Knights",
+                "position": "Fullback",
+                "number": 1,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100008071,
+                "playerName": "Dominic Young",
+                "club": "Knights",
+                "position": "Winger",
+                "number": 2,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100008414,
+                "playerName": "Fletcher Hunt",
+                "club": "Knights",
+                "position": "Centre",
+                "number": 3,
+                "identity": "matched"
+              },
+              {
+                "playerId": 506682,
+                "playerName": "Bradman Best",
+                "club": "Knights",
+                "position": "Centre",
+                "number": 4,
+                "identity": "matched"
+              },
+              {
+                "playerId": 504325,
+                "playerName": "Greg Marzhew",
+                "club": "Knights",
+                "position": "Winger",
+                "number": 5,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100006482,
+                "playerName": "Fletcher Sharpe",
+                "club": "Knights",
+                "position": "Five-Eighth",
+                "number": 6,
+                "identity": "matched"
+              },
+              {
+                "playerId": 505626,
+                "playerName": "Dylan Brown",
+                "club": "Knights",
+                "position": "Halfback",
+                "number": 7,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500622,
+                "playerName": "Tyson Frizell",
+                "club": "Knights",
+                "position": "Prop",
+                "number": 8,
+                "identity": "matched"
+              },
+              {
+                "playerId": 504597,
+                "playerName": "Phoenix Crossland",
+                "club": "Knights",
+                "position": "Hooker",
+                "number": 9,
+                "identity": "matched"
+              },
+              {
+                "playerId": 507915,
+                "playerName": "Trey Mooney",
+                "club": "Knights",
+                "position": "Prop",
+                "number": 10,
+                "identity": "matched"
+              },
+              {
+                "playerId": 505582,
+                "playerName": "Dylan Lucas",
+                "club": "Knights",
+                "position": "2nd Row",
+                "number": 11,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100013721,
+                "playerName": "Francis Manuleleua",
+                "club": "Knights",
+                "position": "2nd Row",
+                "number": 12,
+                "identity": "matched"
+              },
+              {
+                "playerId": 504298,
+                "playerName": "Mat Croker",
+                "club": "Knights",
+                "position": "Lock",
+                "number": 13,
+                "identity": "matched"
+              },
+              {
+                "playerId": 509579,
+                "playerName": "Sandon Smith",
+                "club": "Knights",
+                "position": "Interchange",
+                "number": 14,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100011256,
+                "playerName": "Cody Hopwood",
+                "club": "Knights",
+                "position": "Interchange",
+                "number": 15,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100003974,
+                "playerName": "Lachlan Crouch",
+                "club": "Knights",
+                "position": "Interchange",
+                "number": 16,
+                "identity": "matched"
+              },
+              {
+                "playerId": 509527,
+                "playerName": "Thomas Cant",
+                "club": "Knights",
+                "position": "Interchange",
+                "number": 17,
+                "identity": "matched"
+              },
+              {
+                "playerId": 506220,
+                "playerName": "Harrison Graham",
+                "club": "Knights",
+                "position": "Interchange",
+                "number": 18,
+                "identity": "matched"
+              },
+              {
+                "playerId": 504075,
+                "playerName": "Brodie Jones",
+                "club": "Knights",
+                "position": "Interchange",
+                "number": 19,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100006946,
+                "playerName": "Kyle McCarthy",
+                "club": "Knights",
+                "position": "Reserve",
+                "number": 20,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100014185,
+                "playerName": "Elijah Salesa-Leaumoana",
+                "club": "Knights",
+                "position": "Reserve",
+                "number": 21,
+                "identity": "matched"
+              },
+              {
+                "playerId": null,
+                "playerName": "Connor Votano",
+                "club": "Knights",
+                "position": "Reserve",
+                "number": 22,
+                "identity": "unresolved"
+              }
+            ],
+            "Roosters": [
+              {
+                "playerId": 500663,
+                "playerName": "James Tedesco",
+                "club": "Roosters",
+                "position": "Fullback",
+                "number": 1,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500002,
+                "playerName": "Daniel Tupou",
+                "club": "Roosters",
+                "position": "Winger",
+                "number": 2,
+                "identity": "matched"
+              },
+              {
+                "playerId": 509128,
+                "playerName": "Billy Smith",
+                "club": "Roosters",
+                "position": "Centre",
+                "number": 3,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100008243,
+                "playerName": "Robert Toia",
+                "club": "Roosters",
+                "position": "Centre",
+                "number": 4,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100018452,
+                "playerName": "Mark Nawaqanitawase",
+                "club": "Roosters",
+                "position": "Winger",
+                "number": 5,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500024,
+                "playerName": "Daly Cherry-Evans",
+                "club": "Roosters",
+                "position": "Five-Eighth",
+                "number": 6,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100004843,
+                "playerName": "Sam Walker",
+                "club": "Roosters",
+                "position": "Halfback",
+                "number": 7,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100006390,
+                "playerName": "Naufahu Whyte",
+                "club": "Roosters",
+                "position": "Prop",
+                "number": 8,
+                "identity": "matched"
+              },
+              {
+                "playerId": 503944,
+                "playerName": "Reece Robson",
+                "club": "Roosters",
+                "position": "Hooker",
+                "number": 9,
+                "identity": "matched"
+              },
+              {
+                "playerId": 505560,
+                "playerName": "Spencer Leniu",
+                "club": "Roosters",
+                "position": "Prop",
+                "number": 10,
+                "identity": "matched"
+              },
+              {
+                "playerId": 503639,
+                "playerName": "Nat Butcher",
+                "club": "Roosters",
+                "position": "2nd Row",
+                "number": 11,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100004373,
+                "playerName": "Siua Wong",
+                "club": "Roosters",
+                "position": "2nd Row",
+                "number": 12,
+                "identity": "matched"
+              },
+              {
+                "playerId": 503920,
+                "playerName": "Victor Radley",
+                "club": "Roosters",
+                "position": "Lock",
+                "number": 13,
+                "identity": "matched"
+              },
+              {
+                "playerId": 509599,
+                "playerName": "Hugo Savala",
+                "club": "Roosters",
+                "position": "Interchange",
+                "number": 14,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100008234,
+                "playerName": "Salesi Foketi",
+                "club": "Roosters",
+                "position": "Interchange",
+                "number": 15,
+                "identity": "matched"
+              },
+              {
+                "playerId": 504678,
+                "playerName": "Egan Butcher",
+                "club": "Roosters",
+                "position": "Interchange",
+                "number": 16,
+                "identity": "matched"
+              },
+              {
+                "playerId": 503327,
+                "playerName": "Connor Watson",
+                "club": "Roosters",
+                "position": "Interchange",
+                "number": 17,
+                "identity": "matched"
+              },
+              {
+                "playerId": 509404,
+                "playerName": "Cody Ramsey",
+                "club": "Roosters",
+                "position": "Interchange",
+                "number": 18,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100000336,
+                "playerName": "Taylor Losalu",
+                "club": "Roosters",
+                "position": "Interchange",
+                "number": 19,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100007527,
+                "playerName": "Benaiah Ioelu",
+                "club": "Roosters",
+                "position": "Reserve",
+                "number": 20,
+                "identity": "matched"
+              },
+              {
+                "playerId": 505642,
+                "playerName": "Tommy Talau",
+                "club": "Roosters",
+                "position": "Reserve",
+                "number": 21,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100011333,
+                "playerName": "Toby Rodwell",
+                "club": "Roosters",
+                "position": "Reserve",
+                "number": 22,
+                "identity": "matched"
+              }
+            ]
+          }
+        },
+        {
+          "id": "snapshot-weh1fz",
+          "version": "24-hour",
+          "label": "24-hour squad",
+          "capturedAt": "2026-07-23T05:48:36.174Z",
+          "sourceUpdatedAt": "2026-07-21T12:52:09.000Z",
           "teams": {
             "Knights": [
               {
@@ -3693,9 +4065,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -3705,6 +4077,371 @@
           "label": "Tuesday squad",
           "capturedAt": "2026-07-21T06:22:07.093Z",
           "sourceUpdatedAt": "2026-07-21T05:59:01.000Z",
+          "teams": {
+            "Rabbitohs": [
+              {
+                "playerId": 500448,
+                "playerName": "Matthew Dufty",
+                "club": "Rabbitohs",
+                "position": "Fullback",
+                "number": 1,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500108,
+                "playerName": "Alex Johnston",
+                "club": "Rabbitohs",
+                "position": "Winger",
+                "number": 2,
+                "identity": "matched"
+              },
+              {
+                "playerId": 510485,
+                "playerName": "Latrell Siegwalt",
+                "club": "Rabbitohs",
+                "position": "Centre",
+                "number": 3,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500339,
+                "playerName": "Jack Wighton",
+                "club": "Rabbitohs",
+                "position": "Centre",
+                "number": 4,
+                "identity": "matched"
+              },
+              {
+                "playerId": 504294,
+                "playerName": "Campbell Graham",
+                "club": "Rabbitohs",
+                "position": "Winger",
+                "number": 5,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500611,
+                "playerName": "Cody Walker",
+                "club": "Rabbitohs",
+                "position": "Five-Eighth",
+                "number": 6,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100006239,
+                "playerName": "Ashton Ward",
+                "club": "Rabbitohs",
+                "position": "Halfback",
+                "number": 7,
+                "identity": "matched"
+              },
+              {
+                "playerId": 503450,
+                "playerName": "Tevita Tatola",
+                "club": "Rabbitohs",
+                "position": "Prop",
+                "number": 8,
+                "identity": "matched"
+              },
+              {
+                "playerId": 503419,
+                "playerName": "Brandon Smith",
+                "club": "Rabbitohs",
+                "position": "Hooker",
+                "number": 9,
+                "identity": "matched"
+              },
+              {
+                "playerId": 504174,
+                "playerName": "Keaon Koloamatangi",
+                "club": "Rabbitohs",
+                "position": "Prop",
+                "number": 10,
+                "identity": "matched"
+              },
+              {
+                "playerId": 506482,
+                "playerName": "David Fifita",
+                "club": "Rabbitohs",
+                "position": "2nd Row",
+                "number": 11,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500441,
+                "playerName": "Euan Aitken",
+                "club": "Rabbitohs",
+                "position": "2nd Row",
+                "number": 12,
+                "identity": "matched"
+              },
+              {
+                "playerId": 506446,
+                "playerName": "Lachlan Hubner",
+                "club": "Rabbitohs",
+                "position": "Lock",
+                "number": 13,
+                "identity": "matched"
+              },
+              {
+                "playerId": 507928,
+                "playerName": "Jayden Sullivan",
+                "club": "Rabbitohs",
+                "position": "Interchange",
+                "number": 14,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100009148,
+                "playerName": "Jye Gray",
+                "club": "Rabbitohs",
+                "position": "Interchange",
+                "number": 15,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100009139,
+                "playerName": "Liam Le Blanc",
+                "club": "Rabbitohs",
+                "position": "Interchange",
+                "number": 16,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100006585,
+                "playerName": "Jamie Humphreys",
+                "club": "Rabbitohs",
+                "position": "Interchange",
+                "number": 17,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500168,
+                "playerName": "Bronson Garlick",
+                "club": "Rabbitohs",
+                "position": "Interchange",
+                "number": 18,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100006107,
+                "playerName": "John Radel",
+                "club": "Rabbitohs",
+                "position": "Interchange",
+                "number": 19,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100006510,
+                "playerName": "Thomas Fletcher",
+                "club": "Rabbitohs",
+                "position": "Reserve",
+                "number": 20,
+                "identity": "matched"
+              },
+              {
+                "playerId": 509842,
+                "playerName": "Edward Kosi",
+                "club": "Rabbitohs",
+                "position": "Reserve",
+                "number": 21,
+                "identity": "matched"
+              },
+              {
+                "playerId": 507833,
+                "playerName": "Peter Mamouzelos",
+                "club": "Rabbitohs",
+                "position": "Reserve",
+                "number": 22,
+                "identity": "matched"
+              }
+            ],
+            "Storm": [
+              {
+                "playerId": 100006297,
+                "playerName": "Sualauvi Faalogo",
+                "club": "Storm",
+                "position": "Fullback",
+                "number": 1,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100011324,
+                "playerName": "Siulagi Tuimalatu-Brown",
+                "club": "Storm",
+                "position": "Winger",
+                "number": 2,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100004865,
+                "playerName": "Jack Howarth",
+                "club": "Storm",
+                "position": "Centre",
+                "number": 3,
+                "identity": "matched"
+              },
+              {
+                "playerId": 505537,
+                "playerName": "Nick Meaney",
+                "club": "Storm",
+                "position": "Centre",
+                "number": 4,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100018554,
+                "playerName": "Moses Leo",
+                "club": "Storm",
+                "position": "Winger",
+                "number": 5,
+                "identity": "matched"
+              },
+              {
+                "playerId": 507680,
+                "playerName": "Tyran Wishart",
+                "club": "Storm",
+                "position": "Five-Eighth",
+                "number": 6,
+                "identity": "matched"
+              },
+              {
+                "playerId": 500826,
+                "playerName": "Jahrome Hughes",
+                "club": "Storm",
+                "position": "Halfback",
+                "number": 7,
+                "identity": "matched"
+              },
+              {
+                "playerId": 505628,
+                "playerName": "Stefano Utoikamanu",
+                "club": "Storm",
+                "position": "Prop",
+                "number": 8,
+                "identity": "matched"
+              },
+              {
+                "playerId": 505904,
+                "playerName": "Harry Grant",
+                "club": "Storm",
+                "position": "Hooker",
+                "number": 9,
+                "identity": "matched"
+              },
+              {
+                "playerId": 501247,
+                "playerName": "Josh King",
+                "club": "Storm",
+                "position": "Prop",
+                "number": 10,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100013815,
+                "playerName": "Cooper Clarke",
+                "club": "Storm",
+                "position": "2nd Row",
+                "number": 11,
+                "identity": "matched"
+              },
+              {
+                "playerId": 510366,
+                "playerName": "Oryn Keeley",
+                "club": "Storm",
+                "position": "2nd Row",
+                "number": 12,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100001560,
+                "playerName": "Trent Loiero",
+                "club": "Storm",
+                "position": "Lock",
+                "number": 13,
+                "identity": "matched"
+              },
+              {
+                "playerId": 508341,
+                "playerName": "Trent Toelau",
+                "club": "Storm",
+                "position": "Interchange",
+                "number": 14,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100007566,
+                "playerName": "Alec MacDonald",
+                "club": "Storm",
+                "position": "Interchange",
+                "number": 15,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100009124,
+                "playerName": "Angus Hinchey",
+                "club": "Storm",
+                "position": "Interchange",
+                "number": 16,
+                "identity": "matched"
+              },
+              {
+                "playerId": 503336,
+                "playerName": "Jack Hetherington",
+                "club": "Storm",
+                "position": "Interchange",
+                "number": 17,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100008846,
+                "playerName": "Stanley Huen",
+                "club": "Storm",
+                "position": "Interchange",
+                "number": 18,
+                "identity": "matched"
+              },
+              {
+                "playerId": 509560,
+                "playerName": "Manaia Waitere",
+                "club": "Storm",
+                "position": "Interchange",
+                "number": 19,
+                "identity": "matched"
+              },
+              {
+                "playerId": 509444,
+                "playerName": "Davvy Moale",
+                "club": "Storm",
+                "position": "Reserve",
+                "number": 20,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100013692,
+                "playerName": "Hugo Peel",
+                "club": "Storm",
+                "position": "Reserve",
+                "number": 21,
+                "identity": "matched"
+              },
+              {
+                "playerId": 100012106,
+                "playerName": "Gabriel Satrick",
+                "club": "Storm",
+                "position": "Reserve",
+                "number": 22,
+                "identity": "matched"
+              }
+            ]
+          }
+        },
+        {
+          "id": "snapshot-17m725z",
+          "version": "24-hour",
+          "label": "24-hour squad",
+          "capturedAt": "2026-07-23T05:48:36.174Z",
+          "sourceUpdatedAt": "2026-07-21T12:52:09.000Z",
           "teams": {
             "Rabbitohs": [
               {
@@ -4075,9 +4812,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -4457,9 +5194,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -4839,9 +5576,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -5221,9 +5958,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -5603,9 +6340,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -5987,7 +6724,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -6654,7 +7391,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -7718,7 +8455,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -8782,7 +9519,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -9481,7 +10218,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -10180,7 +10917,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -11244,7 +11981,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -11943,7 +12680,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       },
       "snapshots": [
@@ -12670,9 +13407,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -12789,9 +13526,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -12861,7 +13598,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -12950,7 +13687,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13023,7 +13760,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13115,7 +13852,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13226,7 +13963,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13356,7 +14093,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13486,7 +14223,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13616,7 +14353,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13689,7 +14426,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13781,7 +14518,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -13930,7 +14667,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14079,7 +14816,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14152,7 +14889,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14225,7 +14962,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14336,7 +15073,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14428,12 +15165,52 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     }
   ],
   "lateMail": [
+    {
+      "id": "publication-r21-13gt3gm-24-hour",
+      "matchId": "r21-13gt3gm",
+      "round": 21,
+      "club": "Knights v Roosters",
+      "capturedAt": "2026-07-23T05:48:36.174Z",
+      "version": "24-hour",
+      "accuracy": "confirmed",
+      "relationship": null,
+      "sequence": [],
+      "summary": "24-hour squad published for Knights v Roosters.",
+      "source": {
+        "publisher": "NRL.com",
+        "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
+        "accuracy": "confirmed"
+      }
+    },
+    {
+      "id": "publication-r21-76pm5q-24-hour",
+      "matchId": "r21-76pm5q",
+      "round": 21,
+      "club": "Rabbitohs v Storm",
+      "capturedAt": "2026-07-23T05:48:36.174Z",
+      "version": "24-hour",
+      "accuracy": "confirmed",
+      "relationship": null,
+      "sequence": [],
+      "summary": "24-hour squad published for Rabbitohs v Storm.",
+      "source": {
+        "publisher": "NRL.com",
+        "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
+        "accuracy": "confirmed"
+      }
+    },
     {
       "id": "change-1lhzuxh",
       "matchId": "r21-44e0wr",
@@ -14471,9 +15248,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14590,9 +15367,9 @@
       "source": {
         "publisher": "NRL.com",
         "sourceUrl": "https://www.nrl.com/news/2026/07/22/nrl-late-mail-round-21/",
-        "publishedAt": "2026-07-22T22:46:21.000Z",
-        "sourceUpdatedAt": "2026-07-22T22:46:21.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "publishedAt": "2026-07-23T01:54:20.000Z",
+        "sourceUpdatedAt": "2026-07-23T01:54:20.000Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14662,7 +15439,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14751,7 +15528,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14824,7 +15601,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -14916,7 +15693,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15027,7 +15804,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15157,7 +15934,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15287,7 +16064,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15417,7 +16194,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15490,7 +16267,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15582,7 +16359,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15731,7 +16508,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15880,7 +16657,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -15953,7 +16730,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -16026,7 +16803,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -16137,7 +16914,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -16229,7 +17006,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -16249,7 +17026,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -16269,7 +17046,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     },
@@ -16289,7 +17066,7 @@
         "sourceUrl": "https://www.nrl.com/news/2026/07/14/nrl-team-lists-round-20/",
         "publishedAt": "2026-07-14T05:59:01.000Z",
         "sourceUpdatedAt": "2026-07-14T05:59:01.000Z",
-        "checkedAt": "2026-07-23T01:53:42.275Z",
+        "checkedAt": "2026-07-23T05:48:36.174Z",
         "accuracy": "confirmed"
       }
     }
@@ -16316,7 +17093,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-judiciary-report-2026/",
       "publishedAt": "2026-07-21T12:47:25.000Z",
       "sourceUpdatedAt": "2026-07-21T12:47:25.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed"
     },
     {
@@ -16340,7 +17117,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-judiciary-report-2026/",
       "publishedAt": "2026-07-21T12:47:25.000Z",
       "sourceUpdatedAt": "2026-07-21T12:47:25.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed"
     },
     {
@@ -16364,7 +17141,7 @@
       "sourceUrl": "https://www.nrl.com/news/2026/01/01/nrl-judiciary-report-2026/",
       "publishedAt": "2026-07-21T12:47:25.000Z",
       "sourceUpdatedAt": "2026-07-21T12:47:25.000Z",
-      "checkedAt": "2026-07-23T01:53:42.275Z",
+      "checkedAt": "2026-07-23T05:48:36.174Z",
       "accuracy": "confirmed"
     }
   ],
