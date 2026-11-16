@@ -176,14 +176,33 @@ test('navigation, internal links, dialogs and failed requests remain usable', as
   const liveFixture=await page.evaluate(()=>({feedId:FEEDIDS[0],round:S.round,squadId:SQUAD_FEED_IDS[PLAYERS[0].sq]}));
   const feedPlayers=await (await page.request.get('/api/players')).json();
   const feedRounds=await (await page.request.get('/api/rounds')).json();
+  let roundContext={};
+  try{roundContext=await (await page.request.get('/api/round-context')).json()}catch(error){}
   const livePlayer=feedPlayers.find(player=>player.id===liveFixture.feedId);
-  livePlayer.stats=livePlayer.stats||{};livePlayer.stats.scores=livePlayer.stats.scores||{};livePlayer.stats.scores[liveFixture.round]=57;
-  const liveRound=feedRounds.find(round=>round.id===liveFixture.round);
-  feedRounds.forEach(round=>{if(round.status==='active')round.status='complete';});
+  expect(livePlayer,`feed player ${liveFixture.feedId}`).toBeTruthy();
+  const roundById=id=>feedRounds.find(round=>Number(round.id)===Number(id));
+  // After a finished season the app keeps S.round at MAXR+1, which is not in the
+  // feed. autoRefresh follows round-context when that round exists, otherwise the
+  // latest complete round. Activate one of those, and inject a round only if the
+  // feed has neither, so this works mid-season and once the season is over.
+  let liveRound=roundById(roundContext.currentRound)||roundById(liveFixture.round);
+  if(!liveRound)liveRound=[...feedRounds].reverse().find(round=>String(round.status||'').toLowerCase()==='complete')||feedRounds[feedRounds.length-1];
+  if(!liveRound){
+    liveRound={id:Number(liveFixture.round)||1,status:'scheduled',matches:[]};
+    feedRounds.push(liveRound);
+  }
+  livePlayer.stats=livePlayer.stats||{};livePlayer.stats.scores=livePlayer.stats.scores||{};livePlayer.stats.scores[liveRound.id]=57;
+  feedRounds.forEach(round=>{if(String(round.status).toLowerCase()==='active')round.status='complete'});
   liveRound.status='active';
   if(!liveRound.matches||!liveRound.matches.length)liveRound.matches=[{home_squad_id:liveFixture.squadId,away_squad_id:999999,start_time:new Date(Date.now()-60000).toISOString()}];
   await page.route('**/api/players',route=>route.fulfill({json:feedPlayers}));
   await page.route('**/api/rounds',route=>route.fulfill({json:feedRounds}));
+  await page.route('**/api/round-context',route=>route.fulfill({json:{
+    season:2026,currentRound:liveRound.id,liveRound:liveRound.id,lastCompletedRound:Math.max(0,Number(liveRound.id)-1),
+    state:'live',firstLockout:new Date(Date.now()-60000).toISOString(),nextLockout:null,
+    games:{complete:0,live:Math.max(1,(liveRound.matches||[]).length),toPlay:0,total:Math.max(1,(liveRound.matches||[]).length)},
+    updatedAt:new Date().toISOString(),cacheAgeMs:0,stale:false,fixtures:[],appearances:[]
+  }}));
   await page.evaluate(()=>autoRefresh());
   expect(await page.evaluate(()=>({status:LIVE.status,score:LIVE.scores[0]}))).toEqual({status:'live',score:57});
   await expect(page.locator('#hdr-status')).toContainText('LIVE');

@@ -1,5 +1,6 @@
 'use strict';
 const {test,expect}=require('@playwright/test');
+const {pinVisualSeason}=require('./visual-fixture');
 
 async function openHub(browser,width){
   const context=await browser.newContext({baseURL:'http://127.0.0.1:32188',viewport:{width,height:900}});
@@ -101,6 +102,7 @@ test('hub controls remain usable across every colour theme',async({browser})=>{
 
 test('approved mobile filter sheet and comparison tray visuals',async({browser})=>{
   const {context,page,errors}=await openHub(browser,375),runner=process.env.CI?'ci':'local';
+  await pinVisualSeason(page);await page.evaluate(()=>renderPlayers());
   await page.getByRole('button',{name:'Filters'}).click();await page.locator('#players-sheet-position').selectOption('4');await page.locator('#players-sheet-price').selectOption('400to600');
   await expect(page.getByRole('dialog',{name:'Filter players'})).toBeVisible();await expect(page).toHaveScreenshot(`players-hub-filters-approved-375-${runner}.png`,{animations:'disabled',caret:'hide',maxDiffPixelRatio:.012});
   await page.getByRole('button',{name:/Show .* players/}).click();await page.getByRole('button',{name:/Clear 2 filters/}).click();
@@ -111,6 +113,7 @@ test('approved mobile filter sheet and comparison tray visuals',async({browser})
 
 for(const width of [375,1440])test(`approved Players Hub visual at ${width}px`,async({browser})=>{
   const {context,page,errors}=await openHub(browser,width);
+  await pinVisualSeason(page);
   await page.evaluate(()=>{S.settings.onboardingVersion=1;S.settings.themeChosen=true;closeModal();renderPlayers()});
   await expect(page.locator('#modal-bg')).not.toHaveClass(/on/);
   await expect(page.locator(width<=768?'.players-mobile-card':'.players-table tbody tr').first()).toBeVisible();

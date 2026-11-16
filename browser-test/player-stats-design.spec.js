@@ -1,5 +1,6 @@
 'use strict';
 const {test,expect}=require('@playwright/test');
+const {pinVisualSeason}=require('./visual-fixture');
 
 const baseURL='http://127.0.0.1:32188';
 let authState;
@@ -130,6 +131,7 @@ test('mobile history preserves season through round navigation and exposes equiv
 for(const width of [375,1440])test(`approved Player Stats visual at ${width}px`,async({browser})=>{
   const {context,page,errors}=await openAccount(browser,width,`visual-${width}`);
   await page.route('**/api/player-stats/*',route=>route.fulfill({json:{stats:[]}}));
+  await pinVisualSeason(page);
   await page.evaluate(async()=>{const p=PLAYERS.find(item=>item.name==='Jayden Campbell')||PLAYERS[0];setPage('players');await showPlayer(p.id)});
   await expect(page.locator('.player-profile')).toBeVisible();
   await expect(page.getByRole('heading',{name:'Game history'})).toBeVisible();
