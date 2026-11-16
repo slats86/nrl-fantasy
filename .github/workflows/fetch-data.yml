@@ -55,20 +55,51 @@ jobs:
         run: |
           git config user.name "nrl-data-bot"
           git config user.email "bot@nrl-fantasy"
+          if git ls-remote --exit-code --heads origin bot/nrl-data-refresh >/dev/null 2>&1; then
+            git fetch --no-tags origin +refs/heads/bot/nrl-data-refresh:refs/remotes/origin/bot/nrl-data-refresh
+          else
+            echo "No refresh branch exists on origin."
+          fi
+          plan="$(mktemp)"
+          node scripts/refresh-publish-plan.js > "$plan"
+          cat "$plan"
+          read_field() {
+            node -e 'const fs=require("fs"); const plan=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); const value=plan[process.argv[2]]; process.stdout.write(value==null?"":String(value));' "$plan" "$1"
+          }
+          publish="$(read_field publish)"
+          obsolete="$(read_field obsolete)"
+          round="$(read_field round)"
+          status="$(read_field status)"
+          echo "$(read_field reason)"
+          if [ "$publish" != "true" ]; then
+            {
+              echo "changed=false"
+              echo "obsolete=$obsolete"
+              echo "round=$round"
+              echo "status=$status"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           git switch -C bot/nrl-data-refresh origin/main
           git add public/players.json public/rounds.json public/team-news.json index.html
           if git diff --staged --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Official data is already current; no publish is needed."
+            {
+              echo "changed=false"
+              echo "obsolete=true"
+              echo "round=$round"
+              echo "status=$status"
+            } >> "$GITHUB_OUTPUT"
+            echo "Staged round data matches main; no publish is needed."
             exit 0
           fi
-          round="$(node -e "const r=require('./public/rounds.json');const x=r.filter(v=>['active','complete'].includes(v.status)).sort((a,b)=>b.id-a.id)[0];console.log(x.id)")"
-          status="$(node -e "const r=require('./public/rounds.json');const x=r.filter(v=>['active','complete'].includes(v.status)).sort((a,b)=>b.id-a.id)[0];console.log(x.status)")"
           git commit -m "data: refresh NRL Fantasy Round ${round} (${status})"
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-          echo "round=$round" >> "$GITHUB_OUTPUT"
-          echo "status=$status" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          {
+            echo "changed=true"
+            echo "obsolete=false"
+            echo "round=$round"
+            echo "status=$status"
+            echo "sha=$(git rev-parse HEAD)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Push refresh branch without stale lease races
         if: steps.prepare.outputs.changed == 'true'
@@ -83,7 +114,7 @@ jobs:
           fi
 
       - name: Close an obsolete no-change refresh pull request
-        if: steps.prepare.outputs.changed == 'false'
+        if: steps.prepare.outputs.obsolete == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

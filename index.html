@@ -6016,6 +6016,7 @@ async function createFantasyLeagueRecord(format,name,teamName,state,rules={}){
 }
 async function loadFantasyLeagues(){
   if(!(S.sooAuth&&S.sooAuth.authenticated)){ensureMultiLeagueState();return}
+  const epochAtStart=window._appStateEpoch||0;
   try{
     let listing=await fantasyApi('/api/fantasy-leagues');S.fantasyLeagueLimit=Number(listing.limit)||20;
     const legacyEntries=[...(S.customLeagues||[]),...(S.draftLeagues||[])].filter(entry=>entry.id&&entry.id.startsWith('LOCAL-'));
@@ -6023,8 +6024,19 @@ async function loadFantasyLeagues(){
       for(const entry of legacyEntries){const state=entry.state||{},format=entry.format;await fantasyApi('/api/fantasy-leagues',{method:'POST',body:JSON.stringify({format,name:entry.name,teamName:state.team&&state.team.name||S.user&&S.user.name||'My Team',maxMembers:entry.maxMembers||state.league&&state.league.size||20,rules:format==='custom'?(state.settings||{}):{},teamState:state,draftState:format==='draft'?state:null,requestId:`legacy.${format}.${entry.id}`.slice(0,80)})})}
       listing=await fantasyApi('/api/fantasy-leagues');
     }
-    const details=await Promise.all(listing.leagues.map(item=>fantasyApi('/api/fantasy-leagues/'+encodeURIComponent(item.id)).then(data=>leagueEntryFromApi(data.league))));
+    let details=await Promise.all(listing.leagues.map(item=>fantasyApi('/api/fantasy-leagues/'+encodeURIComponent(item.id)).then(data=>leagueEntryFromApi(data.league))));
     const previous={custom:S.activeCustomLeagueId,draft:S.activeDraftLeagueId};
+    /* A squad edit during this request must survive the directory response. */
+    if((window._appStateEpoch||0)!==epochAtStart){
+      details=preserveLeagueEdits(details);
+      for(const format of ['custom','draft']){
+        const id=format==='custom'?previous.custom:previous.draft;
+        if(!id||!String(id).startsWith('LOCAL-'))continue;
+        const alias=format==='custom'?S.customLeague:S.draft;
+        const match=details.find(detail=>detail.format===format&&detail.state===alias);
+        if(match)previous[format]=match.id;
+      }
+    }
     S.customLeagues=details.filter(entry=>entry.format==='custom');S.draftLeagues=details.filter(entry=>entry.format==='draft');
     bindActiveLeague('custom',previous.custom);bindActiveLeague('draft',previous.draft);save();
   }catch(error){console.warn('League sync unavailable',error.message);if(error.status!==401)showCloudSaveError()}
@@ -6075,6 +6087,19 @@ let _cloudSaveTimer=null;
 let _cloudVersion=0;
 let _cloudSaveChain=Promise.resolve();
 let _cloudConflictShown=false;
+let _cloudSyncedPayload=null;
+const CLOUD_KEYS=['classic','customLeague','customLeagues','activeCustomLeagueId','league','draft','draftLeagues','activeDraftLeagueId','settings','watchlist','teamNewsPrefs','corrections','origin','priceHistory','round','season'];
+function canonicalCloudPayload(source){
+  return Object.fromEntries(CLOUD_KEYS.filter(key=>source&&source[key]!==undefined).map(key=>[key,source[key]]));
+}
+function cloudEditIdentity(source){
+  const state=source||{};
+  return JSON.stringify({
+    classic:state.classic&&state.classic.squad||[],
+    custom:state.customLeague&&state.customLeague.team&&state.customLeague.team.squad||[],
+    watchlist:state.watchlist||[]
+  });
+}
 function showCloudSaveError(){
   let el=document.getElementById('cloud-sync-error');
   if(!el){
@@ -6088,8 +6113,7 @@ function showCloudSaveError(){
 function clearCloudSaveError(){const el=document.getElementById('cloud-sync-error');if(el)el.style.display='none';}
 function cloudPayload(){
   syncActiveLeagueEntry('custom');syncActiveLeagueEntry('draft');
-  const keys=['classic','customLeague','customLeagues','activeCustomLeagueId','league','draft','draftLeagues','activeDraftLeagueId','settings','watchlist','teamNewsPrefs','corrections','origin','priceHistory','round','season'];
-  return Object.fromEntries(keys.filter(k=>S[k]!==undefined).map(k=>[k,S[k]]));
+  return canonicalCloudPayload(S);
 }
 function hasLocalGameData(){return !!(S.classic&&S.classic.squad&&S.classic.squad.length||S.customLeague||S.customLeagues&&S.customLeagues.length||S.league||S.draft||S.draftLeagues&&S.draftLeagues.length);}
 window.queueCloudSave=function(immediate=false){
@@ -6100,10 +6124,16 @@ window.queueCloudSave=function(immediate=false){
     const state=cloudPayload();
     _cloudSaveChain=_cloudSaveChain.then(async()=>{
       try{
-        const r=await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({state,baseVersion:_cloudVersion})});
-        const d=await r.json().catch(()=>({}));
-        if(r.status===409){
+        let sent=state,response=await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({state:sent,baseVersion:_cloudVersion})});
+        let d=await response.json().catch(()=>({}));
+        if(response.status===409&&_cloudSyncedPayload&&cloudEditIdentity(d.state)===cloudEditIdentity(JSON.parse(_cloudSyncedPayload))){
+          _cloudVersion=Number(d.version)||_cloudVersion;sent=cloudPayload();
+          response=await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({state:sent,baseVersion:_cloudVersion})});
+          d=await response.json().catch(()=>({}));
+        }
+        if(response.status===409){
           _cloudVersion=Number(d.version)||_cloudVersion;window._cloudReady=false;setTeamSaveStatus('conflict','Save conflict - Reload');
           if(!_cloudConflictShown){
             _cloudConflictShown=true;
@@ -6112,8 +6142,8 @@ window.queueCloudSave=function(immediate=false){
           }
           return;
         }
-        if(!r.ok)throw new Error('Cloud save returned '+r.status);
-        _cloudVersion=Number(d.version)||_cloudVersion;_cloudConflictShown=false;clearCloudSaveError();setTeamSaveStatus('saved','Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+        if(!response.ok)throw new Error('Cloud save returned '+response.status);
+        _cloudVersion=Number(d.version)||_cloudVersion;_cloudSyncedPayload=JSON.stringify(sent);_cloudConflictShown=false;clearCloudSaveError();setTeamSaveStatus('saved','Saved '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
       }catch(e){console.warn('Cloud save unavailable',e.message||e);setTeamSaveStatus('failed','Save failed - Retry');showCloudSaveError();}
     });
   },immediate?0:900);
@@ -6128,6 +6158,7 @@ async function syncCloudState(){
       const auth=S.sooAuth,user=S.user,ui=S.ui,dataPatch=S.dataPatch;
       Object.assign(S,d.state);S.sooAuth=auth;S.user=user;S.ui=ui||S.ui;S.dataPatch=dataPatch||S.dataPatch;ensureMultiLeagueState();
       applyTheme((S.settings&&S.settings.theme)||'lime',false);applyLayout();
+      _cloudSyncedPayload=JSON.stringify(cloudPayload());
       localStorage.setItem(STORE_KEY,JSON.stringify(S));
     }else if(hasLocalGameData()){
       const created=await fetch('/api/app-state',{method:'PUT',headers:{'Content-Type':'application/json'},
