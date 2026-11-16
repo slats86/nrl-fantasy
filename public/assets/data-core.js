@@ -192,7 +192,20 @@ function ensureMultiLeagueState(){
   bindActiveLeague('custom',S.activeCustomLeagueId);
   bindActiveLeague('draft',S.activeDraftLeagueId);
 }
+function preserveLeagueEdits(details){
+  return details.map(detail=>{
+    const pool=detail.format==='custom'?(S.customLeagues||[]):(S.draftLeagues||[]);
+    const named=pool.find(entry=>entry&&(entry.id===detail.id||(entry.name===detail.name&&(!entry.format||entry.format===detail.format))));
+    const alias=detail.format==='custom'?S.customLeague:S.draft;
+    const aliasName=alias&&(alias.name||alias.league&&alias.league.name);
+    const local=named||(alias&&aliasName===detail.name?{state:alias}:null);
+    if(!local||!local.state)return detail;
+    local.state._league={...(local.state._league||{}),id:detail.id,code:detail.code,name:detail.name,role:detail.role,memberCount:detail.memberCount,maxMembers:detail.maxMembers,teamVersion:detail.teamVersion,draftVersion:detail.draftVersion,updated:detail.updated};
+    return {...detail,state:local.state};
+  });
+}
 function save(){
+  window._appStateEpoch=(window._appStateEpoch||0)+1;
   syncActiveLeagueEntry('custom');syncActiveLeagueEntry('draft');
   try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){console.warn('save failed',e)}
   if(window._cloudReady&&typeof window.queueCloudSave==='function')window.queueCloudSave();

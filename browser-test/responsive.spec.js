@@ -137,10 +137,13 @@ test('classic and custom state sync across devices', async ({browser}) => {
   });
   await flushCloudSave(page);
   const second=await browser.newContext({baseURL:'http://127.0.0.1:32188'}),phone=await second.newPage();
+  let releaseLeagues=()=>{};
+  const leaguesGate=new Promise(resolve=>{releaseLeagues=resolve});
+  await phone.route('**/api/fantasy-leagues**',async route=>{await leaguesGate;await route.continue()});
+  try{
   expect((await phone.request.post('/api/soo/login',{data:{email:'sync@example.com',password:'sync-password-123'}})).status()).toBe(200);
-  await phone.goto('/');await phone.waitForLoadState('domcontentloaded');await phone.waitForTimeout(300);
-  const synced=await phone.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague&&S.customLeague.name}));
-  expect(synced).toEqual({classic:[0],custom:'Synced Custom'});
+  await phone.goto('/');await phone.waitForLoadState('domcontentloaded');
+  await expect.poll(()=>phone.evaluate(()=>({classic:S.classic.squad.slice(),custom:S.customLeague&&S.customLeague.name}))).toEqual({classic:[0],custom:'Synced Custom'});
   await phone.evaluate(()=>{
     const classicPid=PLAYERS.find(p=>p.id!==0&&p.pos.includes(2))?.id;
     S.classic.squad=[classicPid];S.classic.line=emptyLine();S.classic.line.starters[2][0]=classicPid;
@@ -148,6 +151,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
     S.customLeague.team.squad=[customPid];S.customLeague.team.line=emptyLine();S.customLeague.team.line.starters[1][0]=customPid;
     save();
   });
+  releaseLeagues();
   await flushCloudSave(phone);
   await expect.poll(async()=>{const response=await page.request.get('/api/app-state');if(!response.ok())return null;const body=await response.json();return {classic:body.state?.classic?.squad?.length||0,custom:body.state?.customLeague?.team?.squad?.length||0}},{timeout:8000}).toEqual({classic:1,custom:1});
   await page.reload();await page.waitForLoadState('domcontentloaded');await page.waitForTimeout(450);
@@ -166,6 +170,7 @@ test('classic and custom state sync across devices', async ({browser}) => {
   await phone.request.post('/api/soo/logout');
   expect((await phone.request.get('/api/soo/me')).status()).toBe(401);
   expect((await page.request.get('/api/soo/me')).status()).toBe(200);
+  } finally { releaseLeagues(); }
   await second.close();await first.close();
 });
 
