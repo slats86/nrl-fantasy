@@ -281,12 +281,11 @@ for (const width of widths) test(`responsive app shell at ${width}px`, async ({p
   await page.route('**/api/home/alerts',route=>route.fulfill({json:{alerts:[]}}));
   await page.route('**/api/home/team-news**',route=>route.fulfill({json:{items:[],nextCursor:null,freshness:'current',checkedAt:new Date().toISOString()}}));
   await page.goto('/'); await page.waitForLoadState('domcontentloaded');
-  await page.waitForTimeout(250);
   const appearancePrompt=page.getByText('Choose your look');
-  if(await appearancePrompt.isVisible().catch(()=>false)){
-    await page.getByRole('button', {name:'Modern Lime'}).click();
-    await page.getByRole('button', {name:'Skip tour'}).click();
-  }
+  await expect(appearancePrompt).toBeVisible();
+  await page.getByRole('button', {name:'Modern Lime'}).click();
+  await page.getByRole('button', {name:'Skip tour'}).click();
+  await expect(page.locator('#modal-bg')).toBeHidden();
   await expect(page).toHaveTitle('The Squad — NRL Fantasy');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
   await expect(page.locator('#app-main')).toHaveAttribute('tabindex', '-1');
